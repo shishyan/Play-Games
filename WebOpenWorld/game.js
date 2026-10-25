@@ -661,6 +661,7 @@ const SHOP_TOOLS = [
 
 const BACKPACK_ITEMS = [
   { icon: '🪨', name: 'Sanctuary Hearthstone', desc: 'Teleports you back to Region I Western Ghats Base Camp.', action: 'hearth' },
+  { icon: '⛵', name: 'Royal Canal & Harbor Skiff', desc: 'Summons your 3D Sailboat Skiff whenever you enter the City Canals or Harbor Sea!', action: 'boat' },
   { icon: '⛺', name: 'Sherpa Expedition Tent', desc: 'Pitch a warm 3D Mountain Campfire [G] anywhere.', action: 'camp' },
   { icon: '🐎', name: 'Golden Bridle of Ashva', desc: 'Summons or dismisses your Seated Mount [Z].', action: 'mount' },
   { icon: '🌿', name: 'Sanjeevani Herb Pouch', desc: 'Endless Himalayan healing herbs for wildlife.', action: 'heal' },
@@ -677,6 +678,7 @@ const STATE = {
   // DEFAULT MOUNTED & SEATED ON LAUNCH!
   isMounted: true,
   isFlying: false, // Press Space while mounted to lift off into 3D Flight!
+  isBoating: false, // Automatically boards your Royal Canal & Harbor Sailboat Skiff on water!
   isSitting: false, // Toggled with [X] when unmounted
   autoRun: false,   // Toggled with [~] or [NumLock]
   speedRunActive: true,
@@ -1025,6 +1027,23 @@ function getTerrainHeight(x, z) {
         const flatF = 1.0 - Math.min(1.0, Math.max(0.0, (distIsland - 125.0) / 70.0));
         const smoothFlat = flatF * flatF * (3.0 - 2.0 * flatF);
         h = h * (1.0 - smoothFlat * 0.98) + 2.6 * (smoothFlat * 0.98);
+      }
+
+      // Carve the Grand Imperial Canal & Southern Maritime Harbor Bay right through the City!
+      // 1. East-West Grand City Canal at dz = +28m (width 11m, depth Y = -2.35m so Ocean water at Y = -1.6m fills it!)
+      if (Math.abs(dx) < 280.0 && Math.abs(dx) > 6.2) {
+        const dCanal = Math.abs(dz - 28.0);
+        if (dCanal < 6.2) {
+          const cF = 1.0 - Math.max(0.0, (dCanal - 3.6) / 2.6);
+          h = h * (1.0 - cF) + -2.35 * cF;
+        }
+      }
+      // 2. Southern Maritime Harbor & Shipping Bay (dz > +64m, width 190m) where Galleons & Ferries dock!
+      if (dz > 64.0 && dz < 340.0 && Math.abs(dx) < 110.0) {
+        const hZ = Math.min(1.0, (dz - 64.0) / 8.0);
+        const hX = 1.0 - Math.max(0.0, (Math.abs(dx) - 85.0) / 25.0);
+        const bayF = hZ * hX;
+        h = h * (1.0 - bayF) + -2.85 * bayF;
       }
 
       if (h > maxContinentH) maxContinentH = h;
@@ -1468,13 +1487,32 @@ function createNameplateDOM(entity) {
 }
 
 // ============================================================================
-// 6A. 3D KINGDOM ARCHITECTURE PER CONTINENT:
-//     Royal Palace Citadel, City Gates, Watchtowers, 126 Village Houses & 42 Campgrounds!
+// 6A. PROPER METROPOLIS CITY INFRASTRUCTURE, MARITIME SHIPPING, HARBORS, CANALS,
+//     BRIDGES, AQUEDUCTS, WINDMILLS, LIGHTHOUSES, GALLEONS & BOATING!
 // ============================================================================
+const sharedShopRingGeo = new THREE.RingGeometry(1.4, 1.75, 20).rotateX(-Math.PI / 2);
+const sharedShopRingMat = new THREE.MeshBasicMaterial({ color: 0xfde047, side: THREE.DoubleSide, transparent: true, opacity: 0.72 });
+const sharedNpcRingGeo = new THREE.RingGeometry(1.0, 1.25, 18).rotateX(-Math.PI / 2);
+const sharedNpcRingMat = new THREE.MeshBasicMaterial({ color: 0x4ade80, side: THREE.DoubleSide, transparent: true, opacity: 0.65 });
+const sharedRobeGeo = new THREE.CylinderGeometry(0.22, 0.34, 0.88, 8);
+const sharedHeadGeo = new THREE.SphereGeometry(0.24, 8, 8);
+const sharedHatGeo = new THREE.ConeGeometry(0.32, 0.34, 6);
+const sharedLimbGeo = new THREE.CylinderGeometry(0.08, 0.07, 0.56, 6);
+const sharedBackpackGeo = new THREE.BoxGeometry(0.36, 0.44, 0.22);
+const sharedEarGeo = new THREE.ConeGeometry(0.11, 0.28, 4);
+const sharedTailGeo = new THREE.ConeGeometry(0.14, 0.58, 6);
+sharedTailGeo.rotateX(Math.PI * 0.35);
+const sharedQuestExclamGeo = new THREE.OctahedronGeometry(0.26, 0);
+const sharedQuestGlowMat = new THREE.MeshStandardMaterial({ color: 0xfde047, emissive: 0xf59e0b, emissiveIntensity: 3.0 });
+const sharedSkinMat = new THREE.MeshStandardMaterial({ color: 0xfbd38d, roughness: 0.6 });
+const sharedDarkHairMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 });
+
 const kWallMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.72 });
 const kStoneTrimMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.8 });
 const kWindowGlowMat = new THREE.MeshStandardMaterial({ color: 0xfef08a, emissive: 0xf59e0b, emissiveIntensity: 2.4 });
 const kFireGlowMat = new THREE.MeshStandardMaterial({ color: 0xfde047, emissive: 0xf97316, emissiveIntensity: 3.2 });
+const kSailMat = new THREE.MeshStandardMaterial({ color: 0xfef9c3, emissive: 0xfde047, emissiveIntensity: 0.25, side: THREE.DoubleSide });
+const kCrimsonSailMat = new THREE.MeshStandardMaterial({ color: 0xe11d48, emissive: 0x9f1239, emissiveIntensity: 0.25, side: THREE.DoubleSide });
 const kRoofMats = [
   new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.6 }),
   new THREE.MeshStandardMaterial({ color: 0x0369a1, roughness: 0.6 }),
@@ -1483,14 +1521,19 @@ const kRoofMats = [
   new THREE.MeshStandardMaterial({ color: 0x6d28d9, roughness: 0.6 }),
 ];
 
-// Shared Geometries for 126 Village Houses, 7 Kingdom Citadels, 14 Gates, 28 Watchtowers & 42 Campgrounds
+const animatedShips = [];
+const animatedWindmills = [];
+
+// Shared Geometries for Proper City Buildings, Townhouses, Warehouses, Bridges, Aqueducts, Ships & Boats
 const houseBodyGeo = new THREE.BoxGeometry(5.6, 3.4, 4.8);
+const houseUpperGeo = new THREE.BoxGeometry(6.1, 3.2, 5.2);
 const houseRoofGeo = new THREE.ConeGeometry(4.6, 2.5, 4);
 const houseDoorGeo = new THREE.BoxGeometry(1.1, 2.0, 0.25);
 const houseWinGeo = new THREE.BoxGeometry(0.95, 0.95, 0.22);
 const houseChimneyGeo = new THREE.BoxGeometry(0.75, 2.6, 0.75);
+const timberBeamGeo = new THREE.BoxGeometry(6.2, 0.28, 5.3);
 
-function createVillageHouseMesh(roofVariant = 0) {
+function createVillageHouseMesh(roofVariant = 0, isTwoStory = false) {
   const h = new THREE.Group();
   const rMat = kRoofMats[roofVariant % kRoofMats.length];
 
@@ -1500,9 +1543,30 @@ function createVillageHouseMesh(roofVariant = 0) {
   walls.receiveShadow = true;
   h.add(walls);
 
+  let roofY = 4.55;
+  if (isTwoStory) {
+    // 2-Story Stormwind-Style Overhanging Timber-Framed City Townhouse!
+    const beam = new THREE.Mesh(timberBeamGeo, postMatShared);
+    beam.position.y = 3.45;
+    h.add(beam);
+
+    const upper = new THREE.Mesh(houseUpperGeo, kWallMat);
+    upper.position.y = 5.1;
+    upper.castShadow = true;
+    h.add(upper);
+
+    const uw1 = new THREE.Mesh(houseWinGeo, kWindowGlowMat);
+    uw1.position.set(-1.6, 5.2, 2.62);
+    const uw2 = new THREE.Mesh(houseWinGeo, kWindowGlowMat);
+    uw2.position.set(1.6, 5.2, 2.62);
+    h.add(uw1, uw2);
+    roofY = 7.85;
+  }
+
   const roof = new THREE.Mesh(houseRoofGeo, rMat);
-  roof.position.y = 4.55;
+  roof.position.y = roofY;
   roof.rotation.y = Math.PI / 4;
+  if (isTwoStory) roof.scale.set(1.08, 1.15, 1.08);
   roof.castShadow = true;
   h.add(roof);
 
@@ -1510,7 +1574,6 @@ function createVillageHouseMesh(roofVariant = 0) {
   door.position.set(0, 1.0, 2.42);
   h.add(door);
 
-  // Warm Glowing Cottage Windows (Front & Sides)
   const w1 = new THREE.Mesh(houseWinGeo, kWindowGlowMat);
   w1.position.set(-1.55, 1.85, 2.42);
   const w2 = new THREE.Mesh(houseWinGeo, kWindowGlowMat);
@@ -1518,10 +1581,221 @@ function createVillageHouseMesh(roofVariant = 0) {
   h.add(w1, w2);
 
   const chimney = new THREE.Mesh(houseChimneyGeo, kStoneTrimMat);
-  chimney.position.set(1.6, 4.6, -1.1);
+  chimney.position.set(1.6, roofY + 0.1, -1.1);
   h.add(chimney);
 
   return h;
+}
+
+// 1. Arched Stone Canal Bridge + Ornamental Streetlamps spanning the Grand City Canal
+const bridgeDeckGeo = new THREE.BoxGeometry(11.0, 0.7, 13.5);
+const bridgeParapetGeo = new THREE.BoxGeometry(0.65, 1.35, 13.5);
+const lampPostPoleGeo = new THREE.CylinderGeometry(0.1, 0.14, 3.8, 6);
+
+function createCanalBridgeMesh() {
+  const b = new THREE.Group();
+  const deck = new THREE.Mesh(bridgeDeckGeo, stoneMat);
+  deck.position.y = 0.25;
+  deck.receiveShadow = true;
+  b.add(deck);
+
+  [-5.1, 5.1].forEach((px) => {
+    const rail = new THREE.Mesh(bridgeParapetGeo, kStoneTrimMat);
+    rail.position.set(px, 0.95, 0);
+    b.add(rail);
+
+    [-5.8, 5.8].forEach((pz) => {
+      const pole = new THREE.Mesh(lampPostPoleGeo, kStoneTrimMat);
+      pole.position.set(px, 2.6, pz);
+      const lantern = new THREE.Mesh(lanternGeoShared, kWindowGlowMat);
+      lantern.scale.setScalar(1.4);
+      lantern.position.set(px, 4.6, pz);
+      b.add(pole, lantern);
+    });
+  });
+  return b;
+}
+
+// 2. Monumental Imperial Stone Aqueduct Viaduct carrying mountain water into the City
+const aqPillarGeo = new THREE.BoxGeometry(2.4, 15.0, 2.4);
+const aqChannelGeo = new THREE.BoxGeometry(82.0, 2.4, 3.4);
+const aqWaterGeo = new THREE.BoxGeometry(81.5, 0.5, 2.2);
+const aqWaterMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 1.2 });
+
+function createImperialAqueductMesh() {
+  const aq = new THREE.Group();
+  for (let i = -3; i <= 3; i++) {
+    const p = new THREE.Mesh(aqPillarGeo, stoneMat);
+    p.position.set(i * 12.5, 7.5, 0);
+    p.castShadow = true;
+    aq.add(p);
+  }
+  const topChannel = new THREE.Mesh(aqChannelGeo, kStoneTrimMat);
+  topChannel.position.y = 15.8;
+  aq.add(topChannel);
+
+  const waterStream = new THREE.Mesh(aqWaterGeo, aqWaterMat);
+  waterStream.position.y = 17.05;
+  aq.add(waterStream);
+  return aq;
+}
+
+// 3. Rotating Agricultural Windmill & Grain Silo in the City Outskirts
+const wmTowerGeo = new THREE.CylinderGeometry(1.9, 3.1, 10.5, 8);
+const wmCapGeo = new THREE.ConeGeometry(2.4, 2.5, 8);
+const wmBladeGeo = new THREE.BoxGeometry(0.85, 9.2, 0.12);
+
+function createCityWindmillMesh(variant = 0) {
+  const wm = new THREE.Group();
+  const tower = new THREE.Mesh(wmTowerGeo, kWallMat);
+  tower.position.y = 5.25;
+  tower.castShadow = true;
+  wm.add(tower);
+
+  const cap = new THREE.Mesh(wmCapGeo, kRoofMats[variant % kRoofMats.length]);
+  cap.position.y = 11.5;
+  wm.add(cap);
+
+  const rotor = new THREE.Group();
+  rotor.position.set(0, 8.8, 2.25);
+  const b1 = new THREE.Mesh(wmBladeGeo, kSailMat);
+  const b2 = new THREE.Mesh(wmBladeGeo, kSailMat);
+  b2.rotation.z = Math.PI / 2;
+  rotor.add(b1, b2);
+  wm.add(rotor);
+  wm._rotor = rotor;
+  animatedWindmills.push(rotor);
+  return wm;
+}
+
+// 4. Coastal Harbor Lighthouse, Wooden Shipping Piers, Harbor Cargo Cranes & Crates
+const lhTowerGeo = new THREE.CylinderGeometry(1.8, 3.2, 18.5, 10);
+const lhBeaconGeo = new THREE.CylinderGeometry(1.6, 1.6, 2.6, 10);
+const lhRoofGeo = new THREE.ConeGeometry(2.3, 2.8, 10);
+const pierDeckGeo = new THREE.BoxGeometry(7.5, 0.55, 28.0);
+const pierPileGeo = new THREE.CylinderGeometry(0.28, 0.28, 5.5, 6);
+const crateGeo = new THREE.BoxGeometry(1.4, 1.4, 1.4);
+const barrelGeo = new THREE.CylinderGeometry(0.55, 0.55, 1.35, 8);
+
+function createHarborLighthouseMesh() {
+  const lh = new THREE.Group();
+  const tower = new THREE.Mesh(lhTowerGeo, kWallMat);
+  tower.position.y = 9.25;
+  tower.castShadow = true;
+  lh.add(tower);
+
+  const beacon = new THREE.Mesh(lhBeaconGeo, kWindowGlowMat);
+  beacon.position.y = 19.6;
+  lh.add(beacon);
+
+  const roof = new THREE.Mesh(lhRoofGeo, kRoofMats[2]);
+  roof.position.y = 22.1;
+  lh.add(roof);
+  return lh;
+}
+
+function createHarborShippingPierMesh() {
+  const pier = new THREE.Group();
+  const deck = new THREE.Mesh(pierDeckGeo, postMatShared);
+  deck.position.set(0, 1.2, 14.0);
+  deck.receiveShadow = true;
+  pier.add(deck);
+
+  for (let pz = 2; pz <= 26; pz += 6) {
+    [-3.1, 3.1].forEach((px) => {
+      const pile = new THREE.Mesh(pierPileGeo, postMatShared);
+      pile.position.set(px, -0.8, pz);
+      pier.add(pile);
+    });
+  }
+
+  // Harbor Cargo Crane + Stacked Shipping Crates & Barrels on the Pier!
+  const craneMast = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.35, 7.5, 6), postMatShared);
+  craneMast.position.set(-2.4, 4.8, 22.0);
+  const craneBoom = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.24, 6.2, 6), postMatShared);
+  craneBoom.position.set(-0.6, 7.8, 23.5);
+  craneBoom.rotation.z = -Math.PI / 3.2;
+  pier.add(craneMast, craneBoom);
+
+  [[-1.8, 6.0], [-0.2, 6.4], [-1.0, 7.4]].forEach(([cx, cz], idx) => {
+    const crate = new THREE.Mesh(crateGeo, postMatShared);
+    crate.position.set(cx, 2.1 + (idx === 2 ? 1.4 : 0), cz);
+    pier.add(crate);
+  });
+  [[2.0, 9.0], [2.2, 10.4]].forEach(([bx, bz]) => {
+    const barrel = new THREE.Mesh(barrelGeo, kRoofMats[0]);
+    barrel.position.set(bx, 2.1, bz);
+    pier.add(barrel);
+  });
+
+  return pier;
+}
+
+// 5. Tall-Mast 3D Merchant Galleons & Canal Gondola Skiffs (For Boating & Maritime Shipping!)
+const shipHullGeo = new THREE.BoxGeometry(5.6, 3.2, 16.5);
+const shipBowGeo = new THREE.ConeGeometry(3.8, 5.5, 4);
+shipBowGeo.rotateX(Math.PI / 2);
+const shipSternGeo = new THREE.BoxGeometry(5.8, 4.2, 4.6);
+const shipMastGeo = new THREE.CylinderGeometry(0.22, 0.32, 14.5, 8);
+const shipSailGeo = new THREE.BoxGeometry(8.2, 5.6, 0.18);
+const skiffHullGeo = new THREE.BoxGeometry(2.1, 0.75, 5.4);
+
+function createMerchantGalleonMesh(isCrimson = false) {
+  const ship = new THREE.Group();
+  const hull = new THREE.Mesh(shipHullGeo, postMatShared);
+  hull.position.y = 1.4;
+  hull.castShadow = true;
+  ship.add(hull);
+
+  const bow = new THREE.Mesh(shipBowGeo, postMatShared);
+  bow.position.set(0, 1.8, 10.6);
+  bow.rotation.z = Math.PI / 4;
+  ship.add(bow);
+
+  const stern = new THREE.Mesh(shipSternGeo, postMatShared);
+  stern.position.set(0, 2.8, -6.5);
+  ship.add(stern);
+
+  // Glowing Captain's Cabin Windows on the Stern
+  [-1.4, 0, 1.4].forEach((wx) => {
+    const win = new THREE.Mesh(houseWinGeo, kWindowGlowMat);
+    win.position.set(wx, 3.4, -8.82);
+    ship.add(win);
+  });
+
+  // 2 Towering Masts with Billowing Square Sails & Golden Crow's Nest
+  const sMat = isCrimson ? kCrimsonSailMat : kSailMat;
+  [-2.5, 3.8].forEach((mz, idx) => {
+    const mast = new THREE.Mesh(shipMastGeo, postMatShared);
+    mast.position.set(0, 8.2, mz);
+    ship.add(mast);
+
+    const sail1 = new THREE.Mesh(shipSailGeo, sMat);
+    sail1.position.set(0, 7.6, mz + 0.35);
+    sail1.scale.setScalar(idx === 0 ? 0.85 : 1.05);
+    const sail2 = new THREE.Mesh(shipSailGeo, sMat);
+    sail2.position.set(0, 12.6, mz + 0.35);
+    sail2.scale.set(0.68, 0.65, 1.0);
+    ship.add(sail1, sail2);
+  });
+
+  return ship;
+}
+
+function createCanalBoatSkiffMesh(variant = 0) {
+  const boat = new THREE.Group();
+  const hull = new THREE.Mesh(skiffHullGeo, postMatShared);
+  hull.position.y = 0.35;
+  boat.add(hull);
+
+  const canopy = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.18, 2.4), kRoofMats[variant % kRoofMats.length]);
+  canopy.position.set(0, 1.65, -0.4);
+  boat.add(canopy);
+
+  const lantern = new THREE.Mesh(lanternGeoShared, kWindowGlowMat);
+  lantern.position.set(0, 1.15, 2.4);
+  boat.add(lantern);
+  return boat;
 }
 
 const towerShaftGeo = new THREE.CylinderGeometry(2.1, 2.6, 11.5, 8);
@@ -1659,7 +1933,7 @@ function spawnContinentKingdomAndVillages(cont) {
   castle.position.set(cont.x, getTerrainHeight(cont.x, castleZ), castleZ);
   scene.add(castle);
 
-  // 2. Southern Kingdom City Gate & Twin Watchtowers welcoming travelers at (cont.z + 52)
+  // 2. Southern Kingdom City Gate & Twin Watchtowers welcoming travelers from the Harbor (at cont.z + 52)
   const southGateZ = cont.z + 52.0;
   const wtL = createKingdomWatchtowerMesh(cont.id);
   wtL.position.set(cont.x - 13.5, getTerrainHeight(cont.x - 13.5, southGateZ), southGateZ);
@@ -1667,40 +1941,166 @@ function spawnContinentKingdomAndVillages(cont) {
   wtR.position.set(cont.x + 13.5, getTerrainHeight(cont.x + 13.5, southGateZ), southGateZ);
   scene.add(wtL, wtR);
 
-  // 3. 18 Cozy 3D Village Houses & Cottages per Kingdom (126 Houses total across the 7 Continents!)
-  for (let hIdx = 0; hIdx < 18; hIdx++) {
+  // 3. Arched Stone Canal Bridge spanning the Grand Imperial City Canal at (cont.x, cont.z + 28)
+  const canalBridge = createCanalBridgeMesh();
+  canalBridge.position.set(cont.x, 2.35, cont.z + 28.0);
+  scene.add(canalBridge);
+
+  // 4. Imperial Stone Aqueduct Viaduct carrying mountain water into the West City Quarter
+  const aqueduct = createImperialAqueductMesh();
+  aqueduct.position.set(cont.x - 68.0, 2.5, cont.z - 18.0);
+  aqueduct.rotation.y = Math.PI * 0.5;
+  scene.add(aqueduct);
+
+  // 5. Rotating Agricultural Windmills on the East & West City Outskirts
+  [-58.0, 58.0].forEach((wx, wIdx) => {
+    const wm = createCityWindmillMesh(cont.id + wIdx);
+    wm.position.set(cont.x + wx, getTerrainHeight(cont.x + wx, cont.z + 12.0), cont.z + 12.0);
+    scene.add(wm);
+  });
+
+  // 6. Grand Maritime Harbor Seaport: Lighthouse, 3 Shipping Piers, Cargo Cranes, Galleons & Interactive Harbor Master!
+  const harborZ = cont.z + 64.0;
+  const lighthouse = createHarborLighthouseMesh();
+  lighthouse.position.set(cont.x - 36.0, 2.4, harborZ - 2.0);
+  scene.add(lighthouse);
+
+  [-22.0, 0.0, 22.0].forEach((px, pIdx) => {
+    const pier = createHarborShippingPierMesh();
+    pier.position.set(cont.x + px, 1.4, harborZ);
+    scene.add(pier);
+
+    // Docked Tall-Mast Merchant Galleons on the Left & Right Piers
+    if (pIdx !== 1) {
+      const galleon = createMerchantGalleonMesh(pIdx === 2);
+      galleon.position.set(cont.x + px + (pIdx === 0 ? -6.5 : 6.5), -1.5, harborZ + 22.0);
+      galleon.rotation.y = pIdx === 0 ? 0.15 : -0.15;
+      scene.add(galleon);
+      animatedShips.push({
+        mesh: galleon,
+        continent: cont,
+        baseX: galleon.position.x,
+        baseZ: galleon.position.z,
+        isCruising: false,
+        phase: cont.id * 1.7 + pIdx,
+      });
+    }
+  });
+
+  // 2 Actively Sailing Offshore Trade Galleons + 2 Canal Gondola Skiffs gliding along the City Canal!
+  for (let s = 0; s < 2; s++) {
+    const cruiser = createMerchantGalleonMesh(s === 1);
+    const cz = harborZ + 52.0 + s * 26.0;
+    cruiser.position.set(cont.x, -1.5, cz);
+    scene.add(cruiser);
+    animatedShips.push({
+      mesh: cruiser,
+      continent: cont,
+      baseX: cont.x,
+      baseZ: cz,
+      isCruising: true,
+      isSkiff: false,
+      cruiseRadius: 72.0 + s * 22.0,
+      speed: 0.22 + s * 0.08,
+      phase: cont.id + s * 3.1,
+    });
+
+    // Canal Skiff gliding along the East-West Grand City Canal (at cont.z + 28)
+    const skiff = createCanalBoatSkiffMesh(cont.id + s);
+    const skX = cont.x + (s === 0 ? -26.0 : 26.0);
+    skiff.position.set(skX, -1.45, cont.z + 28.0);
+    skiff.rotation.y = Math.PI * 0.5;
+    scene.add(skiff);
+    animatedShips.push({
+      mesh: skiff,
+      continent: cont,
+      baseX: skX,
+      baseZ: cont.z + 28.0,
+      isCruising: true,
+      isSkiff: true,
+      cruiseRadius: 16.0,
+      speed: 0.55,
+      phase: s * 2.2,
+    });
+  }
+
+  // Interactive Harbor Master & Royal Skiff Captain at the Central Pier (Allows Boarding & Sailing a Boat or Fast-Sailing!)
+  const harborCaptainGroup = new THREE.Group();
+  harborCaptainGroup.position.set(cont.x + 3.2, 2.6, harborZ + 6.0);
+  const capRing = new THREE.Mesh(sharedShopRingGeo, sharedShopRingMat);
+  capRing.position.y = 0.12;
+  harborCaptainGroup.add(capRing);
+  const capModel = createArticulatedTeenOrAnimalNPC(0x0284c7, true, true);
+  harborCaptainGroup.add(capModel);
+  scene.add(harborCaptainGroup);
+
+  const harborEntity = {
+    id: `harbor-master-${cont.id}`,
+    continent: cont,
+    tier: cont.tier,
+    badge: `⛵ HARBOR PORT #${cont.id + 1}`,
+    kind: 'shop_npc',
+    shopAction: 'boating',
+    questMarker: '⛵',
+    greeting: 'Ahoy Sadhak! Board your Royal Canal Skiff to sail the City Canals & Seas, or take a Merchant Galleon to any Continent!',
+    icon: '⛵',
+    name: `Admiral Varuna (Shipping & Boating)`,
+    hp: 100,
+    maxHp: 100,
+    rejuvenated: true,
+    mesh: harborCaptainGroup,
+    blightRing: capRing,
+    homeX: cont.x + 3.2,
+    homeZ: harborZ + 6.0,
+    wanderAngle: 0,
+    heightOffset: 3.4,
+    mixer: null,
+  };
+  createNameplateDOM(harborEntity);
+  interactables.push(harborEntity);
+
+  // 7. 26 Multi-Story City Townhouses, Guildhalls & Mountain Cottages per Kingdom (182 Buildings total!)
+  for (let hIdx = 0; hIdx < 26; hIdx++) {
     let hx = cont.x;
     let hz = cont.z;
     let hRot = 0;
+    const isTwoStory = hIdx < 16 && hIdx % 2 === 0;
     if (hIdx < 12) {
-      // 12 Kingdom Residential Neighborhood Houses flanking the Outer Bazaar Avenues
+      // 12 Inner City Multi-Story Townhouses flanking the Grand Bazaar Avenues
       const side = hIdx % 2 === 0 ? -1 : 1;
       const row = Math.floor(hIdx / 2);
-      hx = cont.x + side * (29.0 + (row % 2) * 10.0);
-      hz = cont.z - 34.0 + row * 15.0;
+      hx = cont.x + side * (28.0 + (row % 2) * 9.5);
+      hz = cont.z - 36.0 + row * 11.5;
       hRot = side < 0 ? Math.PI * 0.5 : -Math.PI * 0.5;
+    } else if (hIdx < 20) {
+      // 8 Harbor & Canal Waterfront Warehouses / Merchant Guildhalls
+      const side = hIdx % 2 === 0 ? -1 : 1;
+      const col = Math.floor((hIdx - 12) / 2);
+      hx = cont.x + side * (18.0 + col * 12.5);
+      hz = cont.z + 42.0;
+      hRot = 0;
     } else {
       // 6 Scenic Mountain Hamlet Cottages nestled along the lower Spiral Mountain Ghat Roadway!
-      const roadS = 0.08 + (hIdx - 12) * 0.11;
+      const roadS = 0.08 + (hIdx - 20) * 0.11;
       const { rx, rz } = getSpiralRoadPoint(cont, roadS);
       hx = rx - 11.5;
       hz = rz + 8.5;
       hRot = (hIdx * 1.1) % (Math.PI * 2);
     }
-    const house = createVillageHouseMesh(cont.id + hIdx);
+    const house = createVillageHouseMesh(cont.id + hIdx, isTwoStory);
     house.position.set(hx, getTerrainHeight(hx, hz), hz);
     house.rotation.y = hRot;
     scene.add(house);
   }
 
-  // 4. 6 Permanent Multi-Tent Expedition Campgrounds per Continent (42 Campgrounds total across the World!)
+  // 8. 6 Permanent Multi-Tent Expedition Campgrounds per Continent (42 Campgrounds total across the World!)
   for (let cIdx = 0; cIdx < 6; cIdx++) {
     let cx = cont.x;
     let cz = cont.z;
     if (cIdx < 2) {
-      // 2 Flatland Meadow Campgrounds near the Kingdom Outskirts
-      cx = cont.x + (cIdx === 0 ? -24.0 : 24.0);
-      cz = cont.z + 28.0;
+      // 2 Flatland Meadow Campgrounds near the City Outskirts
+      cx = cont.x + (cIdx === 0 ? -42.0 : 42.0);
+      cz = cont.z - 12.0;
     } else {
       // 4 High-Altitude Trekking Base-Camps along the 3.5-Turn Spiral Mountain Roadway!
       const roadS = 0.14 + (cIdx - 2) * 0.21;
@@ -1941,23 +2341,6 @@ CONTINENTS.forEach((cont) => {
 // ============================================================================
 // 6B. 108 SACRED BAZAAR SHOPS, 108 FORWARD-FACING ANIMAL & TEEN NPCs, & WOW QUESTS!
 // ============================================================================
-const sharedShopRingGeo = new THREE.RingGeometry(1.4, 1.75, 20).rotateX(-Math.PI / 2);
-const sharedShopRingMat = new THREE.MeshBasicMaterial({ color: 0xfde047, side: THREE.DoubleSide, transparent: true, opacity: 0.72 });
-const sharedNpcRingGeo = new THREE.RingGeometry(1.0, 1.25, 18).rotateX(-Math.PI / 2);
-const sharedNpcRingMat = new THREE.MeshBasicMaterial({ color: 0x4ade80, side: THREE.DoubleSide, transparent: true, opacity: 0.65 });
-const sharedRobeGeo = new THREE.CylinderGeometry(0.22, 0.34, 0.88, 8);
-const sharedHeadGeo = new THREE.SphereGeometry(0.24, 8, 8);
-const sharedHatGeo = new THREE.ConeGeometry(0.32, 0.34, 6);
-const sharedLimbGeo = new THREE.CylinderGeometry(0.08, 0.07, 0.56, 6);
-const sharedBackpackGeo = new THREE.BoxGeometry(0.36, 0.44, 0.22);
-const sharedEarGeo = new THREE.ConeGeometry(0.11, 0.28, 4);
-const sharedTailGeo = new THREE.ConeGeometry(0.14, 0.58, 6);
-sharedTailGeo.rotateX(Math.PI * 0.35);
-const sharedQuestExclamGeo = new THREE.OctahedronGeometry(0.26, 0);
-const sharedQuestGlowMat = new THREE.MeshStandardMaterial({ color: 0xfde047, emissive: 0xf59e0b, emissiveIntensity: 3.0 });
-const sharedSkinMat = new THREE.MeshStandardMaterial({ color: 0xfbd38d, roughness: 0.6 });
-const sharedDarkHairMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 });
-
 const SHOP_ARCHETYPES = [
   { awning: 0xd97706, badge: '🛠️ FORGE SHOP', icon: '🦊', title: 'Kitsune Armorer Apprent.', action: 'shop', greeting: 'Welcome to the Royal Kingdom Forge! Upgrade your Sacred Staff, Saddle & Crampons here.' },
   { awning: 0x059669, badge: '🧪 APOTHECARY', icon: '🦌', title: 'Young Fawn Herbalist', action: 'apothecary', greeting: 'Drink this Himalayan Soma-Elixir! Your Vigor Orbs and Stamina are 100% restored!' },
@@ -2324,6 +2707,19 @@ scene.add(playerGroup);
 const mountGroup = new THREE.Group();
 playerGroup.add(mountGroup);
 
+// 3D Royal Sailboat Skiff Container inside playerGroup for City Canal & Ocean Boating!
+const playerBoatGroup = new THREE.Group();
+const pBoatMesh = createCanalBoatSkiffMesh(1);
+pBoatMesh.scale.set(1.25, 1.2, 1.28);
+pBoatMesh.rotation.y = Math.PI; // Align prow with player forward (-Z)
+const pBoatMast = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.14, 5.2, 6), postMatShared);
+pBoatMast.position.set(0, 2.7, -0.5);
+const pBoatSail = new THREE.Mesh(new THREE.BoxGeometry(3.2, 2.8, 0.12), kSailMat);
+pBoatSail.position.set(0, 3.2, -0.7);
+playerBoatGroup.add(pBoatMesh, pBoatMast, pBoatSail);
+playerBoatGroup.visible = false;
+playerGroup.add(playerBoatGroup);
+
 // Ornate Golden Saddle & Reins on the Mount's Back
 const saddleMesh = new THREE.Mesh(
   new THREE.BoxGeometry(0.75, 0.25, 0.95),
@@ -2444,17 +2840,21 @@ function setPlayerAnim(name) {
 function applySeatedRiderPose(elapsed, isMoving) {
   if (!playerModel) return;
 
-  mountGroup.visible = STATE.isMounted;
-  mountWingsGroup.visible = STATE.isMounted && (STATE.isFlying || canFlyOnContinent(STATE.currentContinent));
+  mountGroup.visible = STATE.isMounted && !STATE.isBoating;
+  playerBoatGroup.visible = STATE.isBoating;
+  mountWingsGroup.visible = STATE.isMounted && !STATE.isBoating && (STATE.isFlying || canFlyOnContinent(STATE.currentContinent));
 
-  if (!STATE.isMounted && !STATE.isSitting) {
+  if (!STATE.isMounted && !STATE.isSitting && !STATE.isBoating) {
     playerModel.position.set(0, 0, 0);
     return;
   }
 
   const gallopBob = isMoving ? Math.sin(elapsed * 11.0) * 0.055 : Math.sin(elapsed * 2.5) * 0.015;
 
-  if (STATE.isMounted) {
+  if (STATE.isBoating) {
+    // Seated comfortably inside the Royal Canal & Harbor Sailboat Skiff!
+    playerModel.position.set(0, 0.45 + Math.sin(elapsed * 3.2) * 0.04, 0.15);
+  } else if (STATE.isMounted) {
     // Lock Rider Pelvis directly onto the Mount's Saddle!
     playerModel.position.set(0, 1.18 + gallopBob, -0.06);
   } else {
@@ -2694,6 +3094,16 @@ function openNPCInteraction(entity) {
       openInspectorModal('quests');
     } else if (entity.shopAction === 'bags') {
       openInspectorModal('bags');
+    } else if (entity.shopAction === 'boating') {
+      // Board the Royal Canal & Harbor Skiff right into the Harbor Bay!
+      const c = entity.continent;
+      playerGroup.position.set(c.x + 12.0, -1.45, c.z + 78.0);
+      STATE.isBoating = true;
+      STATE.isFlying = false;
+      updateVigorOrbsUI();
+      spawnShockwave(playerGroup.position, 0x38bdf8, 14.0, 0.75);
+      spawnFloatingText(playerGroup.position, '⛵ BOARDED ROYAL SAILBOAT SKIFF! Sail with [WASD]!', '#38bdf8');
+      showToast('⛵ Boarded Royal Sailboat Skiff in the Harbor! Sail across the Canal & Sea with [WASD] or press [M] to Fast-Sail!');
     }
   } else if (entity.kind === 'town_npc') {
     if (entity.questMarker && !entity.questCompleted) {
@@ -2921,7 +3331,11 @@ function updateVigorOrbsUI() {
   const statusEl = document.getElementById('vigor-status-txt');
   const badgeEl = document.getElementById('wow-mount-badge');
 
-  if (!STATE.isMounted) {
+  if (STATE.isBoating) {
+    mountNameEl.textContent = '⛵ ROYAL HARBOR SKIFF (SAILING)';
+    statusEl.textContent = 'Sailing Canal & Sea ([WASD] Steer • [Space] Fly)';
+    badgeEl.textContent = '⛵ Sailing Skiff';
+  } else if (!STATE.isMounted) {
     mountNameEl.textContent = '🥾 ON FOOT ([Z] TO MOUNT)';
     statusEl.textContent = 'Press [Z] to Mount Up';
     badgeEl.textContent = STATE.isSitting ? '🧘 Sitting' : '🥾 On Foot';
@@ -3213,6 +3627,16 @@ function openInspectorModal(mode) {
         const act = b.getAttribute('data-bag-act');
         closeAllModals();
         if (act === 'hearth') travelToPeakBaseCamp(0);
+        else if (act === 'boat') {
+          const c = STATE.currentContinent;
+          playerGroup.position.set(c.x + 12.0, -1.45, c.z + 82.0);
+          playerGroup.rotation.y = 0.25;
+          cameraYaw = 0.25;
+          STATE.isBoating = true;
+          STATE.isFlying = false;
+          updateVigorOrbsUI();
+          showToast('⛵ Boarded Royal Canal & Harbor Skiff! Sail with [WASD] across the Harbor & Canals!');
+        }
         else if (act === 'camp') pitchMountainCampfire();
         else if (act === 'mount') toggleMountUp();
         else triggerActionSlot(1);
@@ -3855,9 +4279,17 @@ function animate() {
   if (mountMixer && (isMoving || STATE.isFlying)) mountMixer.update(dt);
   applySeatedRiderPose(elapsed, isMoving || STATE.isFlying);
 
-  // Vertical Flight & Realistic High-Altitude Mountain Thin-Air Resistance
-  // (True Apex is 2,650m–4,800m tall; vertical ascent rate tapers in thin alpine air so reaching the True Apex takes 15+ minutes!)
-  const groundY = Math.max(-1.2, getTerrainHeight(playerGroup.position.x, playerGroup.position.z));
+  // Vertical Flight, Automatic Canal/Harbor Sailboat Boating & Realistic High-Altitude Thin-Air Resistance
+  const rawGroundY = getTerrainHeight(playerGroup.position.x, playerGroup.position.z);
+  const groundY = Math.max(-1.45, rawGroundY);
+  const inWaterZone = rawGroundY < -1.65 && !STATE.isFlying;
+  if (inWaterZone !== STATE.isBoating) {
+    STATE.isBoating = inWaterZone;
+    updateVigorOrbsUI();
+    if (inWaterZone) {
+      showToast('⛵ Boarded Royal Canal & Harbor Sailboat Skiff! Sail with [WASD] or press [Space] to Fly!');
+    }
+  }
   if (STATE.isMounted && STATE.isFlying) {
     const altAboveSea = Math.max(0, playerGroup.position.y);
     // In lower foothills (<65m), responsive lift-off; in thin alpine stratosphere, realistic 2.6m/s climb rate (~17 mins to 2,695m apex!)
@@ -3935,6 +4367,40 @@ function animate() {
     const flap = Math.sin(elapsed * bd.flapSpeed + bd.phase) * 0.55;
     if (bd.mesh._lw) bd.mesh._lw.rotation.z = flap;
     if (bd.mesh._rw) bd.mesh._rw.rotation.z = -flap;
+  }
+
+  // Animate City Windmills & Maritime Harbor Galleons + Canal Gondola Skiffs!
+  for (let w = 0; w < animatedWindmills.length; w++) {
+    animatedWindmills[w].rotation.z = elapsed * 0.95;
+  }
+  for (let s = 0; s < animatedShips.length; s++) {
+    const sh = animatedShips[s];
+    if (sh.continent !== STATE.currentContinent) continue;
+    const bob = Math.sin(elapsed * 2.1 + sh.phase) * 0.22;
+    sh.mesh.rotation.z = Math.sin(elapsed * 1.6 + sh.phase) * 0.04;
+    if (!sh.isCruising) {
+      sh.mesh.position.y = -1.5 + bob;
+    } else if (sh.isSkiff) {
+      // Canal Gondola Skiff gliding back and forth along the East-West City Canal!
+      const t = elapsed * sh.speed + sh.phase;
+      const nx = sh.baseX + Math.sin(t) * sh.cruiseRadius;
+      const dxS = nx - sh.mesh.position.x;
+      sh.mesh.position.set(nx, -1.45 + bob * 0.6, sh.baseZ);
+      if (Math.abs(dxS) > 0.001) {
+        sh.mesh.rotation.y = dxS > 0 ? Math.PI * 0.5 : -Math.PI * 0.5;
+      }
+    } else {
+      // Offshore Tall-Mast Merchant Galleons sailing across the Harbor Bay!
+      const t = elapsed * sh.speed + sh.phase;
+      const nx = sh.baseX + Math.sin(t) * sh.cruiseRadius;
+      const nz = sh.baseZ + Math.cos(t * 0.7) * 18.0;
+      const dxS = nx - sh.mesh.position.x;
+      const dzS = nz - sh.mesh.position.z;
+      sh.mesh.position.set(nx, -1.5 + bob, nz);
+      if (Math.abs(dxS) + Math.abs(dzS) > 0.001) {
+        sh.mesh.rotation.y = Math.atan2(dxS, dzS);
+      }
+    }
   }
 
   interactables.forEach((ent) => {

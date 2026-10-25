@@ -24,12 +24,14 @@ async def take_screenshot():
         await page.screenshot(path=screenshot_path, full_page=False)
         print(f"Screenshot successfully captured to {screenshot_path}")
 
-        # Also capture a second screenshot with the WoW System Settings Menu [Esc] open!
-        await page.keyboard.press("Escape")
+        # Capture a second screenshot at the Southern Maritime Harbor & Canal showing the Galleons, Lighthouse, Piers, Canal Bridge, Windmills & Boating!
+        await page.keyboard.press("b")
         await asyncio.sleep(0.4)
+        await page.click('[data-bag-act="boat"]')
+        await asyncio.sleep(0.6)
         map_path = r"g:\My Drive\GitHub\RobloxGames\shop_proof.png"
         await page.screenshot(path=map_path, full_page=False)
-        print(f"Settings menu screenshot successfully captured to {map_path}")
+        print(f"Harbor & Boating screenshot successfully captured to {map_path}")
         await browser.close()
 
 if __name__ == "__main__":
