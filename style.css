@@ -1,7 +1,7 @@
 /* ==========================================================================
-   DHARMA.IO - HORDES.IO MINIMALIST CLEAN WEBGL MMORPG THEME
-   Dark semi-transparent glass cards, neon health/mana bars, crisp minimap,
-   in-game real-time chat, cast-bar channel, and tactile action hotbar.
+   DHARMA.IO - HORDES.IO HIGH-PERFORMANCE WEBGL MMORPG THEME
+   Crisp, clean, dark-glass HUD, neon vitality bars, active minimap,
+   instant responsive hotbars, and classic io-game polish.
    ========================================================================== */
 
 * {
@@ -17,7 +17,7 @@ body {
   height: 100vh;
   overflow: hidden;
   background-color: #0d1117;
-  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  font-family: 'Plus Jakarta Sans', -apple-system, system-ui, sans-serif;
   color: #f1f5f9;
 }
 
@@ -38,101 +38,124 @@ body {
   top: 0;
   left: 0;
   width: 100%;
-  height: 48px;
+  height: 46px;
   background: rgba(13, 17, 23, 0.88);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
+  padding: 0 16px;
   z-index: 20;
 }
 
-.hordes-logo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.logo-gem {
-  font-size: 22px;
-}
-
-.logo-title {
-  font-family: 'Cinzel', serif;
-  font-weight: 900;
-  font-size: 18px;
-  letter-spacing: 1px;
-  color: #ffffff;
-}
-
-.logo-io {
-  color: #10b981;
-}
-
-.topbar-pill {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 20px;
-  padding: 4px 14px;
-  font-size: 12px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.pill-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-.pill-dot.green {
-  background: #10b981;
-  box-shadow: 0 0 8px #10b981;
-}
-
-.topbar-stats {
+.topbar-left, .topbar-right {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.stat-badge {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-  padding: 4px 10px;
-  font-size: 12px;
-  font-weight: 700;
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.logo-icon {
+  font-size: 20px;
+}
+.logo-text {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 17px;
+  letter-spacing: 1px;
+  color: #ffffff;
+}
+.logo-io {
+  color: #10b981;
+}
+
+/* Faction & Zone Pills */
+.faction-pill {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 10px;
+  font-weight: 800;
   display: flex;
   align-items: center;
   gap: 6px;
 }
-.gold-badge { color: #fbbf24; }
-.punya-badge { color: #34d399; }
-.fame-badge { color: #38bdf8; }
-.players-badge { color: #a78bfa; }
-.stat-badge small {
-  font-size: 9px;
-  opacity: 0.7;
+.faction-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fbbf24;
+  box-shadow: 0 0 6px #fbbf24;
 }
+
+.zone-pill {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+/* Stat Badges */
+.stat-pill {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 4px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.gold-pill { color: #fbbf24; }
+.punya-pill { color: #34d399; }
+.fame-pill { color: #38bdf8; }
+.ping-pill { color: #94a3b8; font-size: 10px; }
+.ping-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+.ping-dot.green { background: #10b981; }
+
+.icon-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 14px;
+  cursor: pointer;
+  color: #f1f5f9;
+  transition: background 0.15s ease;
+}
+.icon-btn:hover { background: rgba(255, 255, 255, 0.15); }
 
 /* ==========================================================================
    2. HORDES.IO MINIMAP (TOP RIGHT)
    ========================================================================== */
-#hordes-minimap-container {
+#hordes-minimap {
   position: absolute;
-  top: 60px;
-  right: 20px;
+  top: 56px;
+  right: 16px;
   width: 160px;
   height: 160px;
-  background: rgba(13, 17, 23, 0.88);
-  border: 1.5px solid rgba(255, 255, 255, 0.15);
-  border-radius: 10px;
+  background: rgba(13, 17, 23, 0.9);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
   z-index: 20;
 }
 
@@ -142,28 +165,31 @@ body {
   display: block;
 }
 
-.minimap-coords {
+.minimap-overlay {
   position: absolute;
   bottom: 4px;
   right: 6px;
+}
+
+.minimap-coords {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
+  font-size: 9px;
   color: #94a3b8;
-  background: rgba(0, 0, 0, 0.65);
-  padding: 1px 6px;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 2px 5px;
   border-radius: 4px;
 }
 
 /* ==========================================================================
-   3. HORDES.IO CHAT BOX (BOTTOM LEFT)
+   3. HORDES.IO CHAT & DEED LOG (BOTTOM LEFT)
    ========================================================================== */
-#hordes-chat-box {
+#hordes-chat {
   position: absolute;
-  bottom: 24px;
-  left: 20px;
-  width: 320px;
+  bottom: 20px;
+  left: 16px;
+  width: 330px;
   height: 190px;
-  background: rgba(13, 17, 23, 0.82);
+  background: rgba(13, 17, 23, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   backdrop-filter: blur(10px);
@@ -173,7 +199,7 @@ body {
   box-shadow: 0 8px 24px rgba(0,0,0,0.5);
 }
 
-.chat-tabs {
+.chat-header {
   display: flex;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -192,7 +218,7 @@ body {
   border-bottom: 2px solid #10b981;
 }
 
-.chat-messages {
+.chat-body {
   flex: 1;
   overflow-y: auto;
   padding: 8px 10px;
@@ -203,12 +229,18 @@ body {
   gap: 4px;
 }
 
-.msg.system { color: #94a3b8; }
-.msg.world { color: #facc15; }
-.msg.deed { color: #34d399; }
-.msg .tag { font-weight: 700; margin-right: 4px; }
+.chat-line .time {
+  color: #64748b;
+  font-size: 10px;
+  margin-right: 4px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.chat-line.system { color: #94a3b8; }
+.chat-line.world { color: #facc15; }
+.chat-line.guide { color: #38bdf8; }
 
-#chat-input {
+.chat-input-bar input {
+  width: 100%;
   background: rgba(0, 0, 0, 0.4);
   border: none;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
@@ -223,7 +255,7 @@ body {
    ========================================================================== */
 #hordes-target-frame {
   position: absolute;
-  top: 60px;
+  top: 56px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 20;
@@ -237,11 +269,11 @@ body {
 }
 
 .target-card {
-  width: 310px;
-  background: rgba(13, 17, 23, 0.9);
-  border: 1.5px solid rgba(56, 189, 248, 0.4);
+  width: 320px;
+  background: rgba(13, 17, 23, 0.92);
+  border: 1.5px solid rgba(56, 189, 248, 0.45);
   border-radius: 8px;
-  padding: 10px 14px;
+  padding: 9px 12px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.6);
   backdrop-filter: blur(10px);
 }
@@ -249,59 +281,59 @@ body {
 .target-header {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
+  gap: 9px;
+  margin-bottom: 6px;
 }
 
-.tgt-icon {
-  font-size: 26px;
+.target-avatar {
+  font-size: 24px;
 }
 
-.tgt-info {
+.target-meta {
   flex: 1;
 }
 
-.tgt-title-row {
+.target-title-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.tgt-name {
+.target-name {
   font-weight: 800;
   font-size: 13px;
   color: #f8fafc;
 }
 
-.tgt-lvl {
+.target-lvl {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   color: #38bdf8;
   background: rgba(56, 189, 248, 0.15);
-  padding: 1px 6px;
-  border-radius: 4px;
+  padding: 1px 5px;
+  border-radius: 3px;
 }
 
-.tgt-sub {
+.target-type {
   font-size: 10px;
   color: #94a3b8;
 }
 
-.tgt-distance {
+.target-range {
   font-size: 9px;
   color: #38bdf8;
   text-align: right;
-  margin-top: 4px;
+  margin-top: 3px;
   font-weight: 600;
 }
 
 /* ==========================================================================
    5. BARS & BOTTOM HUD (HORDES.IO COMPACT LAYOUT)
    ========================================================================== */
-#hordes-bottom-hud {
+#hordes-bottom-bar {
   position: absolute;
-  bottom: 20px;
+  bottom: 18px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -311,49 +343,49 @@ body {
   z-index: 20;
 }
 
-.player-bars-stack {
-  width: 440px;
-  background: rgba(13, 17, 23, 0.88);
+.player-unit-card {
+  width: 450px;
+  background: rgba(13, 17, 23, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 7px 12px;
   backdrop-filter: blur(10px);
   display: flex;
   flex-direction: column;
   gap: 5px;
 }
 
-.player-name-row {
+.unit-row-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 12px;
-  margin-bottom: 2px;
+  font-size: 11px;
 }
 
-.class-tag.vaidya {
+.class-badge {
   background: rgba(16, 185, 129, 0.2);
   color: #34d399;
   border: 1px solid rgba(16, 185, 129, 0.4);
   padding: 1px 6px;
-  border-radius: 4px;
-  font-size: 10px;
+  border-radius: 3px;
+  font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.5px;
 }
 
-.player-name {
+.player-handle {
   font-weight: 800;
   color: #ffffff;
 }
 
-.player-level {
+.player-lvl-badge {
   font-family: 'JetBrains Mono', monospace;
-  font-weight: 700;
+  font-weight: 800;
   color: #ffd700;
+  font-size: 11px;
 }
 
-.hordes-bar {
+.bar-shell {
   position: relative;
   height: 16px;
   background: #090c10;
@@ -362,22 +394,22 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.hordes-bar-fill {
+.bar-fill {
   height: 100%;
-  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.green-fill {
+.prana-fill, .hp-fill {
   background: linear-gradient(90deg, #059669 0%, #10b981 100%);
   box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
 }
 
-.gold-fill {
+.punya-fill {
   background: linear-gradient(90deg, #d97706 0%, #f59e0b 100%);
   box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
 }
 
-.bar-label {
+.bar-text {
   position: absolute;
   top: 0;
   left: 0;
@@ -394,14 +426,13 @@ body {
 }
 
 /* Cast Bar */
-#cast-bar-container {
+.cast-shell {
   position: relative;
-  height: 14px;
+  height: 13px;
   background: #111827;
   border-radius: 3px;
   overflow: hidden;
   border: 1px solid #38bdf8;
-  margin-top: 2px;
 }
 
 .cast-hidden {
@@ -414,13 +445,13 @@ body {
   background: linear-gradient(90deg, #0284c7, #38bdf8);
 }
 
-#cast-bar-label {
+.cast-label {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  font-size: 9px;
+  font-size: 8.5px;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -432,7 +463,7 @@ body {
 /* ==========================================================================
    6. HORDES.IO CRISP HOTBAR
    ========================================================================== */
-.hordes-hotbar {
+.action-hotbar {
   display: flex;
   gap: 6px;
   background: rgba(13, 17, 23, 0.92);
@@ -448,7 +479,7 @@ body {
   width: 48px;
   height: 48px;
   background: rgba(255, 255, 255, 0.04);
-  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  border: 1.5px solid rgba(255, 255, 255, 0.14);
   border-radius: 6px;
   display: flex;
   flex-direction: column;
@@ -503,13 +534,13 @@ body {
   left: 0;
   width: 100%;
   height: 0%;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.75);
   pointer-events: none;
   transition: height 0.1s linear;
 }
 
 /* ==========================================================================
-   7. FLOATING TEXT & CELESTIAL GIFT MODAL
+   7. FLOATING TEXT & MYTHIC MODAL
    ========================================================================== */
 #floating-text-container {
   position: absolute;
@@ -547,8 +578,12 @@ body {
   100% { opacity: 0; transform: translateY(-70px) scale(0.85); }
 }
 
-/* Gift Modal */
-#gift-modal {
+/* Modal Backdrops */
+.modal-backdrop-hidden {
+  display: none !important;
+}
+
+#gift-modal, #inventory-modal {
   position: absolute;
   top: 0;
   left: 0;
@@ -562,47 +597,37 @@ body {
   backdrop-filter: blur(8px);
 }
 
-.gift-modal-hidden {
-  display: none !important;
-}
-
-.gift-card {
+.mythic-card {
   width: 440px;
   max-width: 90vw;
   background: #111827;
   border: 2px solid #fbbf24;
   border-radius: 12px;
-  padding: 30px 24px;
+  padding: 28px 24px;
   text-align: center;
   box-shadow: 0 0 40px rgba(251, 191, 36, 0.35);
 }
 
-.gift-rarity {
-  font-size: 12px;
+.mythic-badge {
+  font-size: 11px;
   font-weight: 800;
   color: #fbbf24;
   letter-spacing: 2px;
 }
 
-.gift-icon-big {
+.mythic-icon {
   font-size: 64px;
   margin: 14px 0;
-  animation: pulseIcon 1.5s infinite alternate ease-in-out;
 }
 
-@keyframes pulseIcon {
-  0% { transform: scale(0.95); }
-  100% { transform: scale(1.08); }
-}
-
-.gift-card h2 {
+.mythic-title {
   font-family: 'Cinzel', serif;
   font-size: 22px;
   color: #f8fafc;
   margin-bottom: 8px;
 }
 
-.gift-card p {
+.mythic-desc {
   font-size: 13px;
   color: #94a3b8;
   line-height: 1.5;
@@ -620,6 +645,58 @@ body {
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
 }
-.hordes-btn:hover {
-  background: #34d399;
+.hordes-btn:hover { background: #34d399; }
+
+/* Inventory Grid */
+.window-card {
+  width: 480px;
+  max-width: 92vw;
+  background: #111827;
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.7);
 }
+
+.window-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 800;
+  font-size: 14px;
+  color: #fbbf24;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 10px;
+  margin-bottom: 14px;
+}
+
+.close-x {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.inv-slot {
+  height: 72px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.inv-slot:hover {
+  border-color: #38bdf8;
+}
+.inv-icon { font-size: 26px; }
+.inv-name { font-size: 9px; font-weight: 700; color: #cbd5e1; margin-top: 4px; }

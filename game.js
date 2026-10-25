@@ -47,28 +47,63 @@ class SoundEngine {
 const audio = new SoundEngine();
 
 // ============================================================================
-// 1. HORDES.IO PROCEDURAL CHUNK TEXTURING (Clean Voxels / Low-Poly Shading)
+// 1. HORDES.IO 4-CLASS SYSTEM (Adapted for Virtuous World)
+// ============================================================================
+const CLASSES = {
+  vaidya: {
+    name: 'Vaidya (Divine Healer)',
+    role: 'Restorer of Wildlife & Healer of Beings',
+    basePrana: 100,
+    basePunya: 120,
+    primarySpell: 'Sanjeevani Herbs',
+    color: '#10b981'
+  },
+  palak: {
+    name: 'Palak (Guardian Protector)',
+    role: 'Sanctifier of Sacred Grounds & Shields',
+    basePrana: 140,
+    basePunya: 80,
+    primarySpell: 'Vajra Shield',
+    color: '#3b82f6'
+  },
+  sadhu: {
+    name: 'Sadhu (Mystic Sage)',
+    role: 'Channeler of Celestial Ganga Jal',
+    basePrana: 90,
+    basePunya: 150,
+    primarySpell: 'Ganga Jal',
+    color: '#a855f7'
+  },
+  dhanurdhar: {
+    name: 'Dhanurdhar (Archer of Light)',
+    role: 'Dispeller of Darkness from Afar',
+    basePrana: 110,
+    basePunya: 100,
+    primarySpell: 'Solar Arrow',
+    color: '#f59e0b'
+  }
+};
+
+// ============================================================================
+// 2. TEXTURING (Hordes.io Low-Poly Palette & Tiled Steppes)
 // ============================================================================
 function generateVoxelPaletteTexture() {
   const c = document.createElement('canvas');
   c.width = 256; c.height = 256;
   const ctx = c.getContext('2d');
 
-  // Vibrant Hordes.io Grass Green
-  ctx.fillStyle = '#43a047';
+  ctx.fillStyle = '#3f9642';
   ctx.fillRect(0, 0, 256, 256);
 
-  // Subtle clean grid tiling (characteristic of Hordes.io ground)
-  ctx.strokeStyle = '#388e3c';
+  ctx.strokeStyle = '#327c35';
   ctx.lineWidth = 2;
   for (let i = 0; i <= 256; i += 32) {
     ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 256); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(256, i); ctx.stroke();
   }
 
-  // Soft scattered wildflower dots
-  for (let i = 0; i < 40; i++) {
-    ctx.fillStyle = Math.random() > 0.5 ? '#fdd835' : '#f06292';
+  for (let i = 0; i < 35; i++) {
+    ctx.fillStyle = Math.random() > 0.5 ? '#fdd835' : '#f472b6';
     ctx.fillRect(Math.floor(Math.random() * 8) * 32 + 14, Math.floor(Math.random() * 8) * 32 + 14, 4, 4);
   }
 
@@ -80,12 +115,12 @@ function generateVoxelPaletteTexture() {
 }
 
 // ============================================================================
-// 2. THREE.JS ENGINE SETUP (Hordes.io Isometric / Close Follow Perspective)
+// 3. THREE.JS ENGINE SETUP
 // ============================================================================
 const container = document.getElementById('canvas-container');
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87ceeb); // Bright clean Hordes.io sky
-scene.fog = new THREE.FogExp2(0x87ceeb, 0.0022);
+scene.background = new THREE.Color(0x87ceeb);
+scene.fog = new THREE.FogExp2(0x87ceeb, 0.002);
 
 const camera = new THREE.PerspectiveCamera(52, window.innerWidth / window.innerHeight, 0.5, 2000);
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -97,27 +132,26 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.1;
 container.appendChild(renderer.domElement);
 
-// Hordes.io Bright Directional Sunlight + Crisp Ambient
 const sunLight = new THREE.DirectionalLight(0xfffaed, 2.5);
-sunLight.position.set(120, 220, 90);
+sunLight.position.set(140, 240, 100);
 sunLight.castShadow = true;
 sunLight.shadow.mapSize.set(2048, 2048);
 sunLight.shadow.camera.near = 10;
 sunLight.shadow.camera.far = 600;
-const d = 160;
+const d = 180;
 sunLight.shadow.camera.left = -d; sunLight.shadow.camera.right = d;
 sunLight.shadow.camera.top = d; sunLight.shadow.camera.bottom = -d;
 scene.add(sunLight);
 
-const ambientLight = new THREE.HemisphereLight(0xffffff, 0x334155, 1.2);
+const ambientLight = new THREE.HemisphereLight(0xffffff, 0x334155, 1.25);
 scene.add(ambientLight);
 
 // ============================================================================
-// 3. HORDES.IO MODULAR TERRAIN (Terraced Clean Steppes & River)
+// 4. HORDES.IO MODULAR TERRAIN & ENVIRONMENT
 // ============================================================================
 const matGround = new THREE.MeshStandardMaterial({
   map: generateVoxelPaletteTexture(),
-  roughness: 0.7,
+  roughness: 0.75,
   metalness: 0.05
 });
 
@@ -125,9 +159,8 @@ const groundGeo = new THREE.PlaneGeometry(1200, 1200, 64, 64);
 groundGeo.rotateX(-Math.PI / 2);
 
 function getTerrainHeight(x, z) {
-  // Stepped terraces (Hordes.io stepped plateau look)
   let h = Math.sin(x * 0.015) * Math.cos(z * 0.015) * 6;
-  return Math.round(h * 2) / 2; // Quantize to crisp steps
+  return Math.round(h * 2) / 2; // Quantized step height
 }
 
 const gPos = groundGeo.attributes.position;
@@ -142,18 +175,16 @@ const terrainMesh = new THREE.Mesh(groundGeo, matGround);
 terrainMesh.receiveShadow = true;
 scene.add(terrainMesh);
 
-// Clean Blue Waterway (River Ganga)
+// Flowing Sacred Ganga River
 const river = new THREE.Mesh(
-  new THREE.PlaneGeometry(100, 1000),
+  new THREE.PlaneGeometry(120, 1000),
   new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.1, transparent: true, opacity: 0.85 })
 );
 river.rotation.x = -Math.PI / 2;
 river.position.set(-180, 0.35, 0);
 scene.add(river);
 
-// ============================================================================
-// 4. HORDES.IO CLEAN MODULAR TREES & PROPS
-// ============================================================================
+// Hexagonal Stepped Trees (Hordes.io Signature Foliage)
 const matWood = new THREE.MeshStandardMaterial({ color: 0x5d4037, roughness: 0.8 });
 const matLeaf = new THREE.MeshStandardMaterial({ color: 0x2e7d32, roughness: 0.7 });
 const matLeafLight = new THREE.MeshStandardMaterial({ color: 0x4caf50, roughness: 0.7 });
@@ -164,13 +195,11 @@ function createHordesTree(x, z, scale = 1) {
   const y = getTerrainHeight(x, z);
   tree.position.set(x, y, z);
 
-  // Polygonal trunk
   const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.5 * scale, 0.7 * scale, 4 * scale, 6), matWood);
   trunk.position.y = 2 * scale;
   trunk.castShadow = true;
   tree.add(trunk);
 
-  // Stepped hexagonal foliage cones (Distinct Hordes.io tree silhouette)
   for (let i = 0; i < 3; i++) {
     const r1 = (3.2 - i * 0.7) * scale;
     const cone = new THREE.Mesh(new THREE.ConeGeometry(r1, 3.2 * scale, 6), i === 2 ? matLeafLight : matLeaf);
@@ -178,25 +207,24 @@ function createHordesTree(x, z, scale = 1) {
     cone.castShadow = true;
     tree.add(cone);
   }
-
   scene.add(tree);
 }
 
-for (let i = 0; i < 50; i++) {
+for (let i = 0; i < 48; i++) {
   const ang = Math.random() * Math.PI * 2;
-  const d = 30 + Math.random() * 110;
+  const d = 30 + Math.random() * 120;
   const tx = Math.cos(ang) * d;
   const tz = Math.sin(ang) * d;
-  if (tx > -220 && tx < -140) continue;
+  if (tx > -240 && tx < -120) continue;
   createHordesTree(tx, tz, 0.85 + Math.random() * 0.4);
 }
 
 // ============================================================================
-// 5. INTERACTABLES (Living Wildlife, Garden Beds, Healing Springs)
+// 5. LIVING FOREST ENTITIES & NURTURING INTERACTABLES
 // ============================================================================
 const interactables = [];
 
-// Selection Reticle on Active Target
+// Selection Ring under Active Target
 const targetRing = new THREE.Mesh(
   new THREE.RingGeometry(1.8, 2.2, 24),
   new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide })
@@ -205,53 +233,50 @@ targetRing.rotation.x = -Math.PI / 2;
 targetRing.visible = false;
 scene.add(targetRing);
 
-// A. Living Forest Animals (Hordes.io Character Proportions)
 function spawnHordesAnimal(x, z, name, icon) {
-  const animalGroup = new THREE.Group();
+  const group = new THREE.Group();
   const y = getTerrainHeight(x, z);
-  animalGroup.position.set(x, y, z);
+  group.position.set(x, y, z);
 
-  // Blocky modular stylized creature
   const body = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.2, 2.4), new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.6 }));
   body.position.y = 1.0;
   body.castShadow = true;
-  animalGroup.add(body);
+  group.add(body);
 
   const head = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.0, 1.2), new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.6 }));
   head.position.set(0, 1.8, 1.2);
   head.castShadow = true;
-  animalGroup.add(head);
+  group.add(head);
 
-  // 4 Legs
   const legMat = new THREE.MeshStandardMaterial({ color: 0x92400e });
   [[-0.6, -0.8], [0.6, -0.8], [-0.6, 0.8], [0.6, 0.8]].forEach(([lx, lz]) => {
     const leg = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.9, 0.3), legMat);
     leg.position.set(lx, 0.45, lz);
-    animalGroup.add(leg);
+    group.add(leg);
   });
 
-  scene.add(animalGroup);
+  scene.add(group);
 
-  const animalObj = {
+  const entity = {
     id: `animal_${x}_${z}`,
     type: 'creature',
     name,
     subtitle: 'Wounded Wildlife • Needs Sanjeevani [1]',
     icon,
     pos: new THREE.Vector3(x, y, z),
-    group: animalGroup,
+    group,
     health: 35,
     maxHealth: 100,
     healed: false
   };
-  interactables.push(animalObj);
+  interactables.push(entity);
 }
 
 spawnHordesAnimal(16, -12, 'Wounded Vrindavan Fawn', '🦌');
 spawnHordesAnimal(-20, 16, 'Injured Golden Fox', '🦊');
 spawnHordesAnimal(24, 24, 'Gentle Grove Gazelle', '🦌');
 
-// B. Sacred Soil Beds (Garden Nurturing)
+// 6 Sacred Soil Beds
 for (let r = 0; r < 2; r++) {
   for (let c = 0; c < 3; c++) {
     const px = (c - 1) * 11;
@@ -286,25 +311,24 @@ for (let r = 0; r < 2; r++) {
 }
 
 // ============================================================================
-// 6. PLAYER CONTROLLER (Hordes.io Character Rig with Saffron Cowl & Weapon)
+// 6. PLAYER CONTROLLER & CLASS RIG
 // ============================================================================
 const playerGroup = new THREE.Group();
 playerGroup.position.set(0, 0, 10);
 scene.add(playerGroup);
 
-// Stylized Vaidya (Healer) Avatar
 const playerMesh = new THREE.Group();
 const tunic = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.8, 0.8), new THREE.MeshStandardMaterial({ color: 0xe65100, roughness: 0.5 }));
 tunic.position.y = 1.4;
 tunic.castShadow = true;
 playerMesh.add(tunic);
 
-const head = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), new THREE.MeshStandardMaterial({ color: 0xffcc80, roughness: 0.5 }));
-head.position.y = 2.6;
-head.castShadow = true;
-playerMesh.add(head);
+const pHead = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), new THREE.MeshStandardMaterial({ color: 0xffcc80, roughness: 0.5 }));
+pHead.position.y = 2.6;
+pHead.castShadow = true;
+playerMesh.add(pHead);
 
-// Healer's Lotus Staff
+// Staff with Glowing Lotus Gem
 const staff = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 3.2, 8), matWood);
 staff.position.set(0.9, 1.8, 0.2);
 const staffGem = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 12), new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x10b981, emissiveIntensity: 0.6 }));
@@ -315,18 +339,25 @@ playerGroup.add(playerMesh);
 
 // Player State
 const state = {
-  punya: 380,
-  gold: 2450,
-  fame: 120,
+  classKey: 'vaidya',
+  punya: 480,
+  gold: 3450,
+  fame: 210,
   prana: 100,
   level: 1,
   selectedTarget: null,
   isFlying: false,
   isCasting: false,
+  inventory: [
+    { name: 'Sanjeevani Leaf', icon: '🌿', qty: 12 },
+    { name: 'Ganga Jal Urn', icon: '💧', qty: 6 },
+    { name: 'Prasad Ladoo', icon: '🍲', qty: 8 },
+    { name: 'Rudraksha Mala', icon: '📿', qty: 1 }
+  ],
   boons: { sprint: false, jump: false, fly: false, teleport: false }
 };
 
-// Controls & Camera Orbit (Hordes.io Right-Click Orbit / WASD)
+// Controls & Camera Orbit
 const keys = {};
 let camYaw = 0;
 let camPitch = 0.42;
@@ -344,6 +375,7 @@ window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyF') castSpell('F');
   if (e.code === 'KeyT') castSpell('T');
   if (e.code === 'KeyE') interactWithTargetOrNearest();
+  if (e.code === 'KeyB') toggleInventory();
   if (e.code === 'Tab') {
     e.preventDefault();
     cycleNearestTarget();
@@ -356,7 +388,6 @@ window.addEventListener('keyup', (e) => {
 
 renderer.domElement.addEventListener('mousedown', (e) => {
   if (e.button === 0) {
-    // Left click target raycasting
     const mouse = new THREE.Vector2(
       (e.clientX / window.innerWidth) * 2 - 1,
       -(e.clientY / window.innerHeight) * 2 + 1
@@ -396,11 +427,11 @@ function selectTarget(item) {
 
   const frame = document.getElementById('hordes-target-frame');
   frame.classList.remove('target-hidden');
-  document.getElementById('tgt-name').textContent = item.name;
-  document.getElementById('tgt-sub').textContent = item.subtitle;
-  document.getElementById('tgt-icon').textContent = item.icon;
-  document.getElementById('tgt-hp-val').textContent = Math.round(item.health);
-  document.getElementById('tgt-hp-fill').style.width = `${item.health}%`;
+  document.getElementById('target-name').textContent = item.name;
+  document.getElementById('target-type').textContent = item.subtitle;
+  document.getElementById('target-icon').textContent = item.icon;
+  document.getElementById('target-hp-val').textContent = Math.round(item.health);
+  document.getElementById('target-hp-fill').style.width = `${item.health}%`;
 
   audio.playChime(440, 0.25);
 }
@@ -440,9 +471,9 @@ function interactWithTargetOrNearest() {
 function startCast(castTimeSec, spellName, onComplete) {
   if (state.isCasting) return;
   state.isCasting = true;
-  const castContainer = document.getElementById('cast-bar-container');
-  const castFill = document.getElementById('cast-bar-fill');
-  document.getElementById('cast-bar-label').textContent = `Channelling ${spellName}...`;
+  const castContainer = document.getElementById('cast-container');
+  const castFill = document.getElementById('cast-fill');
+  document.getElementById('cast-label').textContent = `Channelling ${spellName}...`;
   castContainer.classList.remove('cast-hidden');
 
   let start = Date.now();
@@ -469,18 +500,18 @@ function castSpell(key) {
     startCast(0.8, 'Sanjeevani Herbs', () => {
       if (tgt && tgt.type === 'creature' && dist < 20) {
         tgt.health = Math.min(100, tgt.health + 40);
-        document.getElementById('tgt-hp-val').textContent = Math.round(tgt.health);
-        document.getElementById('tgt-hp-fill').style.width = `${tgt.health}%`;
+        document.getElementById('target-hp-val').textContent = Math.round(tgt.health);
+        document.getElementById('target-hp-fill').style.width = `${tgt.health}%`;
 
         audio.playHeal();
         showFloatingText(tgt.pos, '+40 Vitality', 'float-healing');
         awardPunya(50);
-        addChatMessage('deed', `[Heal] You channeled Sanjeevani Herbs on ${tgt.name}! (+50 Punya)`);
+        addChatMessage('deed', `[Heal] Channeled Sanjeevani on ${tgt.name}! (+50 Punya)`);
 
         if (tgt.health >= 100 && !tgt.healed) {
           tgt.healed = true;
           tgt.subtitle = 'Fully Restored & Grateful';
-          document.getElementById('tgt-sub').textContent = tgt.subtitle;
+          document.getElementById('target-type').textContent = tgt.subtitle;
           showSurpriseGift('Surya Tejas (Solar Sprint)', '☀️', 'sprint', 'Awakened from wildlife rescue! Press [4] to sprint at 3x speed.');
         }
       } else {
@@ -492,7 +523,7 @@ function castSpell(key) {
     });
   }
 
-  // Spell 2: Ganga Jal (Water / Sanctify)
+  // Spell 2: Ganga Jal (AoE Sanctify / Water)
   if (key === 2 || key === '2') {
     triggerCooldown('2', 1.5);
     audio.playChime(640, 0.5);
@@ -504,11 +535,11 @@ function castSpell(key) {
     }
   }
 
-  // Spell 3: Annadana (Feed Pilgrims)
+  // Spell 3: Annadana (Shared Pilgrim Meals)
   if (key === 3 || key === '3') {
     triggerCooldown('3', 2.0);
     audio.playChime(720, 0.6);
-    showFloatingText(playerGroup.position, 'Served 5 Annadana Meals (+65 Punya)', 'float-punya');
+    showFloatingText(playerGroup.position, 'Distributed 5 Annadana Meals (+65 Punya)', 'float-punya');
     awardPunya(65);
     addChatMessage('world', '[Annadana] Shared sacred meals with visiting seekers! (+65 Punya)');
   }
@@ -623,14 +654,14 @@ function showSurpriseGift(name, icon, unlockedKey, desc) {
   state.boons[unlockedKey] = true;
   unlockActionSlot(unlockedKey);
 
-  document.getElementById('gift-name-text').textContent = name;
-  document.getElementById('gift-icon-big').textContent = icon;
-  document.getElementById('gift-desc-text').textContent = desc;
-  document.getElementById('gift-modal').classList.remove('gift-modal-hidden');
+  document.getElementById('gift-title').textContent = name;
+  document.getElementById('gift-icon').textContent = icon;
+  document.getElementById('gift-desc').textContent = desc;
+  document.getElementById('gift-modal').classList.remove('modal-backdrop-hidden');
 }
 
-document.getElementById('gift-claim-btn').addEventListener('click', () => {
-  document.getElementById('gift-modal').classList.add('gift-modal-hidden');
+document.getElementById('btn-claim-gift').addEventListener('click', () => {
+  document.getElementById('gift-modal').classList.add('modal-backdrop-hidden');
 });
 
 function unlockActionSlot(key) {
@@ -679,13 +710,38 @@ function showFloatingText(pos3D, text, cssClass = 'float-punya') {
 function addChatMessage(type, text) {
   const msgBox = document.getElementById('chat-messages');
   const div = document.createElement('div');
-  div.className = `msg ${type}`;
+  div.className = `chat-line ${type}`;
   div.innerHTML = text;
   msgBox.appendChild(div);
   msgBox.scrollTop = msgBox.scrollHeight;
 }
 
-// Minimap Render Loop
+// Inventory Modal
+function toggleInventory() {
+  const modal = document.getElementById('inventory-modal');
+  modal.classList.toggle('modal-backdrop-hidden');
+  if (!modal.classList.contains('modal-backdrop-hidden')) {
+    renderInventory();
+  }
+}
+document.getElementById('btn-inventory').addEventListener('click', toggleInventory);
+document.getElementById('btn-close-inv').addEventListener('click', toggleInventory);
+
+function renderInventory() {
+  const grid = document.getElementById('inv-grid');
+  grid.innerHTML = '';
+  for (let i = 0; i < 16; i++) {
+    const item = state.inventory[i];
+    const slot = document.createElement('div');
+    slot.className = 'inv-slot';
+    if (item) {
+      slot.innerHTML = `<span class="inv-icon">${item.icon}</span><span class="inv-name">${item.name} (${item.qty})</span>`;
+    }
+    grid.appendChild(slot);
+  }
+}
+
+// Minimap Update Loop
 const minimapCanvas = document.getElementById('minimap-canvas');
 const mmCtx = minimapCanvas.getContext('2d');
 
@@ -693,17 +749,14 @@ function updateMinimap() {
   mmCtx.fillStyle = '#0d1117';
   mmCtx.fillRect(0, 0, 160, 160);
 
-  // River on map
   mmCtx.fillStyle = '#0284c7';
   mmCtx.fillRect(10, 0, 25, 160);
 
-  // Center sanctuary
   mmCtx.fillStyle = '#10b981';
   mmCtx.beginPath();
-  mmCtx.arc(80, 80, 20, 0, Math.PI * 2);
+  mmCtx.arc(80, 80, 18, 0, Math.PI * 2);
   mmCtx.fill();
 
-  // Targets
   interactables.forEach((item) => {
     const mx = 80 + (item.pos.x / 1200) * 160;
     const my = 80 + (item.pos.z / 1200) * 160;
@@ -711,12 +764,11 @@ function updateMinimap() {
     mmCtx.fillRect(mx - 2, my - 2, 4, 4);
   });
 
-  // Player position dot & heading
   const px = 80 + (playerGroup.position.x / 1200) * 160;
   const py = 80 + (playerGroup.position.z / 1200) * 160;
   mmCtx.fillStyle = '#38bdf8';
   mmCtx.beginPath();
-  mmCtx.arc(px, py, 4, 0, Math.PI * 2);
+  mmCtx.arc(px, py, 3.5, 0, Math.PI * 2);
   mmCtx.fill();
 
   document.getElementById('minimap-coords').textContent = `X: ${Math.round(playerGroup.position.x)}, Z: ${Math.round(playerGroup.position.z)}`;
@@ -733,8 +785,9 @@ function updateHUD() {
   const pct = Math.min(100, Math.round((state.punya / maxPunya) * 100));
   document.getElementById('player-punya-fill').style.width = `${Math.max(4, pct)}%`;
 
-  document.getElementById('val-gold').textContent = state.gold.toLocaleString();
-  document.getElementById('val-punya').textContent = state.punya;
+  document.getElementById('stat-gold').textContent = state.gold.toLocaleString();
+  document.getElementById('stat-punya').textContent = state.punya;
+  document.getElementById('stat-fame').textContent = state.fame;
 }
 
 // ============================================================================
@@ -746,7 +799,7 @@ function animate() {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.1);
 
-  // WASD Locomotion
+  // Movement
   let moveX = 0;
   let moveZ = 0;
   if (keys['KeyW'] || keys['ArrowUp']) moveZ -= 1;
@@ -765,7 +818,6 @@ function animate() {
     playerGroup.position.x += Math.sin(moveAngle) * speed * dt;
     playerGroup.position.z += Math.cos(moveAngle) * speed * dt;
 
-    // Gentle run bobbing
     playerMesh.position.y = Math.sin(clock.getElapsedTime() * 14) * 0.15;
   } else {
     playerMesh.position.y = 0;
@@ -793,10 +845,9 @@ function animate() {
   camera.position.y = Math.max(groundY + 1.8, targetPos.y + Math.sin(camPitch) * camDist);
   camera.lookAt(targetPos);
 
-  // Update target distance if targeted
   if (state.selectedTarget) {
     const d = Math.round(playerGroup.position.distanceTo(state.selectedTarget.pos));
-    const distEl = document.getElementById('tgt-dist');
+    const distEl = document.getElementById('target-range');
     if (distEl) distEl.textContent = `Range: ${d}m (${d <= 20 ? 'In Spell Range' : 'Too Far'})`;
   }
 

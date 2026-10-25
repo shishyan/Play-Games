@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dharma.io — Massively Multiplayer Virtuous WebGL RPG</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Dharma.io — Virtuous WebGL MMORPG</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Cinzel:wght@700;800;900&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Cinzel:wght@800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
   <script type="importmap">
     {
@@ -20,124 +20,133 @@
   <!-- 3D WebGL Canvas Layer -->
   <div id="canvas-container"></div>
 
-  <!-- HORDES.IO STYLE TOP BAR (Player info, party, mini stats) -->
+  <!-- HORDES.IO STYLE TOP NAVBAR -->
   <header id="hordes-topbar">
-    <div class="hordes-logo">
-      <span class="logo-gem">🪷</span>
-      <span class="logo-title">DHARMA<span class="logo-io">.IO</span></span>
+    <div class="topbar-left">
+      <div class="logo">
+        <span class="logo-icon">🪷</span>
+        <span class="logo-text">DHARMA<span class="logo-io">.IO</span></span>
+      </div>
+      <!-- Faction Selector: Surya Order vs Chandra Sanctuary -->
+      <div class="faction-pill surya" id="faction-badge">
+        <span class="faction-dot"></span>
+        <span id="faction-name">ORDER OF SURYA (SOLAR LIFE)</span>
+      </div>
+      <!-- Zone Indicator -->
+      <div class="zone-pill" id="zone-badge">
+        <span>📍 Vrindavan Sanctuary [Lv. 1-10]</span>
+      </div>
     </div>
 
-    <!-- Active Zone Badge -->
-    <div id="zone-pill" class="topbar-pill">
-      <span class="pill-dot green"></span>
-      <span id="zone-pill-text">Vrindavan Sanctuary [Lv. 1-10]</span>
-    </div>
-
-    <!-- Currency & Fame (Hordes Style) -->
-    <div class="topbar-stats">
-      <div class="stat-badge gold-badge"><span class="badge-icon">🪙</span> <span id="val-gold">2,450</span></div>
-      <div class="stat-badge punya-badge"><span class="badge-icon">✨</span> <span id="val-punya">380</span> <small>PUNYA</small></div>
-      <div class="stat-badge fame-badge"><span class="badge-icon">🌟</span> <span id="val-fame">120</span> <small>FAME</small></div>
-      <div class="stat-badge players-badge"><span class="badge-icon">👥</span> <span id="val-online">18 Online</span></div>
+    <!-- Right Side Currency, Punya, Fame & Ping -->
+    <div class="topbar-right">
+      <div class="stat-pill gold-pill" title="Swarna (Gold Coins)"><span class="icon">🪙</span> <span id="stat-gold">3,450</span></div>
+      <div class="stat-pill punya-pill" title="Punya (Spiritual Karma)"><span class="icon">✨</span> <span id="stat-punya">480</span> <small>PUNYA</small></div>
+      <div class="stat-pill fame-pill" title="Kirti (Fame Earned from Seva)"><span class="icon">🌟</span> <span id="stat-fame">210</span> <small>FAME</small></div>
+      <div class="stat-pill ping-pill" title="Network Latency"><span class="ping-dot green"></span> <span id="stat-ping">18ms</span></div>
+      <button class="icon-btn" id="btn-inventory" title="Inventory [B]">🎒</button>
+      <button class="icon-btn" id="btn-character" title="Character Sheet [C]">👤</button>
     </div>
   </header>
 
   <!-- HORDES.IO MINIMAP (Top Right) -->
-  <div id="hordes-minimap-container">
+  <div id="hordes-minimap">
     <canvas id="minimap-canvas" width="160" height="160"></canvas>
-    <div class="minimap-border"></div>
-    <div class="minimap-coords" id="minimap-coords">X: 0, Z: 0</div>
+    <div class="minimap-overlay">
+      <div class="minimap-coords" id="minimap-coords">X: 0, Z: 0</div>
+    </div>
   </div>
 
-  <!-- HORDES.IO LEFT CHAT / EVENT LOG -->
-  <div id="hordes-chat-box">
-    <div class="chat-tabs">
-      <button class="chat-tab active">General</button>
-      <button class="chat-tab">Virtue Log</button>
-      <button class="chat-tab">Party</button>
+  <!-- HORDES.IO CHAT & COMBAT/DEED LOG (Bottom Left) -->
+  <div id="hordes-chat">
+    <div class="chat-header">
+      <button class="chat-tab active" data-tab="all">All</button>
+      <button class="chat-tab" data-tab="deed">Virtue Log</button>
+      <button class="chat-tab" data-tab="party">Party</button>
     </div>
-    <div id="chat-messages" class="chat-messages">
-      <div class="msg system">Welcome to <strong style="color: #ffd700;">Dharma.io</strong>. Nurture, protect, and heal living beings across the realm.</div>
-      <div class="msg world"><span class="tag">[World]</span> Rishi_Ananda cleansed the Sacred Ganga Ghats! (+150 Punya)</div>
-      <div class="msg deed"><span class="tag">[Dharma]</span> Target injured wildlife or saplings with Left-Click/Tab, then press [1] to Heal!</div>
+    <div class="chat-body" id="chat-messages">
+      <div class="chat-line system"><span class="time">[System]</span> Welcome to <strong>Dharma.io</strong>. In this world, power comes from <em>saving, healing, and nurturing</em> all beings.</div>
+      <div class="chat-line world"><span class="time">[World]</span> <strong>Rishi_Ananda</strong> restored the injured Himalayan Fawn! (+120 Punya)</div>
+      <div class="chat-line guide"><span class="time">[Tip]</span> Left-click or press <kbd>[Tab]</kbd> to target injured wildlife, then press <kbd>[1]</kbd> to channel Sanjeevani Herbs!</div>
     </div>
-    <input type="text" id="chat-input" placeholder="Press Enter to chat..." />
+    <div class="chat-input-bar">
+      <input type="text" id="chat-input" placeholder="Press Enter to chant or chat..." />
+    </div>
   </div>
 
-  <!-- HORDES.IO TARGET UNIT FRAME (Compact Clean WebGL HUD) -->
+  <!-- HORDES.IO TARGET UNIT FRAME (Top Center) -->
   <div id="hordes-target-frame" class="target-hidden">
     <div class="target-card">
       <div class="target-header">
-        <span id="tgt-icon" class="tgt-icon">🦌</span>
-        <div class="tgt-info">
-          <div class="tgt-title-row">
-            <span id="tgt-name" class="tgt-name">Wounded Forest Fawn</span>
-            <span id="tgt-lvl" class="tgt-lvl">Lv. 3</span>
+        <span class="target-avatar" id="target-icon">🦌</span>
+        <div class="target-meta">
+          <div class="target-title-row">
+            <span class="target-name" id="target-name">Injured Forest Fawn</span>
+            <span class="target-lvl" id="target-lvl">Lv. 3</span>
           </div>
-          <span id="tgt-sub" class="tgt-sub">Injured Creature • Needs Sanjeevani Herbs</span>
+          <span class="target-type" id="target-type">Wildlife • Needs Sanjeevani Herbs</span>
         </div>
       </div>
-      <!-- Vitality / Life Bar -->
-      <div class="hordes-bar hp-bar">
-        <div id="tgt-hp-fill" class="hordes-bar-fill green-fill" style="width: 35%;"></div>
-        <span class="bar-label">VITALITY: <strong id="tgt-hp-val">35</strong> / 100</span>
+      <!-- Target Vitality Bar -->
+      <div class="bar-shell">
+        <div class="bar-fill hp-fill" id="target-hp-fill" style="width: 35%;"></div>
+        <span class="bar-text">VITALITY: <strong id="target-hp-val">35</strong> / 100</span>
       </div>
-      <!-- Distance indicator -->
-      <div class="tgt-distance" id="tgt-dist">Range: 8m (In Spell Range)</div>
+      <div class="target-range" id="target-range">Range: 8m (In Spell Range)</div>
     </div>
   </div>
 
-  <!-- HORDES.IO BOTTOM HUD: PLAYER ORBS, CLASS BARS & COMPACT HOTBAR -->
-  <div id="hordes-bottom-hud">
-    <!-- Player Status Stack (Prana HP & Punya Mana) -->
-    <div class="player-bars-stack">
-      <div class="player-name-row">
-        <span id="player-class-badge" class="class-tag vaidya">VAIDYA (HEALER)</span>
-        <span id="player-name" class="player-name">Sadhak</span>
-        <span class="player-level" id="player-lvl">Lv. 1</span>
+  <!-- HORDES.IO BOTTOM HUD: PLAYER UNIT BARS, CASTBAR, 4-CLASS SYSTEM & HOTBAR -->
+  <div id="hordes-bottom-bar">
+    <!-- Class Selector Modal (Vaidya / Palak / Sadhu / Dhanurdhar) -->
+    <div class="player-unit-card">
+      <div class="unit-row-top">
+        <span class="class-badge" id="player-class-badge">VAIDYA (DIVINE HEALER)</span>
+        <span class="player-handle" id="player-name">Sadhak</span>
+        <span class="player-lvl-badge" id="player-lvl">Lv. 1</span>
       </div>
-      <!-- Prana (HP) -->
-      <div class="hordes-bar prana-bar">
-        <div id="player-prana-fill" class="hordes-bar-fill green-fill" style="width: 100%;"></div>
-        <span class="bar-label">PRANA: <strong id="player-prana-val">100</strong> / 100</span>
+      <!-- Prana Bar (Green HP) -->
+      <div class="bar-shell prana-shell">
+        <div class="bar-fill prana-fill" id="player-prana-fill" style="width: 100%;"></div>
+        <span class="bar-text">PRANA (Life Force): <strong id="player-prana-val">100</strong> / 100</span>
       </div>
-      <!-- Punya (Mana / Karma Energy) -->
-      <div class="hordes-bar punya-bar">
-        <div id="player-punya-fill" class="hordes-bar-fill gold-fill" style="width: 25%;"></div>
-        <span class="bar-label">PUNYA: <strong id="player-punya-val">25</strong> / <strong id="player-punya-max">100</strong></span>
+      <!-- Punya Bar (Gold Mana/Karma) -->
+      <div class="bar-shell punya-shell">
+        <div class="bar-fill punya-fill" id="player-punya-fill" style="width: 30%;"></div>
+        <span class="bar-text">PUNYA (Karma Power): <strong id="player-punya-val">30</strong> / <strong id="player-punya-max">100</strong></span>
       </div>
-      <!-- Cast Bar -->
-      <div id="cast-bar-container" class="cast-hidden">
-        <div id="cast-bar-fill" class="cast-fill"></div>
-        <span id="cast-bar-label">Channelling Sanjeevani Herbs...</span>
+      <!-- Channeled Cast Bar -->
+      <div class="cast-shell cast-hidden" id="cast-container">
+        <div class="cast-fill" id="cast-fill"></div>
+        <span class="cast-label" id="cast-label">Channelling Sanjeevani Herbs...</span>
       </div>
     </div>
 
-    <!-- Hordes.io 8-Slot Crisp Hotbar -->
-    <div class="hordes-hotbar">
+    <!-- Hordes.io Crisp 8-Slot Hotbar -->
+    <div class="action-hotbar">
       <!-- 1: Sanjeevani Herbs (Heal Single Target) -->
-      <div class="h-slot" id="slot-1" data-key="1">
+      <div class="h-slot" id="slot-1" data-slot="1" title="Sanjeevani Herbs: Restores life to target [1]">
         <span class="h-key">1</span>
         <div class="h-icon">🌿</div>
         <div class="h-name">Sanjeevani</div>
         <div class="h-cd" id="cd-1"></div>
       </div>
-      <!-- 2: Ganga Jal (AoE Sanctify / Grow Saplings) -->
-      <div class="h-slot" id="slot-2" data-key="2">
+      <!-- 2: Ganga Jal (AoE Sanctify / Grow Flora) -->
+      <div class="h-slot" id="slot-2" data-slot="2" title="Ganga Jal: Purifies ground & waters plants [2]">
         <span class="h-key">2</span>
         <div class="h-icon">💧</div>
         <div class="h-name">Ganga Jal</div>
         <div class="h-cd" id="cd-2"></div>
       </div>
-      <!-- 3: Annadana (Feed / Restore Party Energy) -->
-      <div class="h-slot" id="slot-3" data-key="3">
+      <!-- 3: Annadana (Shared Pilgrim Meals) -->
+      <div class="h-slot" id="slot-3" data-slot="3" title="Annadana: Distribute food to travelers [3]">
         <span class="h-key">3</span>
         <div class="h-icon">🍲</div>
         <div class="h-name">Annadana</div>
         <div class="h-cd" id="cd-3"></div>
       </div>
-      <!-- 4: Surya Tejas (Speed Burst) -->
-      <div class="h-slot locked" id="slot-4" data-key="4">
+      <!-- 4: Surya Tejas (Speed Sprint Burst) -->
+      <div class="h-slot locked" id="slot-4" data-slot="4" title="Surya Tejas: 3x Solar Sprint speed [4]">
         <span class="h-key">4</span>
         <div class="h-icon">☀️</div>
         <div class="h-name">Surya Tejas</div>
@@ -145,54 +154,67 @@
         <div class="h-cd" id="cd-4"></div>
       </div>
       <!-- 5: Lotus Leap (High Levitation Jump) -->
-      <div class="h-slot locked" id="slot-5" data-key="5">
+      <div class="h-slot locked" id="slot-5" data-slot="5" title="Lotus Leap: Levitate over cliffs and rivers [5]">
         <span class="h-key">5</span>
         <div class="h-icon">🪷</div>
         <div class="h-name">Lotus Leap</div>
         <div class="lock-glyph">🔒</div>
         <div class="h-cd" id="cd-5"></div>
       </div>
-      <!-- 6: Akash Blink (Teleport Forward) -->
-      <div class="h-slot locked" id="slot-6" data-key="T">
+      <!-- 6: Akash Blink (Spatial Warp) -->
+      <div class="h-slot locked" id="slot-6" data-slot="6" title="Akash Blink: Teleport 36m forward [T]">
         <span class="h-key">T</span>
         <div class="h-icon">✨</div>
         <div class="h-name">Akash Blink</div>
         <div class="lock-glyph">🔒</div>
         <div class="h-cd" id="cd-6"></div>
       </div>
-      <!-- 7: Garuda Flight (Mount Mode) -->
-      <div class="h-slot locked" id="slot-7" data-key="F">
+      <!-- 7: Garuda Flight (Sky Gliding Mount) -->
+      <div class="h-slot locked" id="slot-7" data-slot="7" title="Garuda Flight: Soar freely across the open skies [F]">
         <span class="h-key">F</span>
         <div class="h-icon">🦅</div>
         <div class="h-name">Garuda Fly</div>
         <div class="lock-glyph">🔒</div>
         <div class="h-cd" id="cd-7"></div>
       </div>
-      <!-- 8: Devas & Realm Menu -->
-      <div class="h-slot" id="slot-8" data-key="M">
+      <!-- 8: Deities & Realm Empire -->
+      <div class="h-slot" id="slot-8" data-slot="8" title="Devas &amp; Sacred Lands [M]">
         <span class="h-key">M</span>
         <div class="h-icon">🛕</div>
-        <div class="h-name">Realm Map</div>
+        <div class="h-name">Devas/Map</div>
         <div class="h-cd" id="cd-8"></div>
       </div>
     </div>
   </div>
 
-  <!-- CELESTIAL MYTHIC BOON POPUP (Blox Fruits style surprise power) -->
-  <div id="gift-modal" class="gift-modal-hidden">
-    <div class="gift-card">
-      <div class="gift-rarity" id="gift-rarity-text">⭐ MYTHIC CELESTIAL BOON ⭐</div>
-      <div class="gift-icon-big" id="gift-icon-big">🪷</div>
-      <h2 id="gift-name-text">Padma Siddhi (Lotus Leap)</h2>
-      <p id="gift-desc-text">Unlocked through selfless deeds of nurturing sacred life! Press [Space] to soar over terrain and water.</p>
-      <button id="gift-claim-btn" class="hordes-btn">Claim Prasadam [Enter]</button>
+  <!-- SURPRISE BLOX-FRUITS CELESTIAL MYTHIC BOON POPUP -->
+  <div id="gift-modal" class="modal-backdrop-hidden">
+    <div class="mythic-card">
+      <div class="mythic-badge" id="gift-tier">⭐ MYTHIC CELESTIAL BOON ⭐</div>
+      <div class="mythic-icon" id="gift-icon">🪷</div>
+      <h2 class="mythic-title" id="gift-title">Padma Siddhi (Lotus Leap)</h2>
+      <p class="mythic-desc" id="gift-desc">Awakened from selfless deeds of nursing sacred life! Press [Space] to leap sky-high over terrain.</p>
+      <button class="hordes-btn" id="btn-claim-gift">Claim Prasadam [Enter]</button>
     </div>
   </div>
 
-  <!-- FLOATING TEXT CONTAINER (Hordes-style clean scrolling combat/healing numbers) -->
+  <!-- INVENTORY & GEAR POPUP (B) -->
+  <div id="inventory-modal" class="modal-backdrop-hidden">
+    <div class="window-card">
+      <div class="window-header">
+        <span>🎒 SAGE INVENTORY &amp; RELICS</span>
+        <button class="close-x" id="btn-close-inv">✕</button>
+      </div>
+      <div class="inventory-grid" id="inv-grid">
+        <!-- 16 Inventory Slots with Rarity Glow -->
+      </div>
+    </div>
+  </div>
+
+  <!-- FLOATING COMBAT/HEALING NUMBERS -->
   <div id="floating-text-container"></div>
 
-  <!-- Engine Script -->
+  <!-- Game Script -->
   <script type="module" src="game.js"></script>
 </body>
 </html>
