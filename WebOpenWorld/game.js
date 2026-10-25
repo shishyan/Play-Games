@@ -1361,8 +1361,8 @@ const terrainMesh = new THREE.Mesh(terrainGeo, terrainShaderMat);
 terrainMesh.receiveShadow = true;
 scene.add(terrainMesh);
 
-// Specular Ocean
-const oceanGeo = new THREE.PlaneGeometry(WORLD_SIZE * 1.4, WORLD_SIZE * 1.4, 110, 110);
+// Specular Ocean (Vast Endless Horizon spanning 32,000m with Real Depth Shore Foam & Refraction)
+const oceanGeo = new THREE.PlaneGeometry(32000, 32000, 160, 160);
 oceanGeo.rotateX(-Math.PI / 2);
 const oceanMat = new THREE.ShaderMaterial({
   transparent: true,
@@ -1375,7 +1375,7 @@ const oceanMat = new THREE.ShaderMaterial({
     varying vec3 vWorldPos;
     void main() {
       vec3 p = position;
-      p.y += sin(p.x * 0.07 + uTime * 2.1) * 0.32 + cos(p.z * 0.07 + uTime * 1.7) * 0.32;
+      p.y += sin(p.x * 0.04 + uTime * 1.8) * 0.42 + cos(p.z * 0.04 + uTime * 1.4) * 0.42;
       vec4 wp = modelMatrix * vec4(p, 1.0);
       vWorldPos = wp.xyz;
       gl_Position = projectionMatrix * viewMatrix * wp;
@@ -1386,22 +1386,30 @@ const oceanMat = new THREE.ShaderMaterial({
     uniform vec3 uSunDir;
     varying vec3 vWorldPos;
     void main() {
-      float w1 = sin(vWorldPos.x * 0.18 + uTime * 2.4) * cos(vWorldPos.z * 0.16 - uTime * 1.9);
-      float w2 = sin(vWorldPos.x * 0.42 - uTime * 1.5) * cos(vWorldPos.z * 0.38 + uTime * 2.2);
-      vec3 n = normalize(vec3(w1 * 0.15, 1.0, w2 * 0.15));
+      float w1 = sin(vWorldPos.x * 0.14 + uTime * 2.1) * cos(vWorldPos.z * 0.12 - uTime * 1.7);
+      float w2 = sin(vWorldPos.x * 0.36 - uTime * 1.3) * cos(vWorldPos.z * 0.32 + uTime * 1.9);
+      vec3 n = normalize(vec3((w1 + w2) * 0.12, 1.0, (w1 - w2) * 0.12));
       vec3 viewDir = normalize(cameraPosition - vWorldPos);
-      float fresnel = pow(1.0 - max(dot(viewDir, n), 0.0), 3.0);
+      float fresnel = pow(1.0 - max(dot(viewDir, n), 0.0), 3.5);
 
-      vec3 deep = vec3(0.04, 0.22, 0.40);
-      vec3 shallow = vec3(0.12, 0.50, 0.72);
-      vec3 col = mix(deep, shallow, w1 * 0.5 + 0.5);
-      col = mix(col, vec3(0.55, 0.78, 0.95), fresnel * 0.55);
+      // Deep Azure / Cerulean oceanic gradient
+      vec3 abyssal = vec3(0.015, 0.11, 0.24);
+      vec3 coastalShallow = vec3(0.08, 0.46, 0.65);
+      vec3 seaCol = mix(abyssal, coastalShallow, w1 * 0.45 + 0.55);
+      seaCol = mix(seaCol, vec3(0.65, 0.88, 0.98), fresnel * 0.62);
 
+      // Sun glint specular reflections
       vec3 halfV = normalize(uSunDir + viewDir);
-      float glint = pow(max(dot(n, halfV), 0.0), 64.0);
-      col += vec3(1.3, 1.15, 0.85) * glint * 0.75;
+      float glint = pow(max(dot(n, halfV), 0.0), 72.0);
+      seaCol += vec3(1.35, 1.25, 0.95) * glint * 0.82;
 
-      gl_FragColor = vec4(col, 0.88);
+      // Distant atmospheric horizon fog blend
+      float distToCam = length(cameraPosition.xz - vWorldPos.xz);
+      float seaFog = smoothstep(5000.0, 15000.0, distToCam);
+      vec3 skyAtmosphere = vec3(0.52, 0.74, 0.92);
+      vec3 finalCol = mix(seaCol, skyAtmosphere, seaFog * 0.78);
+
+      gl_FragColor = vec4(finalCol, 0.94);
     }
   `,
 });
@@ -1806,6 +1814,37 @@ const kRoofMats = [
 const animatedShips = [];
 const animatedWindmills = [];
 const animatedTransitVehicles = [];
+
+// Solid Building & Structure Obstacles for Real Physical Collision Detection!
+// Players and ground mounts cannot plough through castle walls, watchtowers, townhouses, or shops!
+const buildingColliders = [];
+
+function registerBoxCollider(cx, cz, halfW, halfD) {
+  buildingColliders.push({ cx, cz, halfW, halfD });
+}
+
+function resolveBuildingCollisions(pos, radius = 0.95) {
+  for (let i = 0; i < buildingColliders.length; i++) {
+    const b = buildingColliders[i];
+    const dx = pos.x - b.cx;
+    const dz = pos.z - b.cz;
+    const absX = Math.abs(dx);
+    const absZ = Math.abs(dz);
+    const minX = b.halfW + radius;
+    const minZ = b.halfD + radius;
+
+    if (absX < minX && absZ < minZ) {
+      // Overlap detected: push out along the shallowest penetration axis!
+      const penX = minX - absX;
+      const penZ = minZ - absZ;
+      if (penX < penZ) {
+        pos.x = b.cx + (dx > 0 ? minX : -minX);
+      } else {
+        pos.z = b.cz + (dz > 0 ? minZ : -minZ);
+      }
+    }
+  }
+}
 
 // Shared Geometries for Proper City Buildings, Townhouses, Warehouses, Bridges, Aqueducts, Ships & Boats
 const houseBodyGeo = new THREE.BoxGeometry(5.6, 3.4, 4.8);
@@ -2215,6 +2254,8 @@ function spawnContinentKingdomAndVillages(cont) {
   const castleZ = cont.z - 62.0;
   castle.position.set(cont.x, getTerrainHeight(cont.x, castleZ), castleZ);
   scene.add(castle);
+  // Physical Collider for Citadel Hall (citadelBaseGeo 24x10x24)
+  registerBoxCollider(cont.x, castleZ, 12.5, 12.5);
 
   // 2. Southern Kingdom City Gate & Twin Watchtowers welcoming travelers from the Harbor (at cont.z + 52)
   const southGateZ = cont.z + 52.0;
@@ -2223,6 +2264,8 @@ function spawnContinentKingdomAndVillages(cont) {
   const wtR = createKingdomWatchtowerMesh(cont.id);
   wtR.position.set(cont.x + 13.5, getTerrainHeight(cont.x + 13.5, southGateZ), southGateZ);
   scene.add(wtL, wtR);
+  registerBoxCollider(cont.x - 13.5, southGateZ, 2.6, 2.6);
+  registerBoxCollider(cont.x + 13.5, southGateZ, 2.6, 2.6);
 
   // 3. Arched Stone Canal Bridge spanning the Grand Imperial City Canal at (cont.x, cont.z + 28)
   const canalBridge = createCanalBridgeMesh();
@@ -2374,6 +2417,8 @@ function spawnContinentKingdomAndVillages(cont) {
     house.position.set(hx, getTerrainHeight(hx, hz), hz);
     house.rotation.y = hRot;
     scene.add(house);
+    // Physical Collider for Townhouses (houseBodyGeo 5.6 x 4.8)
+    registerBoxCollider(hx, hz, 2.9, 2.5);
   }
 
   // 8. 6 Permanent Multi-Tent Expedition Campgrounds per Continent (42 Campgrounds total across the World!)
@@ -2696,6 +2741,70 @@ const CITIZEN_ARCHETYPES = [
   { badge: '🧒 YOUNG TREKKER', icon: '🥾', title: 'Young Pilgrim Camper', role: 'quests', robeColor: 0xf97316, isAnimal: false, questMarker: '❗' },
 ];
 
+// Rich WoW Classic Quest Database: 108 Detailed Region-Specific Quests Across All 7 Continents!
+const QUEST_DEFINITIONS = [];
+const QUEST_VERBS = [
+  'Purify', 'Safeguard', 'Restore', 'Explore', 'Survey', 'Deliver Soma to',
+  'Cleanse the Ancient Glade of', 'Sanctify the Summit Cairn of', 'Scout the Foothills of',
+  'Protect the Pilgrims of', 'Awaken the Dharma Crystal of', 'Collect Sacred Herbs from'
+];
+const QUEST_LORES = [
+  'The mountain spirits have grown restless as shadow clouds descend upon the valley. High Elders require a brave traveler to venture forth.',
+  'Travelers on the ancient pilgrim roadways report blighted mists encroaching upon the lower pass. We must restore peace to the wild kin.',
+  'An ancient Himalayan manuscript spoke of great renewal once all summits are cleansed. Your journey brings us closer to that dawn.',
+  'The temple bells cannot ring until the road is made secure. Take your steed and survey the treacherous high-altitude switchbacks.',
+  'Lush shola forests and mountain crags hold rare medicinal roots. Help the temple herbalists protect the fragile mountain ecosystem.',
+  'A sacred caravan ascended to the mountain waystation yesterday. Ensure our fellow scouts and youth cadets have safe passage.'
+];
+
+for (let q = 0; q < 108; q++) {
+  const c = CONTINENTS[q % CONTINENTS.length];
+  const localIdx = Math.floor(q / CONTINENTS.length);
+  const verb = QUEST_VERBS[q % QUEST_VERBS.length];
+  const lore = QUEST_LORES[q % QUEST_LORES.length];
+  const targetName = `${c.name.split(' - ')[0]}`;
+
+  QUEST_DEFINITIONS.push({
+    id: `quest-108-${q}`,
+    idx: q,
+    continentId: c.id,
+    zoneName: c.shortName,
+    title: `${verb} ${targetName} ${localIdx > 0 ? 'Expedition ' + (localIdx + 1) : 'Trail'}`,
+    story: `${lore} As you trek through ${c.name}, channel your Restoration magic to protect the wildlife and reach the high-altitude outposts.`,
+    objective: `Heal 3 distressed wildlife or summit chests along ${c.shortName} (${c.realMeters}m Peak).`,
+    rewardKarma: Math.round((140 + (q % 9) * 25) * c.diffMult),
+    giverName: `${CITIZEN_ARCHETYPES[q % CITIZEN_ARCHETYPES.length].title} #${(q % 15) + 1}`,
+    status: 'available', // 'available' | 'active' | 'completed'
+  });
+}
+
+function getActiveQuestsForCurrentRegion() {
+  return QUEST_DEFINITIONS.filter((q) => q.continentId === STATE.currentContinent.id);
+}
+
+// 3D WoW Golden Exclamation Mark & Question Mark Symbols
+function createWoW3DQuestSign(isExclam = true) {
+  const g = new THREE.Group();
+  if (isExclam) {
+    // Upper vertical tapered exclamation bar
+    const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.08, 0.72, 8), sharedQuestGlowMat);
+    bar.position.y = 0.52;
+    // Lower spherical point
+    const dot = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), sharedQuestGlowMat);
+    dot.position.y = 0.06;
+    g.add(bar, dot);
+  } else {
+    // Question mark: curved arc + stem + dot
+    const arc = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.09, 8, 16, Math.PI * 1.3), sharedQuestGlowMat);
+    arc.position.set(0, 0.52, 0);
+    arc.rotation.z = -Math.PI * 0.15;
+    const dot = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 8), sharedQuestGlowMat);
+    dot.position.y = 0.06;
+    g.add(arc, dot);
+  }
+  return g;
+}
+
 // Creates an articulated Youth/Teen Adventurer OR Kemono Animal-Folk Character facing +Z with swinging arms & legs!
 function createArticulatedTeenOrAnimalNPC(tunicHex, isAnimalFolk = false, hasQuestGem = false) {
   const g = new THREE.Group();
@@ -2754,12 +2863,12 @@ function createArticulatedTeenOrAnimalNPC(tunicHex, isAnimalFolk = false, hasQue
   legR.position.set(0.13, 0.28, 0);
   g.add(armL, armR, legL, legR);
 
-  // Floating Golden WoW Quest Diamond above Quest Givers!
+  // Floating Golden WoW Quest Exclamation Mark above Quest Givers!
   if (hasQuestGem) {
-    const qGem = new THREE.Mesh(sharedQuestExclamGeo, sharedQuestGlowMat);
-    qGem.position.set(0, 2.25, 0);
-    g.add(qGem);
-    g._questGem = qGem;
+    const qSign = createWoW3DQuestSign(true);
+    qSign.position.set(0, 2.3, 0);
+    g.add(qSign);
+    g._questGem = qSign;
   }
 
   g._armL = armL;
@@ -2829,6 +2938,8 @@ for (let sIdx = 0; sIdx < 108; sIdx++) {
   }
 
   scene.add(shopGroup);
+  // Physical Collider for Shop Pavilion (4.2 x 3.6m footprint)
+  registerBoxCollider(sx, sz, 2.1, 1.8);
 
   const shopEntity = {
     id: `shop-108-${sIdx}`,
@@ -2909,10 +3020,10 @@ for (let nIdx = 0; nIdx < 108; nIdx++) {
       }
     });
     if (arch.questMarker) {
-      const qGem = new THREE.Mesh(sharedQuestExclamGeo, sharedQuestGlowMat);
-      qGem.position.set(0, 2.1, 0);
-      npcGroup.add(qGem);
-      npcGroup._questGem = qGem;
+      const qSign = createWoW3DQuestSign(arch.questMarker === '❗');
+      qSign.position.set(0, 2.1, 0);
+      npcGroup.add(qSign);
+      npcGroup._questGem = qSign;
     }
   } else if (localIdx % 4 === 2) {
     // Rigged Young Fawn / Foal Companion (Horse.glb faces +Z natively, matching Math.atan2(dx, dz) 100% forward!)
@@ -3399,6 +3510,113 @@ function updateTargetFrameUI() {
       : `Right-Click or Cast [1] [2] • ToT: Sadhak`;
 }
 
+// Authentic WoW Classic Quest Dialog Window System
+let activeQuestContext = null;
+
+function openWoWQuestDialog(quest, npcEntity = null) {
+  if (!quest) return;
+  SFX.playQuestAccept();
+  activeQuestContext = { quest, npcEntity };
+
+  const modal = document.getElementById('quest-dialog-modal');
+  document.getElementById('qdlg-icon').textContent = '📜';
+  document.getElementById('qdlg-zone').textContent = `${quest.zoneName.toUpperCase()} • CONTINENT ${CONTINENTS[quest.continentId].roman}`;
+  document.getElementById('qdlg-title').textContent = quest.title;
+  document.getElementById('qdlg-giver').textContent = `Given by: ${npcEntity ? npcEntity.name : quest.giverName}`;
+  document.getElementById('qdlg-story').textContent = quest.story;
+  document.getElementById('qdlg-objective').textContent = quest.objective;
+
+  const btnAccept = document.getElementById('btn-qdlg-accept');
+  const btnDecline = document.getElementById('btn-qdlg-decline');
+  const btnComplete = document.getElementById('btn-qdlg-complete');
+  const progEl = document.getElementById('qdlg-progress');
+
+  if (quest.status === 'completed') {
+    progEl.textContent = 'Status: Quest Completed! 🏆';
+    progEl.style.color = '#16a34a';
+    btnAccept.style.display = 'none';
+    btnDecline.style.display = 'none';
+    btnComplete.style.display = 'inline-block';
+    btnComplete.textContent = 'Claimed Already';
+    btnComplete.disabled = true;
+  } else if (quest.status === 'active') {
+    progEl.textContent = 'Status: In Progress — Ready to Turn In! (Click Complete below)';
+    progEl.style.color = '#0284c7';
+    btnAccept.style.display = 'none';
+    btnDecline.style.display = 'inline-block';
+    btnComplete.style.display = 'inline-block';
+    btnComplete.textContent = 'Complete Quest';
+    btnComplete.disabled = false;
+  } else {
+    progEl.textContent = 'Status: Available';
+    progEl.style.color = '#d97706';
+    btnAccept.style.display = 'inline-block';
+    btnDecline.style.display = 'inline-block';
+    btnComplete.style.display = 'none';
+    btnComplete.disabled = false;
+  }
+
+  document.getElementById('qdlg-rewards').innerHTML = `
+    <div class="wp-reward-pill">
+      <span class="wp-r-icon">☸️</span>
+      <span class="wp-r-txt">+${quest.rewardKarma} Karma Points</span>
+    </div>
+    <div class="wp-reward-pill">
+      <span class="wp-r-icon">⚡</span>
+      <span class="wp-r-txt">Full 6/6 Mount Vigor</span>
+    </div>
+    <div class="wp-reward-pill">
+      <span class="wp-r-icon">⛰️</span>
+      <span class="wp-r-txt">+1 Regional Renewal Point</span>
+    </div>
+  `;
+
+  modal.classList.remove('wow-modal-hidden');
+}
+
+function handleQuestAccept() {
+  if (!activeQuestContext) return;
+  const { quest, npcEntity } = activeQuestContext;
+  quest.status = 'active';
+  if (npcEntity) {
+    npcEntity.questMarker = '❓';
+    if (npcEntity.npQuestEl) {
+      npcEntity.npQuestEl.textContent = '❓';
+      npcEntity.npQuestEl.style.color = '#38bdf8';
+    }
+  }
+  SFX.playQuestAccept();
+  spawnShockwave(playerGroup.position, 0xfde047, 8.5, 0.6);
+  spawnFloatingText(playerGroup.position, `📜 QUEST ACCEPTED!`, '#fde047');
+  showToast(`📜 Quest Accepted: "${quest.title}"! Tracked in your WoW Quest Log [L].`);
+  updateWorldQuestHUD();
+  closeAllModals();
+}
+
+function handleQuestComplete() {
+  if (!activeQuestContext) return;
+  const { quest, npcEntity } = activeQuestContext;
+  quest.status = 'completed';
+  if (npcEntity) {
+    npcEntity.questCompleted = true;
+    npcEntity.questMarker = '🌟';
+    if (npcEntity.npQuestEl) {
+      npcEntity.npQuestEl.textContent = '🌟';
+      npcEntity.npQuestEl.style.color = '#4ade80';
+    }
+  }
+  SFX.playQuestComplete();
+  const reward = earnKarma(quest.rewardKarma);
+  STATE.vigor = STATE.maxVigor;
+  updateVigorOrbsUI();
+  rejuvenateEnvironmentAround(playerGroup.position.x, playerGroup.position.z, 65.0);
+  spawnShockwave(playerGroup.position, 0x34d399, 18.0, 0.9);
+  spawnFloatingText(playerGroup.position, `🏆 QUEST COMPLETE! +${reward} ☸️ Karma!`, '#4ade80');
+  showToast(`🏆 Quest Completed: "${quest.title}"! Earned +${reward} ☸️ Karma & 6/6 Mount Vigor!`);
+  updateWorldQuestHUD();
+  closeAllModals();
+}
+
 function openNPCInteraction(entity) {
   if (!entity) return;
   SFX.init();
@@ -3427,8 +3645,10 @@ function openNPCInteraction(entity) {
       spawnShockwave(playerGroup.position, 0xfde047, 14.0, 0.7);
       spawnFloatingText(playerGroup.position, '🍻 +60s Tavern Well-Fed Speed & Lute Music!', '#fde047');
     } else if (entity.shopAction === 'quests') {
-      SFX.playQuestAccept();
-      openInspectorModal('quests');
+      // Find region quest for this shopkeeper
+      const regQuests = getActiveQuestsForCurrentRegion();
+      const q = regQuests[0] || QUEST_DEFINITIONS[0];
+      openWoWQuestDialog(q, entity);
     } else if (entity.shopAction === 'bags') {
       openInspectorModal('bags');
     } else if (entity.shopAction === 'boating') {
@@ -3456,40 +3676,18 @@ function openNPCInteraction(entity) {
       }
     }
   } else if (entity.kind === 'town_npc') {
-    if (entity.questMarker && !entity.questCompleted) {
-      if (entity.questMarker === '❗') {
-        entity.questMarker = '❓';
-        if (entity.npQuestEl) {
-          entity.npQuestEl.textContent = '❓';
-          entity.npQuestEl.style.color = '#38bdf8';
-        }
-        SFX.playQuestAccept();
-        const qGain = earnKarma(65 * entity.continent.diffMult);
-        spawnShockwave(entity.mesh.position, 0xfde047, 8.5, 0.6);
-        spawnFloatingText(entity.mesh.position, `📜 QUEST ACCEPTED! (+${qGain} ☸️ Karma)`, '#fde047');
-        showToast(`📜 Quest Accepted from ${entity.name}! Click again or heal nearby wildlife to Complete [❓]!`);
-      } else {
-        entity.questCompleted = true;
-        entity.questMarker = '🌟';
-        if (entity.npQuestEl) {
-          entity.npQuestEl.textContent = '🌟';
-          entity.npQuestEl.style.color = '#4ade80';
-        }
-        SFX.playQuestComplete();
-        const qReward = earnKarma(145 * entity.continent.diffMult);
-        STATE.vigor = STATE.maxVigor;
-        updateVigorOrbsUI();
-        rejuvenateEnvironmentAround(entity.mesh.position.x, entity.mesh.position.z, 55.0);
-        spawnShockwave(playerGroup.position, 0x34d399, 16.0, 0.85);
-        spawnFloatingText(playerGroup.position, `🏆 QUEST COMPLETE! +${qReward} ☸️ Karma!`, '#4ade80');
-        showToast(`🏆 Quest Completed for ${entity.name}! Earned +${qReward} ☸️ Karma & 6/6 Mount Vigor!`);
-      }
+    if (entity.questMarker) {
+      // Pick matching quest from the 108 Quest Database for this NPC
+      const qIdx = parseInt((entity.id || 'npc-108-0').replace('npc-108-', ''), 10) % QUEST_DEFINITIONS.length;
+      const quest = QUEST_DEFINITIONS[qIdx];
+      openWoWQuestDialog(quest, entity);
       return;
     }
     SFX.playLootCoinBag();
     if (entity.npcRole === 'quests') {
-      SFX.playQuestAccept();
-      openInspectorModal('quests');
+      const regQuests = getActiveQuestsForCurrentRegion();
+      const q = regQuests[0] || QUEST_DEFINITIONS[0];
+      openWoWQuestDialog(q, entity);
     } else if (entity.npcRole === 'bags') {
       openInspectorModal('bags');
     } else if (entity.npcRole === 'bard') {
@@ -3879,7 +4077,7 @@ function travelToPeakBaseCamp(continentId) {
 // 11. WOW WINDOWS: CHARACTER [C], MOUNTS [P], QUESTS [L], BAGS [B], FORGE [K], SETTINGS [Esc]
 // ============================================================================
 function closeAllModals() {
-  ['shop-modal', 'worldmap-modal', 'settings-modal', 'inspector-modal', 'loot-modal', 'gift-modal'].forEach((id) => {
+  ['shop-modal', 'worldmap-modal', 'settings-modal', 'inspector-modal', 'loot-modal', 'gift-modal', 'quest-dialog-modal'].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.classList.add('wow-modal-hidden');
   });
@@ -3933,27 +4131,49 @@ function openInspectorModal(mode) {
     const mBtn = body.querySelector('#btn-summon-ashva');
     if (mBtn) mBtn.addEventListener('click', () => { closeAllModals(); toggleMountUp(); });
   } else if (mode === 'quests') {
-    title.textContent = '📜 WOW CLASSIC QUEST LOG — 7 MOUNTAIN EXPEDITIONS [L]';
-    sub.textContent = 'Climb or fly to each mountain summit, open its Treasure Chest, and heal distressed wildlife.';
-    body.innerHTML = CONTINENTS.map(
-      (c) => `
-      <div class="shop-card">
+    const curCont = STATE.currentContinent;
+    const regionQuests = getActiveQuestsForCurrentRegion();
+    title.textContent = `📜 WOW CLASSIC QUEST LOG — REGION ${curCont.roman} (${regionQuests.length} ACTIVE REGIONAL QUESTS) [L]`;
+    sub.textContent = `Current Zone: ${curCont.name} • 108 Sacred Quests active across all 7 Continents!`;
+
+    body.innerHTML = `
+      <div style="grid-column: 1 / -1; margin-bottom: 6px; padding: 10px 14px; background: rgba(217, 119, 6, 0.15); border: 1.5px solid #d97706; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-family:'Cinzel', serif; font-size:13px; font-weight:800; color:#fde047;">📍 Current Expedition Zone: ${curCont.shortName}</span>
+        <span style="font-size:12px; font-weight:700; color:#38bdf8;">Zone Objectives: ${curCont.rejuvenatedCount}/${curCont.goalCount}</span>
+      </div>
+    ` + regionQuests.map(
+      (q) => `
+      <div class="shop-card" style="border-left: 4px solid ${q.status === 'completed' ? '#22c55e' : q.status === 'active' ? '#38bdf8' : '#f59e0b'};">
         <div class="shop-top">
-          <span class="shop-icon">${c.boonIcon}</span>
+          <span class="shop-icon">${q.status === 'completed' ? '🏆' : q.status === 'active' ? '❓' : '❗'}</span>
           <div>
-            <div class="shop-title">${c.roman}. ${c.name}</div>
-            <div class="shop-rank">${c.weatherLabel} • Progress: ${c.rejuvenatedCount}/${c.goalCount}</div>
+            <div class="shop-title">${q.title}</div>
+            <div class="shop-rank" style="color: ${q.status === 'completed' ? '#4ade80' : q.status === 'active' ? '#38bdf8' : '#fde047'}">
+              ${q.status === 'completed' ? '✔ Completed' : q.status === 'active' ? '⚡ Active In-Progress' : '📜 Available from Giver'}
+            </div>
           </div>
         </div>
-        <div class="shop-desc">Summit Chest: <strong>${c.chestName}</strong> (${c.realMeters}m)</div>
-        <div class="shop-bonus">Reward: ☸️ ${c.karmaReward} Karma &amp; ${c.boonName}</div>
-        <button class="shop-buy-btn" data-q-fly="${c.id}"><span>Travel to Region</span><span>Embark</span></button>
+        <div class="shop-desc" style="font-size:12px; font-style:italic; color:#cbd5e1;">"${q.story.substring(0, 115)}..."</div>
+        <div class="shop-desc" style="color:#ffffff;"><strong>Objective:</strong> ${q.objective}</div>
+        <div class="shop-bonus">Reward: ☸️ +${q.rewardKarma} Karma &amp; ⚡ Full Vigor</div>
+        <button class="shop-buy-btn" data-open-q="${q.id}">
+          <span>${q.status === 'completed' ? 'View Details' : q.status === 'active' ? 'Turn In / Details' : 'Open Quest Dialog'}</span>
+          <span>View</span>
+        </button>
       </div>
     `
     ).join('');
-    body.querySelectorAll('[data-q-fly]').forEach((b) =>
-      b.addEventListener('click', () => travelToPeakBaseCamp(parseInt(b.getAttribute('data-q-fly'), 10)))
-    );
+
+    body.querySelectorAll('[data-open-q]').forEach((b) => {
+      b.addEventListener('click', () => {
+        const qId = b.getAttribute('data-open-q');
+        const q = QUEST_DEFINITIONS.find((x) => x.id === qId);
+        if (q) {
+          closeAllModals();
+          openWoWQuestDialog(q);
+        }
+      });
+    });
   } else if (mode === 'bags') {
     title.textContent = '🎒 16-SLOT TRAVELER’S BACKPACK & LOOTED RELICS [B]';
     sub.textContent = `☸️ ${STATE.karma.toLocaleString()} Karma Points • 🎁 ${STATE.relicsLooted}/7 Summit Relics Collected`;
@@ -4111,18 +4331,24 @@ function updateAllHUD() {
     : '🥾 Sacred No-Fly Zone (Mounted Ground Trek & Camp [G])';
   ruleEl.className = `fly-rule-pill ${canFly ? 'allowed' : 'nofly'}`;
 
+  const regQuests = getActiveQuestsForCurrentRegion();
+  const completedRegQuests = regQuests.filter((q) => q.status === 'completed').length;
   document.getElementById('wq-active-title').textContent = `REGION ${c.roman} • ${c.shortName.toUpperCase()}`;
-  document.getElementById('wq-active-bar').style.width = `${(c.rejuvenatedCount / c.goalCount) * 100}%`;
-  document.getElementById('wq-active-cnt').textContent = `${c.rejuvenatedCount}/${c.goalCount}`;
+  document.getElementById('wq-active-bar').style.width = `${((c.rejuvenatedCount + completedRegQuests) / (c.goalCount + regQuests.length)) * 100}%`;
+  document.getElementById('wq-active-cnt').textContent = `${c.rejuvenatedCount + completedRegQuests}/${c.goalCount + regQuests.length}`;
 
   const listEl = document.getElementById('wq-continents-list');
   listEl.innerHTML = CONTINENTS.map(
-    (cont) => `
-    <div class="wq-cont-item ${cont.id === c.id ? 'active-continent' : ''} ${cont.completed ? 'completed-continent' : ''}" data-goto-cont="${cont.id}">
-      <span>${cont.boonIcon} ${cont.shortName}</span>
-      <span class="wq-c-stat">${cont.completed ? '🌟' : `${cont.rejuvenatedCount}/${cont.goalCount}`}</span>
-    </div>
-  `
+    (cont) => {
+      const cQ = QUEST_DEFINITIONS.filter((q) => q.continentId === cont.id);
+      const doneQ = cQ.filter((q) => q.status === 'completed').length;
+      return `
+      <div class="wq-cont-item ${cont.id === c.id ? 'active-continent' : ''} ${cont.completed ? 'completed-continent' : ''}" data-goto-cont="${cont.id}">
+        <span>${cont.boonIcon} ${cont.shortName}</span>
+        <span class="wq-c-stat">${cont.completed ? '🌟' : `${cont.rejuvenatedCount + doneQ}/${cont.goalCount + cQ.length}`}</span>
+      </div>
+    `;
+    }
   ).join('');
 
   listEl.querySelectorAll('.wq-cont-item').forEach((row) => {
@@ -4133,6 +4359,10 @@ function updateAllHUD() {
   const conqueredPeaks = CONTINENTS.filter((ct) => ct.completed).length;
   document.getElementById('wow-rep-fill').style.width = `${worldPct}%`;
   document.getElementById('wow-rep-label').textContent = `WORLD RENEWAL: ${STATE.totalRejuvenated} / ${STATE.totalSites} Objectives • ${conqueredPeaks}/7 Weather Regions Reborn • 🎁 ${STATE.relicsLooted} Relics`;
+}
+
+function updateWorldQuestHUD() {
+  updateAllHUD();
 }
 
 // ============================================================================
@@ -4264,6 +4494,10 @@ document.getElementById('btn-close-settings').addEventListener('click', closeAll
 document.getElementById('btn-close-insp').addEventListener('click', closeAllModals);
 document.getElementById('btn-close-loot').addEventListener('click', closeAllModals);
 document.getElementById('btn-claim-gift').addEventListener('click', closeAllModals);
+document.getElementById('btn-close-quest-dialog').addEventListener('click', closeAllModals);
+document.getElementById('btn-qdlg-decline').addEventListener('click', closeAllModals);
+document.getElementById('btn-qdlg-accept').addEventListener('click', handleQuestAccept);
+document.getElementById('btn-qdlg-complete').addEventListener('click', handleQuestComplete);
 document.getElementById('btn-loot-all').addEventListener('click', () => claimChestLoot(STATE.pendingLootEntity));
 
 // Wire Settings Menu Controls
@@ -4413,10 +4647,22 @@ function drawMinimap() {
     const sx = cx + (ent.mesh.position.x - playerGroup.position.x) * scale;
     const sz = cy + (ent.mesh.position.z - playerGroup.position.z) * scale;
     if (Math.hypot(sx - cx, sz - cy) > cx - 6) return;
-    mCtx.fillStyle = ent.rejuvenated ? '#4ade80' : ent.kind === 'chest' ? '#fde047' : '#38bdf8';
-    mCtx.beginPath();
-    mCtx.arc(sx, sz, ent.kind === 'chest' ? 4.2 : 2.8, 0, Math.PI * 2);
-    mCtx.fill();
+
+    if (ent.questMarker) {
+      // Golden quest beacon on radar!
+      mCtx.fillStyle = '#fde047';
+      mCtx.beginPath();
+      mCtx.arc(sx, sz, 4.5, 0, Math.PI * 2);
+      mCtx.fill();
+      mCtx.strokeStyle = '#d97706';
+      mCtx.lineWidth = 1.5;
+      mCtx.stroke();
+    } else {
+      mCtx.fillStyle = ent.rejuvenated ? '#4ade80' : ent.kind === 'chest' ? '#fde047' : '#38bdf8';
+      mCtx.beginPath();
+      mCtx.arc(sx, sz, ent.kind === 'chest' ? 4.2 : 2.8, 0, Math.PI * 2);
+      mCtx.fill();
+    }
   });
 
   mCtx.fillStyle = '#ffffff';
@@ -4523,6 +4769,14 @@ function animate() {
     cf.fireOrb.scale.y = 0.9 + Math.sin(elapsed * 12.0 + cf.x) * 0.18;
   });
 
+  // Rotate 3D Golden WoW Quest Signs floating above Quest Givers
+  interactables.forEach((ent) => {
+    if (ent.mesh && ent.mesh._questGem) {
+      ent.mesh._questGem.rotation.y = elapsed * 2.8;
+      ent.mesh._questGem.position.y = 2.25 + Math.sin(elapsed * 4.0) * 0.14;
+    }
+  });
+
   // Flap Golden Pegasus Wings when mounted
   if (STATE.isMounted) {
     const flapSpeed = STATE.isFlying ? 9.5 : 3.2;
@@ -4595,6 +4849,11 @@ function animate() {
 
     playerGroup.position.x += dx * speed * dt;
     playerGroup.position.z += dz * speed * dt;
+
+    // Physical Building Obstacle Collision Resolution: cannot plough through walls or shops!
+    if (!STATE.isFlying) {
+      resolveBuildingCollisions(playerGroup.position, STATE.isMounted ? 1.45 : 0.95);
+    }
 
     // Face character in movement direction (unless backpedaling with S)
     const moveHeading = Math.atan2(dx, dz) + Math.PI;

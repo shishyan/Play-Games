@@ -401,6 +401,66 @@
     </div>
   </div>
 
+  <!-- =====================================================================
+       12. AUTHENTIC WOW CLASSIC QUEST DIALOG POPUP WINDOW
+       ===================================================================== -->
+  <div id="quest-dialog-modal" class="wow-modal-hidden">
+    <div class="wow-parchment-window">
+      <div class="wp-parchment-frame">
+        <div class="wp-corner wp-tl"></div>
+        <div class="wp-corner wp-tr"></div>
+        <div class="wp-corner wp-bl"></div>
+        <div class="wp-corner wp-br"></div>
+        <button class="wp-close-x" id="btn-close-quest-dialog">✕</button>
+
+        <div class="wp-content-scroll">
+          <div class="wp-header-row">
+            <span class="wp-quest-icon" id="qdlg-icon">📜</span>
+            <div>
+              <div class="wp-zone-badge" id="qdlg-zone">WESTERN GHATS • LEVEL 1-10</div>
+              <h2 class="wp-quest-title" id="qdlg-title">Protect the Sacred Glade</h2>
+            </div>
+          </div>
+
+          <div class="wp-quest-giver" id="qdlg-giver">Given by: High Elder Veda</div>
+
+          <div class="wp-divider"></div>
+
+          <div class="wp-quest-story" id="qdlg-story">
+            Greetings, traveler. The sacred mountain ridges need your assistance...
+          </div>
+
+          <div class="wp-objective-box">
+            <div class="wp-obj-heading">QUEST OBJECTIVES</div>
+            <div class="wp-obj-desc" id="qdlg-objective">Purify 3 Blighted Groves and reach the Sahyadri Summit Outpost.</div>
+            <div class="wp-obj-progress" id="qdlg-progress">Progress: 0 / 1 Completed</div>
+          </div>
+
+          <div class="wp-rewards-box">
+            <div class="wp-rewards-heading">REWARDS</div>
+            <div class="wp-rewards-sub">You will receive:</div>
+            <div class="wp-rewards-row" id="qdlg-rewards">
+              <div class="wp-reward-pill">
+                <span class="wp-r-icon">☸️</span>
+                <span class="wp-r-txt">+150 Karma Points</span>
+              </div>
+              <div class="wp-reward-pill">
+                <span class="wp-r-icon">⚡</span>
+                <span class="wp-r-txt">Full 6/6 Mount Vigor</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="wp-footer-bar">
+          <button class="wp-wow-btn wp-btn-accept" id="btn-qdlg-accept">Accept Quest</button>
+          <button class="wp-wow-btn wp-btn-decline" id="btn-qdlg-decline">Decline</button>
+          <button class="wp-wow-btn wp-btn-complete" id="btn-qdlg-complete" style="display:none;">Complete Quest</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="floating-text-container"></div>
 
   <script type="module" src="game.js"></script>

@@ -917,3 +917,321 @@ body, html {
   20%  { opacity: 1; transform: translate(-50%, -14px) scale(1.08); }
   100% { opacity: 0; transform: translate(-50%, -52px) scale(0.96); }
 }
+
+/* ============================================================================
+   AUTHENTIC WOW CLASSIC PARCHMENT QUEST WINDOW & SLEEK HIGH-CONTRAST MODALS
+   ============================================================================ */
+#quest-dialog-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 8, 16, 0.72);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 90;
+}
+
+.wow-parchment-window {
+  width: min(580px, 94vw);
+  max-height: 88vh;
+  position: relative;
+  background: #fbf0d9;
+  background-image: 
+    radial-gradient(ellipse at 50% 20%, rgba(255, 255, 255, 0.45) 0%, rgba(224, 195, 148, 0.35) 70%),
+    linear-gradient(180deg, #f5ebd2 0%, #ecdcb9 50%, #dfcba2 100%);
+  border: 4px solid #4a3418;
+  border-radius: 8px;
+  box-shadow: 
+    0 0 0 2px #d4af37,
+    0 0 0 4px #2b1d0c,
+    0 16px 48px rgba(0, 0, 0, 0.95),
+    inset 0 0 35px rgba(110, 75, 28, 0.28);
+  color: #2b1d0c;
+  display: flex;
+  flex-direction: column;
+}
+
+.wp-parchment-frame {
+  position: relative;
+  padding: 24px 28px 20px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.wp-corner {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 3px solid #d4af37;
+  pointer-events: none;
+}
+.wp-tl { top: 6px; left: 6px; border-right: none; border-bottom: none; }
+.wp-tr { top: 6px; right: 6px; border-left: none; border-bottom: none; }
+.wp-bl { bottom: 6px; left: 6px; border-right: none; border-top: none; }
+.wp-br { bottom: 6px; right: 6px; border-left: none; border-top: none; }
+
+.wp-close-x {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  background: #3b220d;
+  color: #fce7b0;
+  border: 2px solid #c99c37;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  z-index: 2;
+}
+.wp-close-x:hover {
+  background: #c99c37;
+  color: #1e1005;
+  transform: scale(1.08);
+}
+
+.wp-content-scroll {
+  overflow-y: auto;
+  max-height: 60vh;
+  padding-right: 6px;
+  margin-bottom: 16px;
+}
+.wp-content-scroll::-webkit-scrollbar {
+  width: 7px;
+}
+.wp-content-scroll::-webkit-scrollbar-thumb {
+  background: #a27b40;
+  border-radius: 4px;
+}
+
+.wp-header-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 6px;
+}
+
+.wp-quest-icon {
+  font-size: 38px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45));
+}
+
+.wp-zone-badge {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #855818;
+}
+
+.wp-quest-title {
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 23px;
+  font-weight: 900;
+  color: #381a04;
+  margin: 2px 0 0 0;
+  line-height: 1.2;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.wp-quest-giver {
+  font-size: 12px;
+  font-weight: 700;
+  color: #63431d;
+  font-style: italic;
+  margin-bottom: 10px;
+}
+
+.wp-divider {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #b88f4b 20%, #8c6023 50%, #b88f4b 80%, transparent);
+  margin: 12px 0 14px;
+}
+
+.wp-quest-story {
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: #2e1a06;
+  font-weight: 500;
+  margin-bottom: 16px;
+  text-align: justify;
+}
+
+.wp-objective-box {
+  background: rgba(228, 207, 166, 0.65);
+  border: 1.5px solid #a88145;
+  border-radius: 6px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+
+.wp-obj-heading {
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  font-weight: 900;
+  color: #592e07;
+  letter-spacing: 0.06em;
+  margin-bottom: 5px;
+}
+
+.wp-obj-desc {
+  font-size: 13.5px;
+  color: #1f1204;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.wp-obj-progress {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #0369a1;
+  margin-top: 6px;
+}
+
+.wp-rewards-box {
+  background: rgba(243, 228, 197, 0.85);
+  border: 1.5px solid #c99c37;
+  border-radius: 6px;
+  padding: 12px 14px;
+}
+
+.wp-rewards-heading {
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  font-weight: 900;
+  color: #592e07;
+  letter-spacing: 0.06em;
+  margin-bottom: 3px;
+}
+
+.wp-rewards-sub {
+  font-size: 11.5px;
+  color: #5e3b14;
+  margin-bottom: 8px;
+}
+
+.wp-rewards-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.wp-reward-pill {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: #ffffff;
+  border: 1.5px solid #a88145;
+  border-radius: 5px;
+  padding: 6px 12px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.wp-r-icon {
+  font-size: 18px;
+}
+
+.wp-r-txt {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #1f1204;
+}
+
+.wp-footer-bar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  border-top: 2px solid #b88f4b;
+  padding-top: 14px;
+}
+
+.wp-wow-btn {
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 13.5px;
+  font-weight: 900;
+  padding: 9px 22px;
+  border-radius: 4px;
+  cursor: pointer;
+  letter-spacing: 0.05em;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.wp-btn-accept {
+  background: linear-gradient(180deg, #d97706 0%, #b45309 60%, #78350f 100%);
+  color: #fffbeb;
+  border: 2px solid #fde047;
+}
+.wp-btn-accept:hover {
+  background: linear-gradient(180deg, #f59e0b 0%, #d97706 60%, #92400e 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.5);
+}
+
+.wp-btn-decline {
+  background: linear-gradient(180deg, #475569 0%, #334155 60%, #1e293b 100%);
+  color: #f1f5f9;
+  border: 2px solid #94a3b8;
+}
+.wp-btn-decline:hover {
+  background: linear-gradient(180deg, #64748b 0%, #475569 60%, #334155 100%);
+}
+
+.wp-btn-complete {
+  background: linear-gradient(180deg, #16a34a 0%, #15803d 60%, #166534 100%);
+  color: #f0fdf4;
+  border: 2px solid #86efac;
+}
+.wp-btn-complete:hover {
+  background: linear-gradient(180deg, #22c55e 0%, #16a34a 60%, #15803d 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.55);
+}
+
+/* HIGH-READABILITY WOW INSPECTOR & POPUP WINDOWS */
+.sleek-modal {
+  background: #111827 !important;
+  border: 2px solid #d4af37 !important;
+  box-shadow: 0 0 0 1px #000, 0 16px 48px rgba(0, 0, 0, 0.95) !important;
+  color: #f8fafc !important;
+}
+
+.shop-card, .continent-card {
+  background: #1f2937 !important;
+  border: 1.5px solid #374151 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+}
+.shop-card:hover, .continent-card:hover {
+  border-color: #d4af37 !important;
+}
+
+.shop-title, .cc-title {
+  color: #fde047 !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+}
+
+.shop-desc {
+  color: #e2e8f0 !important;
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+}
+
+.shop-bonus {
+  color: #38bdf8 !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+}
+
+.loot-box {
+  background: #111827 !important;
+  border: 2px solid #d4af37 !important;
+  color: #f8fafc !important;
+}
+
