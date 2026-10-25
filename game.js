@@ -1,29 +1,218 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
 // ============================================================================
-// WORLD OF DHARMA — 7 CONTINENTS, KARMA CURRENCY & SACRED FORGE MMORPG
-// Classic WoW UI • Live GPU Blight-to-Lush Terrain Shader • Boundless Flight
+// WORLD OF DHARMA (2026) — DRAGONFLIGHT SKYRIDING, 7 WORLD PEAKS & TREKKING
+// Western Ghats • Nilgiris • Kilimanjaro • Kailash • Denali • Everest • Meru
 // ============================================================================
 
+// ============================================================================
+// 1. POLYPHONIC WEB AUDIO API WOW ORCHESTRAL & SPATIAL SOUND ENGINE
+// ============================================================================
+class WoWSoundEngine {
+  constructor() {
+    this.ctx = null;
+    this.muted = false;
+    this.ambientStarted = false;
+    this.masterGain = null;
+    this.reverbNode = null;
+  }
+
+  init() {
+    if (this.ctx) {
+      if (this.ctx.state === 'suspended') this.ctx.resume();
+      return;
+    }
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    this.ctx = new AudioCtx();
+    this.masterGain = this.ctx.createGain();
+    this.masterGain.gain.value = 0.42;
+
+    this.reverbNode = this.createCathedralReverb(2.6, 2.2);
+    const wetGain = this.ctx.createGain();
+    wetGain.gain.value = 0.48;
+    const dryGain = this.ctx.createGain();
+    dryGain.gain.value = 0.75;
+
+    this.masterGain.connect(dryGain);
+    this.masterGain.connect(this.reverbNode);
+    this.reverbNode.connect(wetGain);
+    dryGain.connect(this.ctx.destination);
+    wetGain.connect(this.ctx.destination);
+
+    this.startAmbientSoundscape();
+  }
+
+  createCathedralReverb(duration, decay) {
+    const rate = this.ctx.sampleRate;
+    const length = rate * duration;
+    const impulse = this.ctx.createBuffer(2, length, rate);
+    for (let ch = 0; ch < 2; ch++) {
+      const channelData = impulse.getChannelData(ch);
+      for (let i = 0; i < length; i++) {
+        channelData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+      }
+    }
+    const convolver = this.ctx.createConvolver();
+    convolver.buffer = impulse;
+    return convolver;
+  }
+
+  toggleMute() {
+    this.init();
+    this.muted = !this.muted;
+    if (this.masterGain) {
+      this.masterGain.gain.setTargetAtTime(this.muted ? 0.0 : 0.42, this.ctx.currentTime, 0.1);
+    }
+    const pill = document.getElementById('btn-audio-toggle');
+    if (pill) {
+      pill.textContent = this.muted ? '🔇 WoW Audio: MUTED' : '🔊 WoW Audio: ON';
+      pill.style.color = this.muted ? '#94a3b8' : '#4ade80';
+    }
+  }
+
+  startAmbientSoundscape() {
+    if (this.ambientStarted || !this.ctx) return;
+    this.ambientStarted = true;
+
+    const freqs = [73.42, 110.0, 185.0, 220.0, 329.63];
+    freqs.forEach((f, idx) => {
+      const osc = this.ctx.createOscillator();
+      const filter = this.ctx.createBiquadFilter();
+      const gain = this.ctx.createGain();
+      osc.type = idx % 2 === 0 ? 'sine' : 'triangle';
+      osc.frequency.value = f;
+      filter.type = 'lowpass';
+      filter.frequency.value = 420 + idx * 80;
+      gain.gain.value = 0.03;
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start();
+    });
+
+    setInterval(() => {
+      if (this.muted || !this.ctx || this.ctx.state !== 'running') return;
+      const scale = [293.66, 329.63, 369.99, 440.0, 493.88, 587.33, 659.25];
+      const f = scale[Math.floor(Math.random() * scale.length)];
+      this.playTone(f, 'sine', 1.8, 0.042, 0.08);
+    }, 4500);
+  }
+
+  playTone(freq, type = 'sine', duration = 0.4, volume = 0.18, attack = 0.015, freqEnd = null) {
+    this.init();
+    if (this.muted || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, now);
+    if (freqEnd) {
+      osc.frequency.exponentialRampToValueAtTime(freqEnd, now + duration);
+    }
+
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(volume, now + attack);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(now);
+    osc.stop(now + duration + 0.05);
+  }
+
+  playTargetClick() {
+    this.playTone(880, 'triangle', 0.09, 0.14, 0.005, 1320);
+  }
+
+  playCastStart() {
+    const notes = [440, 554.37, 659.25];
+    notes.forEach((n, i) => {
+      setTimeout(() => this.playTone(n, 'sine', 0.35, 0.09, 0.02, n * 1.12), i * 55);
+    });
+  }
+
+  playHealImpact() {
+    const chord = [587.33, 739.99, 880.0, 1174.66];
+    chord.forEach((n, i) => {
+      setTimeout(() => this.playTone(n, 'sine', 0.65, 0.11, 0.015), i * 35);
+    });
+  }
+
+  playNovaWave() {
+    this.playTone(146.83, 'triangle', 0.95, 0.22, 0.03, 73.42);
+    const shimmer = [440, 587.33, 659.25, 880, 1174.66];
+    shimmer.forEach((n, i) => {
+      setTimeout(() => this.playTone(n, 'sine', 0.75, 0.09, 0.02), i * 45);
+    });
+  }
+
+  playWoWLevelUpFanfare() {
+    const brassNotes = [
+      { f: 293.66, delay: 0, dur: 0.45 },
+      { f: 440.00, delay: 140, dur: 0.45 },
+      { f: 587.33, delay: 280, dur: 1.6 },
+      { f: 739.99, delay: 320, dur: 1.5 },
+      { f: 880.00, delay: 360, dur: 1.7 },
+    ];
+    brassNotes.forEach((bn) => {
+      setTimeout(() => {
+        this.playTone(bn.f, 'sawtooth', bn.dur, 0.11, 0.04);
+        this.playTone(bn.f * 0.5, 'triangle', bn.dur, 0.15, 0.04);
+      }, bn.delay);
+    });
+  }
+
+  playForgeAnvil() {
+    this.playTone(1480, 'square', 0.18, 0.14, 0.004, 740);
+    setTimeout(() => this.playTone(2217.46, 'sine', 0.55, 0.16, 0.005), 30);
+  }
+
+  playDragonRoarWingbeat() {
+    this.playTone(130.81, 'sawtooth', 0.55, 0.16, 0.03, 65.41);
+    setTimeout(() => this.playTone(261.63, 'triangle', 0.4, 0.12, 0.02, 523.25), 90);
+  }
+
+  playCampfireCrackle() {
+    const notes = [329.63, 392.0, 493.88, 659.25];
+    notes.forEach((n, i) => {
+      setTimeout(() => this.playTone(n, 'triangle', 0.5, 0.12, 0.02), i * 70);
+    });
+  }
+}
+
+const SFX = new WoWSoundEngine();
+
+// ============================================================================
+// 2. THE 7 GREAT MOUNTAINS OF THE WORLD (SKYRIDING vs NO-FLY TREKKING PEAKS)
+// ============================================================================
 const CONTINENTS = [
   {
     id: 0,
     roman: 'I',
-    name: 'Jambudvipa — The Ashen Groves',
-    shortName: 'I. Jambudvipa',
+    name: 'Western Ghats (Sahyadri — Kalsubai & Anamudi)',
+    shortName: 'I. Western Ghats',
     x: 0,
     z: 0,
     radius: 175,
+    peakHeight: 58.0, // Towering 3D summit with spiral trekking path!
+    realMeters: 2695,
+    allowFlying: true,
     tier: 1,
     diffMult: 1.0,
     maxHpBase: 120,
-    karmaReward: 95,
-    boonIcon: '☀️',
-    boonName: 'Boon of Surya (Solar Renewal)',
-    boonDesc: '+35% Sanjeevani Healing Power & +20% Karma Generation from all deeds.',
-    lushColor: new THREE.Color(0x2e7d32), // Deep Emerald Forest
+    karmaReward: 110,
+    chestName: 'Sahyadri Shola Chest',
+    boonIcon: '🐉',
+    boonName: 'Boon of Sahyadri (Monsoon Updraft)',
+    boonDesc: '+35% Healing Power & recharges Dragonflight Vigor Orbs 40% faster.',
     rejuvenatedCount: 0,
     goalCount: 4,
     completed: false,
@@ -31,19 +220,22 @@ const CONTINENTS = [
   {
     id: 1,
     roman: 'II',
-    name: 'Plakshadvipa — Weeping Fig Basin',
-    shortName: 'II. Plakshadvipa',
+    name: 'Nilgiri & Agasthyamalai Ghats (Doddabetta)',
+    shortName: 'II. Nilgiri Ghats',
     x: 0,
-    z: -420,
+    z: -430,
     radius: 175,
+    peakHeight: 68.0,
+    realMeters: 2637,
+    allowFlying: false, // SACRED NO-FLY TREKKING ZONE!
     tier: 2,
     diffMult: 1.8,
     maxHpBase: 220,
-    karmaReward: 165,
-    boonIcon: '💧',
-    boonName: 'Boon of Saraswati (Living Waters)',
-    boonDesc: 'Ganga Jal Nova [2] radius expands by +50% and restores +60 bonus Vitality.',
-    lushColor: new THREE.Color(0x1b8a6b), // Turquoise-Jade Sanctuary
+    karmaReward: 190,
+    chestName: 'Neelakurinji Summit Chest',
+    boonIcon: '🥾',
+    boonName: 'Boon of Agasthya (Master Trekker)',
+    boonDesc: '+50% Ganga Nova AoE Radius & +40% Foot-Trekking Sprint Speed on No-Fly Peaks!',
     rejuvenatedCount: 0,
     goalCount: 4,
     completed: false,
@@ -51,19 +243,22 @@ const CONTINENTS = [
   {
     id: 2,
     roman: 'III',
-    name: 'Salmalidvipa — Silk-Cotton Crags',
-    shortName: 'III. Salmalidvipa',
-    x: 380,
+    name: 'Mount Kilimanjaro & Matterhorn Crags',
+    shortName: 'III. Kilimanjaro',
+    x: 390,
     z: -240,
     radius: 175,
+    peakHeight: 78.0,
+    realMeters: 5895,
+    allowFlying: true,
     tier: 3,
     diffMult: 2.8,
     maxHpBase: 360,
-    karmaReward: 260,
+    karmaReward: 290,
+    chestName: 'Uhuru Crater Chest',
     boonIcon: '⚡',
-    boonName: 'Boon of Hanuman (Supersonic Wind)',
-    boonDesc: 'Doubles Vayu Speed-Run [4] & Garuda Flight [F] velocity and cuts spell cast time by 35%.',
-    lushColor: new THREE.Color(0x558b2f), // Golden-Olive Blossom Highland
+    boonName: 'Boon of the Sky-Drake (Supersonic Glide)',
+    boonDesc: 'Doubles Sky-Dragon Flight velocity and cuts spell cast time by 35%.',
     rejuvenatedCount: 0,
     goalCount: 4,
     completed: false,
@@ -71,19 +266,22 @@ const CONTINENTS = [
   {
     id: 3,
     roman: 'IV',
-    name: 'Kushadvipa — Scorched Grasslands',
-    shortName: 'IV. Kushadvipa',
-    x: 380,
+    name: 'Sacred Mount Kailash & Nanda Devi',
+    shortName: 'IV. Mt. Kailash',
+    x: 390,
     z: 240,
     radius: 175,
+    peakHeight: 92.0,
+    realMeters: 6638,
+    allowFlying: false, // SACRED NO-FLY PILGRIMAGE PARIKRAMA!
     tier: 4,
     diffMult: 4.2,
     maxHpBase: 540,
-    karmaReward: 390,
-    boonIcon: '🌸',
-    boonName: 'Boon of Lakshmi (Abundant Grace)',
-    boonDesc: 'Doubles all Karma Points (☸️) earned across the universe and empowers Sunbeam [3].',
-    lushColor: new THREE.Color(0x689f38), // Golden Meadow Steppe
+    karmaReward: 440,
+    chestName: 'Manasarovar Relic Chest',
+    boonIcon: '🔱',
+    boonName: 'Boon of Kailash (Shiva’s Parikrama)',
+    boonDesc: 'Doubles all Karma Points (☸️) earned across the universe and empowers Campfires [C].',
     rejuvenatedCount: 0,
     goalCount: 4,
     completed: false,
@@ -91,19 +289,22 @@ const CONTINENTS = [
   {
     id: 4,
     roman: 'V',
-    name: 'Kraunchadvipa — Heron Peaks',
-    shortName: 'V. Kraunchadvipa',
+    name: 'Denali & Aconcagua (Andean-Alaskan Ridge)',
+    shortName: 'V. Denali Peak',
     x: 0,
-    z: 420,
+    z: 430,
     radius: 175,
+    peakHeight: 104.0,
+    realMeters: 6961,
+    allowFlying: true,
     tier: 5,
     diffMult: 6.0,
     maxHpBase: 780,
-    karmaReward: 560,
+    karmaReward: 620,
+    chestName: 'High-Andes Condor Chest',
     boonIcon: '🐘',
-    boonName: 'Boon of Ganesha (Obstacle Breaker)',
-    boonDesc: 'All spells automatically chain-heal 2 additional suffering targets within 25m.',
-    lushColor: new THREE.Color(0x26a69a), // Alpine Teal Sanctuary
+    boonName: 'Boon of Ganesha (Ridge Breaker)',
+    boonDesc: 'All spells automatically chain-heal 2 additional suffering targets within 28m.',
     rejuvenatedCount: 0,
     goalCount: 4,
     completed: false,
@@ -111,19 +312,22 @@ const CONTINENTS = [
   {
     id: 5,
     roman: 'VI',
-    name: 'Shakadvipa — Petrified Teak Highlands',
-    shortName: 'VI. Shakadvipa',
-    x: -380,
+    name: 'The Great Himalayas (Mount Everest & K2)',
+    shortName: 'VI. Mt. Everest',
+    x: -390,
     z: 240,
-    radius: 175,
+    radius: 185,
+    peakHeight: 122.0,
+    realMeters: 8848,
+    allowFlying: false, // EXTREME KHUMBU GALE NO-FLY TREKKING ZONE!
     tier: 6,
     diffMult: 8.5,
     maxHpBase: 1100,
-    karmaReward: 820,
-    boonIcon: '🔱',
-    boonName: 'Boon of Shiva (Kailash Omnipresence)',
-    boonDesc: 'Amrita World-Pulse [R] cooldown reduced by 50% and cleanses entire regions at once.',
-    lushColor: new THREE.Color(0x43a047), // Sacred Cedar Emerald
+    karmaReward: 950,
+    chestName: 'Sagarmatha 8,848m Chest',
+    boonIcon: '🏔️',
+    boonName: 'Boon of Sagarmatha (Crown of the World)',
+    boonDesc: 'Cuts Surge [R] cooldown by 50% and grants immunity to high-altitude stamina drain.',
     rejuvenatedCount: 0,
     goalCount: 4,
     completed: false,
@@ -131,19 +335,22 @@ const CONTINENTS = [
   {
     id: 6,
     roman: 'VII',
-    name: 'Pushkaradvipa — Eternal Lotus Citadel',
-    shortName: 'VII. Pushkaradvipa',
-    x: -380,
+    name: 'Mount Meru (Cosmic Axis of the Universe)',
+    shortName: 'VII. Mount Meru',
+    x: -390,
     z: -240,
-    radius: 175,
+    radius: 185,
+    peakHeight: 138.0,
+    realMeters: 10800,
+    allowFlying: true,
     tier: 7,
     diffMult: 12.0,
     maxHpBase: 1600,
-    karmaReward: 1500,
-    boonIcon: '🦅',
-    boonName: 'Boon of Vishnu (Vaikuntha Avatar)',
-    boonDesc: 'Ultimate Cosmic Ascension: Passive Aura of Renewal heals all suffering beings around you as you fly!',
-    lushColor: new THREE.Color(0x38b2ac), // Celestial Lotus Gold-Emerald
+    karmaReward: 1800,
+    chestName: 'Vaikuntha Sovereign Chest',
+    boonIcon: '👑',
+    boonName: 'Boon of Vishnu (Universal Sovereign)',
+    boonDesc: 'Unlocks flying even in No-Fly Zones + Passive Aura heals all beings around your Dragon!',
     rejuvenatedCount: 0,
     goalCount: 4,
     completed: false,
@@ -151,68 +358,68 @@ const CONTINENTS = [
 ];
 
 // ============================================================================
-// KARMA EMPORIUM: SACRED TOOLS, ITEMS & ABILITY UPGRADES (UNIVERSAL CURRENCY)
+// KARMA & MOUNTAINEERING FORGE ITEMS [K]
 // ============================================================================
 const SHOP_TOOLS = [
   {
     id: 'danda_staff',
     icon: '🦯',
-    name: 'Brahmadanda Lotus Staff',
+    name: 'Sahyadri Brahmadanda Staff',
     category: 'Sacred Tool • Upgrades [1] & [3]',
     rank: 1,
     maxRank: 10,
     baseCost: 80,
     costMult: 1.55,
-    desc: 'Channeling staff carved from celestial sandalwood. Amplifies the rejuvenation power of Sanjeevani Bolt [1] and Sunbeam [3].',
-    bonusText: (r) => `Current: +${(r - 1) * 45} Healing Power (Next: +${r * 45})`,
+    desc: 'Carved from Western Ghats sandalwood. Amplifies Sanjeevani Bolt [1], Sunbeam [3] & Summit Chest unlocking.',
+    bonusText: (r) => `Current: +${(r - 1) * 45} Healing & Loot Power (Next: +${r * 45})`,
   },
   {
-    id: 'kamandalu_vessel',
-    icon: '🏺',
-    name: 'Amrita Kamandalu Vessel',
-    category: 'Sacred Tool • Upgrades [2] & [R]',
-    rank: 1,
-    maxRank: 10,
-    baseCost: 95,
-    costMult: 1.55,
-    desc: 'Eternally flowing vessel of Himalayan Ganga Jal. Expands AoE radius and potency of Ganga Nova [2] and World Pulse [R].',
-    bonusText: (r) => `Current: ${22 + (r - 1) * 5}m AoE Radius & +${(r - 1) * 35} AoE Heal`,
-  },
-  {
-    id: 'garuda_plume',
-    icon: '🦅',
-    name: 'Suvarna Garuda Plume',
-    category: 'Sky Relic • Upgrades [4] & [F]',
-    rank: 1,
-    maxRank: 7,
-    baseCost: 110,
-    costMult: 1.6,
-    desc: 'Golden wing-feather of Garuda. Boosts your Speed-Running [4] velocity and Sky-Flight [F] cruise speed across continents.',
-    bonusText: (r) => `Current: +${(r - 1) * 25}% Flight & Sprint Speed`,
-  },
-  {
-    id: 'rudraksha_mala',
-    icon: '📿',
-    name: '108-Bead Siddha Mala',
-    category: 'Karma Amplifier • Passive Relic',
+    id: 'dragon_saddle',
+    icon: '🐉',
+    name: 'Drake-Scale Skyriding Harness',
+    category: 'Dragon Gear • Upgrades [F] & [5]',
     rank: 1,
     maxRank: 8,
-    baseCost: 120,
-    costMult: 1.65,
-    desc: 'Sacred prayer beads that resonate with universal Dharma, multiplying the Karma Points (☸️) earned from every healing act.',
-    bonusText: (r) => `Current: +${(r - 1) * 30}% Karma Points Earned`,
+    baseCost: 95,
+    costMult: 1.55,
+    desc: 'Aerodynamic saddle for your Sky-Dragon companion. Increases Dragonflight cruise speed & Vigor recharge rate.',
+    bonusText: (r) => `Current: +${(r - 1) * 25}% Dragon Speed & +${(r - 1) * 20}% Vigor Regen`,
+  },
+  {
+    id: 'crampon_boots',
+    icon: '🥾',
+    name: 'Himalayan Mithril Crampons',
+    category: 'Trekking Gear • Upgrades [4] & Climb',
+    rank: 1,
+    maxRank: 8,
+    baseCost: 105,
+    costMult: 1.6,
+    desc: 'Essential for No-Fly Trekking Peaks (Nilgiris, Kailash, Everest)! Grips steep 75° rock faces and boosts Sprint [4].',
+    bonusText: (r) => `Current: +${(r - 1) * 28}% Steep-Slope Climb Speed & Stamina`,
+  },
+  {
+    id: 'camping_kit',
+    icon: '⛺',
+    name: 'Sherpa Base-Camp Brazier Kit',
+    category: 'Expedition Gear • Upgrades [C]',
+    rank: 1,
+    maxRank: 6,
+    baseCost: 115,
+    costMult: 1.6,
+    desc: 'Upgrades your pitched Campfire [C] so resting heals all suffering creatures within 45m and grants a longer Well-Fed speed buff.',
+    bonusText: (r) => `Current: Campfire heals 45m radius for +${r * 90} Vitality`,
   },
   {
     id: 'sanjeevani_elixir',
     icon: '🧪',
-    name: 'Soma-Sanjeevani Elixir',
-    category: 'Consumable Item • Instant Burst',
+    name: 'Himalayan Soma-Elixir',
+    category: 'Consumable • Instant Summit Burst',
     rank: 0,
     maxRank: 99,
     baseCost: 140,
     costMult: 1.15,
-    desc: 'Instantly releases a 65-meter Golden Supernova around you, restoring +320 Rejuvenation to all suffering beings in range!',
-    bonusText: () => `Instant Use on Purchase: 65m +320 Rejuvenation Wave!`,
+    desc: 'Instantly releases a 65-meter Golden Supernova around you, restoring +340 Rejuvenation and refilling all 6 Dragon Vigor Orbs!',
+    bonusText: () => `Instant Use: 65m +340 Heal + 6/6 Dragon Vigor!`,
     isConsumable: true,
   },
   {
@@ -224,90 +431,95 @@ const SHOP_TOOLS = [
     maxRank: 5,
     baseCost: 240,
     costMult: 1.75,
-    desc: 'Summons an orbiting golden Chakra above your head that automatically fires healing bolts at nearby suffering creatures every 1.5s!',
-    bonusText: (r) => (r === 0 ? 'Not Yet Forged (Buy Rank 1 to Summon!)' : `Active: Auto-heals nearby suffering for ${r * 45}/pulse`),
+    desc: 'Summons an orbiting golden Chakra above your head that automatically fires bolts at nearby suffering wildlife & chests!',
+    bonusText: (r) => (r === 0 ? 'Not Yet Forged (Buy Rank 1 to Summon!)' : `Active: Auto-pulses nearby targets for ${r * 50}`),
   },
 ];
 
 const STATE = {
-  karma: 350,          // Current spendable Karma Points (Universal Currency)
-  lifetimeKarma: 350,  // Total Karma generated
-  ascensionStage: 1,   // 1 to 7 (unlocked by rejuvenating continents)
+  karma: 350,
+  lifetimeKarma: 350,
+  relicsLooted: 0,
+  ascensionStage: 1,
   totalRejuvenated: 0,
-  totalSites: 28,      // 7 continents * 4 major suffering clusters
+  totalSites: 28,
   currentContinent: CONTINENTS[0],
-  speedRunActive: true, // Speed-running enabled right from the start!
-  flyingActive: false,  // Toggle anytime with [F]
+  speedRunActive: true,
+  mountedOnDragon: false, // Toggle with [F] (Skyriding!)
+  vigor: 6.0,
+  maxVigor: 6,
+  trekStamina: 100,
+  wellFedTimer: 0,        // From pitching a Campfire [C]
   selectedTarget: null,
   casting: null,
   cooldowns: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0 },
-  cdMax:     { 1: 0.9, 2: 2.2, 3: 3.0, 4: 0.5, 5: 1.8, 6: 3.5, 7: 0.4, 8: 6.0 },
+  cdMax:     { 1: 0.85, 2: 2.0, 3: 2.8, 4: 0.4, 5: 1.4, 6: 5.0, 7: 0.4, 8: 5.0 },
 };
 
-// ============================================================================
-// HELPER STATS CALCULATED FROM SHOP TOOLS & CONTINENT BOONS
-// ============================================================================
 function getHealPower() {
   const staffRank = SHOP_TOOLS[0].rank;
   const boonMult = CONTINENTS[0].completed ? 1.35 : 1.0;
   return Math.round((85 + (staffRank - 1) * 45) * boonMult);
 }
-
 function getAoERadius() {
-  const vesselRank = SHOP_TOOLS[1].rank;
-  const boonMult = CONTINENTS[1].completed ? 1.5 : 1.0;
-  return Math.round((22 + (vesselRank - 1) * 5) * boonMult);
+  return CONTINENTS[1].completed ? 34 : 24;
 }
-
-function getAoEBonus() {
-  const vesselRank = SHOP_TOOLS[1].rank;
-  return (vesselRank - 1) * 35 + (CONTINENTS[1].completed ? 60 : 0);
-}
-
 function getKarmaMultiplier() {
-  const malaRank = SHOP_TOOLS[3].rank;
-  let mult = 1.0 + (malaRank - 1) * 0.3;
-  if (CONTINENTS[0].completed) mult += 0.2;
+  let mult = 1.0 + (STATE.relicsLooted * 0.15);
   if (CONTINENTS[3].completed) mult *= 2.0;
   return mult;
 }
-
-function getMobilityMultiplier() {
-  const plumeRank = SHOP_TOOLS[2].rank;
-  let mult = 1.0 + (plumeRank - 1) * 0.25;
-  if (CONTINENTS[2].completed) mult *= 1.65;
+function getTrekMobilityMult() {
+  let mult = 1.0 + (SHOP_TOOLS[2].rank - 1) * 0.25;
+  if (CONTINENTS[1].completed) mult += 0.4;
+  if (STATE.wellFedTimer > 0) mult += 0.3;
   return mult;
+}
+function getDragonMobilityMult() {
+  let mult = 1.0 + (SHOP_TOOLS[1].rank - 1) * 0.25;
+  if (CONTINENTS[2].completed) mult *= 1.55;
+  return mult;
+}
+function canFlyOnContinent(cont) {
+  return cont.allowFlying || CONTINENTS[6].completed;
 }
 
 // ============================================================================
-// 1. SCENE, CAMERA, RENDERER & CELESTIAL SKY DOME
+// 3. 2026 NEXT-GEN WEBGL2 RENDERER + UNREAL BLOOM POST-PROCESSING PIPELINE
 // ============================================================================
 const container = document.getElementById('canvas-container');
 const nameplatesContainer = document.getElementById('nameplates-container');
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x5282ad);
-scene.fog = new THREE.FogExp2(0x6492ba, 0.00085); // Long view distance so players can see distant continents while flying!
+scene.background = new THREE.Color(0x1f3a5c);
 
-const camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.5, 2200);
+const camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.5, 2500);
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.15;
+renderer.toneMappingExposure = 1.08;
 container.appendChild(renderer.domElement);
 
-// Expansive Sky Dome covering all 7 Continents
-const skyGeo = new THREE.SphereGeometry(1850, 32, 24);
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloomPass = new UnrealBloomPass(
+  new THREE.Vector2(window.innerWidth, window.innerHeight),
+  0.38,
+  0.55,
+  0.78
+);
+composer.addPass(bloomPass);
+
+// Atmospheric Sky Dome
+const skyGeo = new THREE.SphereGeometry(2000, 32, 24);
 const skyMat = new THREE.ShaderMaterial({
   side: THREE.BackSide,
   depthWrite: false,
   uniforms: {
-    topColor: { value: new THREE.Color(0x163c6e) },
-    horizonColor: { value: new THREE.Color(0x88b8de) },
-    sunDir: { value: new THREE.Vector3(0.52, 0.46, -0.71).normalize() },
+    uSunDir: { value: new THREE.Vector3(0.54, 0.38, -0.75).normalize() },
   },
   vertexShader: `
     varying vec3 vWorldPos;
@@ -319,34 +531,34 @@ const skyMat = new THREE.ShaderMaterial({
   `,
   fragmentShader: `
     varying vec3 vWorldPos;
-    uniform vec3 topColor;
-    uniform vec3 horizonColor;
-    uniform vec3 sunDir;
+    uniform vec3 uSunDir;
     void main() {
       vec3 dir = normalize(vWorldPos);
-      float h = clamp(dir.y * 1.4 + 0.12, 0.0, 1.0);
-      vec3 col = mix(horizonColor, topColor, pow(h, 0.65));
-      float sunAmt = max(dot(dir, sunDir), 0.0);
-      col += vec3(1.0, 0.88, 0.6) * pow(sunAmt, 16.0) * 0.48;
-      col += vec3(1.0, 0.97, 0.88) * smoothstep(0.996, 0.9996, sunAmt);
+      float h = clamp(dir.y * 1.3 + 0.1, 0.0, 1.0);
+      vec3 zenith = vec3(0.08, 0.22, 0.46);
+      vec3 horizon = vec3(0.56, 0.76, 0.92);
+      vec3 col = mix(horizon, zenith, pow(h, 0.62));
+      float sunAmt = max(dot(dir, uSunDir), 0.0);
+      col += vec3(1.0, 0.78, 0.42) * pow(sunAmt, 9.0) * 0.45;
+      col += vec3(1.3, 1.15, 0.85) * smoothstep(0.995, 0.9996, sunAmt);
       gl_FragColor = vec4(col, 1.0);
     }
   `,
 });
 scene.add(new THREE.Mesh(skyGeo, skyMat));
 
-const hemiLight = new THREE.HemisphereLight(0xdff2ff, 0x3b4d34, 0.9);
-hemiLight.position.set(0, 300, 0);
+const hemiLight = new THREE.HemisphereLight(0xd9f0ff, 0x3b4d38, 0.95);
+hemiLight.position.set(0, 350, 0);
 scene.add(hemiLight);
 
-const sunLight = new THREE.DirectionalLight(0xfff2d6, 2.25);
-sunLight.position.set(160, 240, -140);
+const sunLight = new THREE.DirectionalLight(0xffeacc, 2.35);
+sunLight.position.set(170, 240, -165);
 sunLight.castShadow = true;
 sunLight.shadow.mapSize.width = 2048;
 sunLight.shadow.mapSize.height = 2048;
 sunLight.shadow.camera.near = 10;
-sunLight.shadow.camera.far = 650;
-const d = 140;
+sunLight.shadow.camera.far = 750;
+const d = 150;
 sunLight.shadow.camera.left = -d;
 sunLight.shadow.camera.right = d;
 sunLight.shadow.camera.top = d;
@@ -355,7 +567,7 @@ sunLight.shadow.bias = -0.0005;
 scene.add(sunLight);
 
 // ============================================================================
-// 2. MULTI-CONTINENT ARCHIPELAGO TERRAIN & LIVE GPU REJUVENATION SHADER
+// 4. VAST MOUNTAIN TOPOGRAPHY WITH SPIRAL TREKKING TRAILS & SNOW SUMMITS
 // ============================================================================
 function hash2D(x, z) {
   const s = Math.sin(x * 127.1 + z * 311.7) * 43758.5453123;
@@ -382,49 +594,90 @@ function fbm(x, z) {
   let freq = 1.0;
   for (let i = 0; i < 4; i++) {
     v += amp * valueNoise(x * freq, z * freq);
-    freq *= 2.02;
+    freq *= 2.03;
     amp *= 0.5;
   }
   return v;
 }
 
-// Compute height across the 7 Continents Archipelago (1500 x 1500m World)
+// Each of the 7 Ranges has:
+// - A Base Camp Valley around (c.x, c.z + 25)
+// - A Towering Mountain Summit centered at (c.x, c.z - 68) so you look straight at the majestic mountain from Base Camp!
+function getPeakCenter(c) {
+  return { px: c.x, pz: c.z - 68 };
+}
+
 function getTerrainHeight(x, z) {
-  let maxContinentH = -8.5; // Deep Cosmic Ocean bed between continents
+  let maxContinentH = -8.5;
 
   for (let i = 0; i < CONTINENTS.length; i++) {
     const c = CONTINENTS[i];
-    const dx = x - c.x;
-    const dz = z - c.z;
-    const dist = Math.hypot(dx, dz);
+    const distIsland = Math.hypot(x - c.x, z - c.z);
 
-    if (dist < c.radius * 1.25) {
-      const normD = dist / c.radius;
-      // Smooth island dome profile with flat sanctuary plaza at center of each continent
+    if (distIsland < c.radius * 1.28) {
+      const normD = distIsland / c.radius;
       const mask = Math.max(0.0, 1.0 - normD * normD);
       const smoothMask = mask * mask * (3.0 - 2.0 * mask);
 
-      const centerPlazaFlat = Math.min(1.0, Math.max(0.0, (dist - 18.0) / 38.0));
-      const n1 = fbm((x + i * 37) * 0.015, (z + i * 53) * 0.015);
-      const n2 = fbm(x * 0.045, z * 0.045);
+      const n1 = fbm((x + i * 37) * 0.016, (z + i * 53) * 0.016);
+      const n2 = fbm(x * 0.05, z * 0.05);
 
-      // Outer mountain rim around each continent
-      let rimHills = 0;
-      if (normD > 0.52 && normD < 0.96) {
-        const rimFactor = Math.sin(((normD - 0.52) / 0.44) * Math.PI);
-        rimHills = rimFactor * (14.0 + i * 2.5) * n1;
+      // Base valley + rolling Western Ghats / Himalayan foothills
+      let h = -7.5 + smoothMask * (9.5 + (n1 - 0.35) * 11.0 + (n2 - 0.5) * 2.5);
+
+      // Towering Mountain Peak at (px, pz)
+      const { px, pz } = getPeakCenter(c);
+      const dxP = x - px;
+      const dzP = z - pz;
+      const distPeak = Math.hypot(dxP, dzP);
+      const peakRadius = 64.0;
+
+      if (distPeak < peakRadius) {
+        const pNorm = 1.0 - distPeak / peakRadius;
+        const plateauNorm = Math.min(1.0, pNorm / 0.88);
+        const ridgeCrags = (n1 - 0.3) * 12.0 * Math.sin(plateauNorm * Math.PI);
+        let mountainRise = Math.pow(plateauNorm, 1.45) * c.peakHeight + ridgeCrags;
+
+        // Carve a Spiral Switchback Trekking Trail winding around the mountain
+        const angle = Math.atan2(dzP, dxP) + Math.PI;
+        let onTrail = 0.0;
+        for (let turn = 0; turn < 2; turn++) {
+          const totalAngle = angle + turn * Math.PI * 2;
+          const progress = totalAngle / (Math.PI * 4);
+          const expectedDist = (1.0 - progress * 0.82) * (peakRadius * 0.88);
+          const distToTrail = Math.abs(distPeak - expectedDist);
+          if (distToTrail < 5.0) {
+            const tf = 1.0 - distToTrail / 5.0;
+            onTrail = Math.max(onTrail, tf * tf);
+          }
+        }
+        mountainRise -= onTrail * ridgeCrags * 0.85;
+        h += mountainRise;
       }
 
-      const h =
-        -7.5 +
-        smoothMask * (10.5 + (n1 - 0.35) * 14.0 * centerPlazaFlat + (n2 - 0.5) * 3.0 * centerPlazaFlat + rimHills);
-
-      if (h > maxContinentH) {
-        maxContinentH = h;
+      // Flatten Base Camp Sanctuary Plaza at (c.x, c.z)
+      const distBaseCamp = Math.hypot(x - c.x, z - c.z);
+      if (distBaseCamp < 20.0) {
+        const flatF = 1.0 - Math.min(1.0, Math.max(0.0, (distBaseCamp - 10.0) / 10.0));
+        h = h * (1.0 - flatF * 0.88) + 2.4 * (flatF * 0.88);
       }
+
+      if (h > maxContinentH) maxContinentH = h;
     }
   }
   return maxContinentH;
+}
+
+// Helper to get 3D coordinates along a mountain's spiral trekking trail (t from 0.0 base to 1.0 summit)
+function getMountainTrailPoint(c, progress) {
+  const { px, pz } = getPeakCenter(c);
+  const peakRadius = 64.0;
+  const totalAngle = progress * Math.PI * 3.4 - Math.PI * 0.5;
+  const r = (1.0 - progress * 0.85) * (peakRadius * 0.86);
+  const x = px + Math.cos(totalAngle) * r;
+  const z = pz + Math.sin(totalAngle) * r;
+  const y = getTerrainHeight(x, z);
+  return new THREE.Vector3(x, y, z);
 }
 
 function getNearestContinent(x, z) {
@@ -441,25 +694,23 @@ function getNearestContinent(x, z) {
   return best;
 }
 
-// GPU Shader Uniform Arrays for 32 Rejuvenation Zones (X, Z, CurrentRadius, TargetRadius)
-const MAX_CLEANSE_ZONES = 32;
+const MAX_CLEANSE_ZONES = 36;
 const cleanseCenters = [];
 for (let i = 0; i < MAX_CLEANSE_ZONES; i++) {
   cleanseCenters.push(new THREE.Vector4(99999, 99999, 0.0, 0.0));
 }
-
-// Center of Jambudvipa Sanctuary Altar starts partially consecrated (14m golden circle)
-cleanseCenters[0].set(0, 0, 14.5, 14.5);
+// Western Ghats Base Camp & Foothills start lush emerald-green so players immediately see the vibrant Shola biome!
+cleanseCenters[0].set(0, 0, 52.0, 52.0);
 let nextCleanseIdx = 1;
 
-function addRejuvenationZone(x, z, radius = 65.0) {
+function addRejuvenationZone(x, z, radius = 68.0) {
   const idx = nextCleanseIdx % MAX_CLEANSE_ZONES;
   cleanseCenters[idx].set(x, z, 2.0, radius);
   nextCleanseIdx++;
 }
 
-const WORLD_SIZE = 1450;
-const terrainGeo = new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, 280, 280);
+const WORLD_SIZE = 1480;
+const terrainGeo = new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, 300, 300);
 terrainGeo.rotateX(-Math.PI / 2);
 const posAttr = terrainGeo.attributes.position;
 for (let i = 0; i < posAttr.count; i++) {
@@ -469,11 +720,11 @@ for (let i = 0; i < posAttr.count; i++) {
 }
 terrainGeo.computeVertexNormals();
 
-// Custom GLSL Terrain Shader: Dynamically transforms Blighted Ashen Wasteland -> Lush Golden-Emerald Paradise!
+// 2026 PBR Mountain Biome Shader: Western Ghats Laterite/Shola Moss + Himalayan Glacier Snow + Trekking Trails
 const terrainShaderMat = new THREE.ShaderMaterial({
   uniforms: {
     uCleanseZones: { value: cleanseCenters },
-    uSunDir: { value: new THREE.Vector3(0.52, 0.46, -0.71).normalize() },
+    uSunDir: { value: new THREE.Vector3(0.54, 0.38, -0.75).normalize() },
     uTime: { value: 0 },
   },
   vertexShader: `
@@ -494,7 +745,7 @@ const terrainShaderMat = new THREE.ShaderMaterial({
     varying vec3 vNormal;
 
     float hash(vec2 p) {
-      return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+      return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
     }
 
     float noise(vec2 p) {
@@ -508,12 +759,24 @@ const terrainShaderMat = new THREE.ShaderMaterial({
       );
     }
 
+    float fbmDetail(vec2 p) {
+      float v = 0.0;
+      v += 0.50 * noise(p);
+      v += 0.25 * noise(p * 2.1);
+      v += 0.125 * noise(p * 4.3);
+      v += 0.0625 * noise(p * 8.7);
+      return v;
+    }
+
     void main() {
-      float n1 = noise(vWorldPos.xz * 0.08);
-      float n2 = noise(vWorldPos.xz * 0.35);
+      float hC = fbmDetail(vWorldPos.xz * 0.45);
+      float hX = fbmDetail((vWorldPos.xz + vec2(0.18, 0.0)) * 0.45);
+      float hZ = fbmDetail((vWorldPos.xz + vec2(0.0, 0.18)) * 0.45);
+      vec3 bumpNormal = normalize(vNormal + vec3(hC - hX, 0.0, hC - hZ) * 1.65);
+
+      float macro = fbmDetail(vWorldPos.xz * 0.055);
       float slope = 1.0 - max(dot(vNormal, vec3(0.0, 1.0, 0.0)), 0.0);
 
-      // Compute how rejuvenated this world coordinate is (0.0 = Suffering Blight, 1.0 = Rejuvenated Paradise)
       float cleanse = 0.0;
       float ringEdge = 0.0;
       for (int i = 0; i < ${MAX_CLEANSE_ZONES}; i++) {
@@ -522,49 +785,54 @@ const terrainShaderMat = new THREE.ShaderMaterial({
           float d = distance(vWorldPos.xz, cz.xy);
           float factor = 1.0 - smoothstep(cz.z - 8.0, cz.z + 2.0, d);
           cleanse = max(cleanse, factor);
-          float edge = smoothstep(cz.z - 2.5, cz.z - 0.5, d) * (1.0 - smoothstep(cz.z - 0.5, cz.z + 1.5, d));
+          float edge = smoothstep(cz.z - 2.2, cz.z - 0.4, d) * (1.0 - smoothstep(cz.z - 0.4, cz.z + 1.4, d));
           ringEdge = max(ringEdge, edge);
         }
       }
 
-      // 1. SUFFERING / KALI BLIGHT PALETTE (Charred purple-ash soil, cracked necrotic veins, dead scrub)
-      vec3 blightGrass = mix(vec3(0.22, 0.18, 0.25), vec3(0.32, 0.25, 0.29), n1);
-      float darkVein = smoothstep(0.62, 0.78, n2);
-      blightGrass = mix(blightGrass, vec3(0.45, 0.16, 0.48), darkVein * 0.45);
+      // 1. SUFFERING BLIGHT BIOME (Dark mossy slate & glowing violet fissures)
+      vec3 blightSoil = mix(vec3(0.18, 0.22, 0.20), vec3(0.26, 0.28, 0.24), macro);
+      float fissure = smoothstep(0.72, 0.85, hC);
+      blightSoil = mix(blightSoil, vec3(0.55, 0.22, 0.72), fissure * 0.45);
 
-      // 2. REJUVENATED DHARMA PALETTE (Rich emerald grass, sunny golden wildflowers, cobblestone paths)
-      vec3 lushGrass = mix(vec3(0.18, 0.52, 0.22), vec3(0.38, 0.72, 0.26), n1);
-      float flowers = smoothstep(0.68, 0.85, n2);
-      lushGrass = mix(lushGrass, vec3(0.95, 0.82, 0.28), flowers * 0.4);
+      // 2. REJUVENATED WESTERN GHATS SHOLA & KURINJI MEADOWS (Rich emerald moss, warm laterite earth & Neelakurinji blooms)
+      vec3 lushTurf = mix(vec3(0.10, 0.48, 0.16), vec3(0.30, 0.68, 0.20), macro);
+      float kurinji = smoothstep(0.68, 0.85, hC);
+      lushTurf = mix(lushTurf, vec3(0.96, 0.82, 0.24), kurinji * 0.48);
 
-      vec3 surfaceCol = mix(blightGrass, lushGrass, cleanse);
+      vec3 col = mix(blightSoil, lushTurf, cleanse);
 
-      // Sandy coastline near ocean level
-      if (vWorldPos.y < 0.35) {
-        float beach = 1.0 - clamp((vWorldPos.y + 1.5) / 1.85, 0.0, 1.0);
-        vec3 sandCol = mix(vec3(0.42, 0.38, 0.36), vec3(0.82, 0.74, 0.54), cleanse);
-        surfaceCol = mix(surfaceCol, sandCol, beach * 0.85);
+      // Steep Basalt / Granite Mountain Cliffs (Western Ghats Deccan Traps & Himalayan Crags)
+      if (slope > 0.34 || vWorldPos.y > 22.0) {
+        float rk = clamp((slope - 0.32) * 2.2 + max(0.0, (vWorldPos.y - 22.0) / 32.0), 0.0, 1.0);
+        float strata = noise(vec2(vWorldPos.x * 0.2, vWorldPos.y * 0.75));
+        vec3 cliff = mix(vec3(0.28, 0.26, 0.25), vec3(0.48, 0.45, 0.42), strata);
+        col = mix(col, cliff, rk * 0.82);
       }
 
-      // Steep mountain rock cliffs
-      if (slope > 0.26 || vWorldPos.y > 14.0) {
-        float rk = clamp((slope - 0.24) * 2.5 + max(0.0, (vWorldPos.y - 14.0) / 14.0), 0.0, 1.0);
-        vec3 rockCol = mix(vec3(0.26, 0.24, 0.28), vec3(0.48, 0.50, 0.54), cleanse);
-        surfaceCol = mix(surfaceCol, rockCol, rk);
+      // High-Altitude Himalayan / Alpine Glacial Snowline (Above Y = 38m)
+      if (vWorldPos.y > 38.0) {
+        float snowMask = clamp((vWorldPos.y - 38.0) / 14.0 - slope * 0.45, 0.0, 1.0);
+        vec3 snowCol = mix(vec3(0.85, 0.90, 0.98), vec3(0.99, 0.99, 1.0), hC);
+        col = mix(col, snowCol, snowMask);
       }
 
-      // Glowing Golden Wave at the boundary of Rejuvenation!
-      surfaceCol += vec3(0.98, 0.84, 0.32) * ringEdge * 0.75;
+      // Golden Rejuvenation Wave Ring
+      col += vec3(1.35, 1.05, 0.35) * ringEdge;
 
-      // Sun & Sky Lighting
-      float diff = max(dot(vNormal, uSunDir), 0.0);
-      vec3 lit = surfaceCol * (0.52 + diff * 0.68);
+      // PBR Sun Direct + Specular + Sky Bounce
+      vec3 viewDir = normalize(cameraPosition - vWorldPos);
+      vec3 halfVec = normalize(uSunDir + viewDir);
+      float NdotL = max(dot(bumpNormal, uSunDir), 0.0);
+      float spec = pow(max(dot(bumpNormal, halfVec), 0.0), 28.0) * 0.22;
 
-      // Atmospheric distance fog
+      vec3 ambient = mix(vec3(0.24, 0.28, 0.38), vec3(0.44, 0.54, 0.66), bumpNormal.y * 0.5 + 0.5);
+      vec3 lit = col * (ambient + vec3(1.05, 0.96, 0.82) * NdotL * 0.82) + vec3(1.0, 0.92, 0.75) * spec;
+
       float camDist = length(cameraPosition - vWorldPos);
-      float fogF = 1.0 - exp(-camDist * 0.00075);
-      vec3 fogCol = vec3(0.39, 0.57, 0.73);
-      gl_FragColor = vec4(mix(lit, fogCol, clamp(fogF, 0.0, 0.85)), 1.0);
+      float fogF = 1.0 - exp(-camDist * 0.00068);
+      vec3 fogCol = vec3(0.46, 0.65, 0.82);
+      gl_FragColor = vec4(mix(lit, fogCol, clamp(fogF, 0.0, 0.84)), 1.0);
     }
   `,
 });
@@ -573,18 +841,21 @@ const terrainMesh = new THREE.Mesh(terrainGeo, terrainShaderMat);
 terrainMesh.receiveShadow = true;
 scene.add(terrainMesh);
 
-// Expansive Cosmic Ocean connecting the 7 Continents
-const oceanGeo = new THREE.PlaneGeometry(WORLD_SIZE * 1.4, WORLD_SIZE * 1.4, 90, 90);
+// Specular Ocean
+const oceanGeo = new THREE.PlaneGeometry(WORLD_SIZE * 1.4, WORLD_SIZE * 1.4, 110, 110);
 oceanGeo.rotateX(-Math.PI / 2);
 const oceanMat = new THREE.ShaderMaterial({
   transparent: true,
-  uniforms: { uTime: { value: 0 } },
+  uniforms: {
+    uTime: { value: 0 },
+    uSunDir: { value: new THREE.Vector3(0.54, 0.38, -0.75).normalize() },
+  },
   vertexShader: `
     uniform float uTime;
     varying vec3 vWorldPos;
     void main() {
       vec3 p = position;
-      p.y += sin(p.x * 0.06 + uTime * 2.0) * 0.35 + cos(p.z * 0.06 + uTime * 1.6) * 0.35;
+      p.y += sin(p.x * 0.07 + uTime * 2.1) * 0.32 + cos(p.z * 0.07 + uTime * 1.7) * 0.32;
       vec4 wp = modelMatrix * vec4(p, 1.0);
       vWorldPos = wp.xyz;
       gl_Position = projectionMatrix * viewMatrix * wp;
@@ -592,12 +863,24 @@ const oceanMat = new THREE.ShaderMaterial({
   `,
   fragmentShader: `
     uniform float uTime;
+    uniform vec3 uSunDir;
     varying vec3 vWorldPos;
     void main() {
-      float w = sin(vWorldPos.x * 0.12 + uTime * 2.2) * cos(vWorldPos.z * 0.12 - uTime * 1.8);
-      vec3 deep = vec3(0.06, 0.28, 0.48);
-      vec3 crest = vec3(0.16, 0.56, 0.78);
-      vec3 col = mix(deep, crest, w * 0.5 + 0.5);
+      float w1 = sin(vWorldPos.x * 0.18 + uTime * 2.4) * cos(vWorldPos.z * 0.16 - uTime * 1.9);
+      float w2 = sin(vWorldPos.x * 0.42 - uTime * 1.5) * cos(vWorldPos.z * 0.38 + uTime * 2.2);
+      vec3 n = normalize(vec3(w1 * 0.15, 1.0, w2 * 0.15));
+      vec3 viewDir = normalize(cameraPosition - vWorldPos);
+      float fresnel = pow(1.0 - max(dot(viewDir, n), 0.0), 3.0);
+
+      vec3 deep = vec3(0.04, 0.22, 0.40);
+      vec3 shallow = vec3(0.12, 0.50, 0.72);
+      vec3 col = mix(deep, shallow, w1 * 0.5 + 0.5);
+      col = mix(col, vec3(0.55, 0.78, 0.95), fresnel * 0.55);
+
+      vec3 halfV = normalize(uSunDir + viewDir);
+      float glint = pow(max(dot(n, halfV), 0.0), 64.0);
+      col += vec3(1.3, 1.15, 0.85) * glint * 0.75;
+
       gl_FragColor = vec4(col, 0.88);
     }
   `,
@@ -607,52 +890,126 @@ oceanMesh.position.y = -1.6;
 scene.add(oceanMesh);
 
 // ============================================================================
-// 3. TREES, SANCTUARY ALTARS & SUFFERING SITES ACROSS ALL 7 CONTINENTS
+// 5. ORGANIC TREES, TRAIL CAIRN MARKERS & SUMMIT TREASURE CHESTS
 // ============================================================================
-const interactables = [];
-const continentTrees = []; // Withered trees that bloom green & scale up when rejuvenated!
+function createFoliageTexture(baseR, baseG, baseB) {
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 256;
+  const ctx = c.getContext('2d');
+  const img = ctx.createImageData(256, 256);
+  for (let i = 0; i < 256 * 256; i++) {
+    const x = i % 256;
+    const y = Math.floor(i / 256);
+    const n = fbm(x * 0.08, y * 0.08);
+    const grain = (hash2D(x, y) - 0.5) * 28;
+    img.data[i * 4] = Math.min(255, Math.max(0, baseR + (n - 0.5) * 55 + grain));
+    img.data[i * 4 + 1] = Math.min(255, Math.max(0, baseG + (n - 0.5) * 65 + grain));
+    img.data[i * 4 + 2] = Math.min(255, Math.max(0, baseB + (n - 0.5) * 40 + grain));
+    img.data[i * 4 + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
 
-const barkDarkMat = new THREE.MeshStandardMaterial({ color: 0x3b2d26, roughness: 0.9, flatShading: true });
-const witheredCrownMat = new THREE.MeshStandardMaterial({ color: 0x4a3b4e, roughness: 0.85, flatShading: true });
-const lushCrownMat = new THREE.MeshStandardMaterial({ color: 0x2e8540, roughness: 0.7, flatShading: true });
-const goldenCrownMat = new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.65, flatShading: true });
-const stoneMat = new THREE.MeshStandardMaterial({ color: 0x78808a, roughness: 0.75, flatShading: true });
+const barkTex = createFoliageTexture(82, 58, 42);
+const witheredTex = createFoliageTexture(78, 56, 88);
+const lushLeafTex = createFoliageTexture(44, 132, 58);
+const goldenLeafTex = createFoliageTexture(218, 165, 32);
+const stoneTex = createFoliageTexture(124, 128, 136);
 
-function createOrganicCrown(radius) {
-  const geo = new THREE.IcosahedronGeometry(radius, 1);
+const barkMat = new THREE.MeshStandardMaterial({ map: barkTex, bumpMap: barkTex, bumpScale: 0.08, roughness: 0.9 });
+const witheredCrownMat = new THREE.MeshStandardMaterial({ map: witheredTex, bumpMap: witheredTex, bumpScale: 0.06, roughness: 0.85 });
+const lushCrownMat = new THREE.MeshStandardMaterial({ map: lushLeafTex, bumpMap: lushLeafTex, bumpScale: 0.08, roughness: 0.72 });
+const goldenCrownMat = new THREE.MeshStandardMaterial({ map: goldenLeafTex, bumpMap: goldenLeafTex, bumpScale: 0.08, roughness: 0.65 });
+const stoneMat = new THREE.MeshStandardMaterial({ map: stoneTex, bumpMap: stoneTex, bumpScale: 0.06, roughness: 0.75 });
+
+function createSculptedCanopyGeometry(radius) {
+  const geo = new THREE.IcosahedronGeometry(radius, 3);
   const p = geo.attributes.position;
   for (let i = 0; i < p.count; i++) {
     const vx = p.getX(i);
     const vy = p.getY(i);
     const vz = p.getZ(i);
-    const n = 0.82 + 0.34 * hash2D(vx * 2.7 + vy, vz * 2.7 - vy);
-    p.setXYZ(i, vx * n, vy * (0.8 + 0.25 * n), vz * n);
+    const n = 0.78 + 0.38 * fbm(vx * 0.7 + 5.1, vz * 0.7 + vy * 0.5);
+    p.setXYZ(i, vx * n, vy * (0.72 + 0.28 * n), vz * n);
   }
   geo.computeVertexNormals();
   return geo;
 }
-const treeCrownGeo = createOrganicCrown(2.8);
+const canopyGeoMain = createSculptedCanopyGeometry(3.1);
+const canopyGeoSub = createSculptedCanopyGeometry(2.1);
 
-function spawnTree(x, z, continentId) {
+const interactables = [];
+const continentTrees = [];
+
+function spawnOrganicTree(x, z, continentId, startLush = false) {
   const y = getTerrainHeight(x, z);
-  if (y < 0.2) return;
+  if (y < 0.25 || y > 30.0) return; // Trees below alpine snowline
   const group = new THREE.Group();
   group.position.set(x, y, z);
 
-  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.52, 4.0, 6), barkDarkMat);
-  trunk.position.y = 2.0;
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.56, 4.4, 10), barkMat);
+  trunk.position.y = 2.2;
   trunk.castShadow = true;
   group.add(trunk);
 
-  // Start withered & shrunken under Kali Blight!
-  const crown = new THREE.Mesh(treeCrownGeo, witheredCrownMat);
-  crown.position.y = 4.6;
-  crown.scale.setScalar(0.55);
-  crown.castShadow = true;
-  group.add(crown);
+  const initMat = startLush ? lushCrownMat : witheredCrownMat;
+  const crownGroup = new THREE.Group();
+  crownGroup.position.y = 4.8;
+  crownGroup.scale.setScalar(startLush ? 1.1 : 0.58);
 
+  const c1 = new THREE.Mesh(canopyGeoMain, initMat);
+  c1.castShadow = true;
+  const c2 = new THREE.Mesh(canopyGeoSub, initMat);
+  c2.position.set(1.5, -0.5, 0.7);
+  c2.castShadow = true;
+  const c3 = new THREE.Mesh(canopyGeoSub, initMat);
+  c3.position.set(-1.4, -0.6, -0.6);
+  c3.castShadow = true;
+
+  crownGroup.add(c1, c2, c3);
+  group.add(crownGroup);
   scene.add(group);
-  continentTrees.push({ group, crown, x, z, continentId, rejuvenated: false });
+
+  continentTrees.push({ group, crownGroup, meshes: [c1, c2, c3], x, z, continentId, rejuvenated: startLush });
+}
+
+// Helper to build a 3D Golden Ornate Summit Loot Chest
+function createTreasureChestMesh() {
+  const chestGroup = new THREE.Group();
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.6, metalness: 0.2 });
+  const goldTrimMat = new THREE.MeshStandardMaterial({
+    color: 0xfde047,
+    emissive: 0xd97706,
+    emissiveIntensity: 1.4,
+    metalness: 0.85,
+    roughness: 0.2,
+  });
+
+  const base = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.0, 1.2), woodMat);
+  base.position.y = 0.5;
+  base.castShadow = true;
+  chestGroup.add(base);
+
+  const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 1.8, 12, 1, false, 0, Math.PI), goldTrimMat);
+  lid.rotation.z = Math.PI / 2;
+  lid.position.y = 1.0;
+  chestGroup.add(lid);
+
+  const lockGem = new THREE.Mesh(
+    new THREE.OctahedronGeometry(0.28, 0),
+    new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 2.5 })
+  );
+  lockGem.position.set(0, 0.95, 0.68);
+  chestGroup.add(lockGem);
+
+  chestGroup._lid = lid;
+  return chestGroup;
 }
 
 function createNameplateDOM(entity) {
@@ -660,7 +1017,7 @@ function createNameplateDOM(entity) {
   el.className = 'nameplate';
   el.innerHTML = `
     <div class="np-title">
-      <span class="np-lvl">[T${entity.tier}]</span>
+      <span class="np-lvl">[${entity.badge}]</span>
       <span class="np-name">${entity.name}</span>
     </div>
     <div class="np-bar-bg">
@@ -669,6 +1026,7 @@ function createNameplateDOM(entity) {
   `;
   el.addEventListener('pointerdown', (e) => {
     e.stopPropagation();
+    SFX.playTargetClick();
     selectTarget(entity);
   });
   nameplatesContainer.appendChild(el);
@@ -678,110 +1036,141 @@ function createNameplateDOM(entity) {
 
 const gltfLoader = new GLTFLoader();
 const mixers = [];
-const modelCache = {};
 
 const WILDLIFE_MODELS = [
   {
     url: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Fox/glTF-Binary/Fox.glb',
     scale: 0.024,
     icon: '🦊',
-    species: 'Forest Fox',
+    species: 'Sahyadri Fox',
   },
   {
     url: 'https://threejs.org/examples/models/gltf/Horse.glb',
     scale: 0.015,
-    icon: '🐎',
-    species: 'Ashva Stallion',
+    icon: '🦌',
+    species: 'Nilgiri Tahr (Ibex)',
   },
   {
     url: 'https://threejs.org/examples/models/gltf/Stork.glb',
     scale: 0.018,
     icon: '🦢',
-    species: 'Himalayan Saras Crane',
-    flyHeight: 2.8,
+    species: 'Himalayan Monal Crane',
+    flyHeight: 2.6,
   },
   {
     url: 'https://threejs.org/examples/models/gltf/Flamingo.glb',
     scale: 0.018,
-    icon: '🦩',
-    species: 'Sun-Winged Hamsa',
-    flyHeight: 3.0,
+    icon: '🦅',
+    species: 'Malabar Hornbill',
+    flyHeight: 2.8,
   },
 ];
 
-// Build Sanctuary Altars, Trees, and 4 Suffering Sites per Continent (7 * 4 = 28 Total Sites)
+// Populate All 7 Mountain Ranges with Base Camps, Trekking Trail Torch Cairns, Wildlife & Summit Loot Chests!
 CONTINENTS.forEach((cont) => {
   const cy = getTerrainHeight(cont.x, cont.z);
 
-  // Central Continent Beacon & Altar
+  // Base Camp Sanctuary Altar at (cont.x, cont.z)
   const altar = new THREE.Group();
   altar.position.set(cont.x, cy, cont.z);
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(4.5, 5.2, 0.8, 12), stoneMat);
-  base.position.y = 0.4;
-  altar.add(base);
+  const dais = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 5.0, 0.65, 24), stoneMat);
+  dais.position.y = 0.32;
+  dais.receiveShadow = true;
+  altar.add(dais);
 
-  // Towering Sky Beacon Pillar so players flying high in the sky can spot all 7 Continents!
-  const skyBeaconGeo = new THREE.CylinderGeometry(0.6, 0.6, 160, 12, 1, true);
-  const skyBeaconMat = new THREE.MeshBasicMaterial({
-    color: cont.id === 0 ? 0xfacc15 : 0xa855f7,
-    transparent: true,
-    opacity: 0.26,
-    side: THREE.DoubleSide,
-  });
-  const skyBeacon = new THREE.Mesh(skyBeaconGeo, skyBeaconMat);
-  skyBeacon.position.y = 80;
-  altar.add(skyBeacon);
-  cont.skyBeaconMat = skyBeaconMat;
-
-  // 4 Sanctuary Pillars around Altar
-  for (let p = 0; p < 4; p++) {
-    const a = (p * Math.PI) / 2 + Math.PI / 4;
-    const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.55, 5.0, 8), stoneMat);
-    pillar.position.set(Math.cos(a) * 8.2, 2.5, Math.sin(a) * 8.2);
-    pillar.castShadow = true;
-    altar.add(pillar);
-  }
+  const crystal = new THREE.Mesh(
+    new THREE.OctahedronGeometry(0.85, 0),
+    new THREE.MeshStandardMaterial({ color: 0xfef08a, emissive: 0xf59e0b, emissiveIntensity: 2.2 })
+  );
+  crystal.position.y = 2.6;
+  altar.add(crystal);
+  cont.crystalMesh = crystal;
   scene.add(altar);
 
-  // Spawn 28 Withered Trees per Continent
-  for (let t = 0; t < 28; t++) {
-    const angle = (t / 28) * Math.PI * 2 + hash2D(cont.id, t) * 0.4;
-    const rad = 22 + hash2D(t, cont.id * 7) * 95;
-    spawnTree(cont.x + Math.cos(angle) * rad, cont.z + Math.sin(angle) * rad, cont.id);
+  // Place 14 Glowing Trekking Trail Torch Cairns winding up the mountain from Base Camp to the Summit!
+  const torchMat = new THREE.MeshStandardMaterial({
+    color: cont.allowFlying ? 0x38bdf8 : 0xfde047,
+    emissive: cont.allowFlying ? 0x0284c7 : 0xf59e0b,
+    emissiveIntensity: 2.2,
+  });
+  for (let step = 1; step <= 14; step++) {
+    const pt = getMountainTrailPoint(cont, step / 15);
+    const cairn = new THREE.Group();
+    cairn.position.copy(pt);
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.28, 1.6, 6), stoneMat);
+    post.position.y = 0.8;
+    cairn.add(post);
+    const flame = new THREE.Mesh(new THREE.SphereGeometry(0.24, 8, 8), torchMat);
+    flame.position.y = 1.75;
+    cairn.add(flame);
+    scene.add(cairn);
   }
 
-  // Spawn 4 Major Suffering Sites on this Continent (2 Wildlife, 1 Blighted Lotus Grove, 1 Corrupted Obelisk)
-  const siteOffsets = [
-    { dx: -11, dz: -8, type: 'wildlife', wIdx: (cont.id * 2) % WILDLIFE_MODELS.length },
-    { dx: 14, dz: -6, type: 'wildlife', wIdx: (cont.id * 2 + 1) % WILDLIFE_MODELS.length },
-    { dx: -15, dz: 14, type: 'grove' },
-    { dx: 12, dz: 16, type: 'obelisk' },
+  // Spawn 26 Shola / Pine Trees around the mountain base
+  for (let t = 0; t < 26; t++) {
+    const angle = (t / 26) * Math.PI * 2 + hash2D(cont.id, t) * 0.4;
+    const rad = 20 + hash2D(t, cont.id * 7) * 90;
+    const tx = cont.x + Math.cos(angle) * rad;
+    const tz = cont.z + Math.sin(angle) * rad;
+    const isNearStart = cont.id === 0 && Math.hypot(tx, tz) < 26;
+    spawnOrganicTree(tx, tz, cont.id, isNearStart);
+  }
+
+  // 4 Expedition Objectives per Mountain:
+  // 1. Base-Camp Wildlife
+  // 2. Mid-Trail Ridge Wildlife (at 45% trail elevation)
+  // 3. High-Pass Shrine (at 75% trail elevation)
+  // 4. SUMMIT LOOT CHEST at the very top of the mountain peak!
+  const { px, pz } = getPeakCenter(cont);
+  const midTrailPt = getMountainTrailPoint(cont, 0.45);
+  const highPassPt = getMountainTrailPoint(cont, 0.78);
+  const summitY = getTerrainHeight(px, pz);
+
+  const objectives = [
+    {
+      pos: new THREE.Vector3(cont.x - 10, getTerrainHeight(cont.x - 10, cont.z - 6), cont.z - 6),
+      kind: 'wildlife',
+      wIdx: (cont.id * 2) % WILDLIFE_MODELS.length,
+      badge: `Base`,
+    },
+    {
+      pos: midTrailPt,
+      kind: 'wildlife',
+      wIdx: (cont.id * 2 + 1) % WILDLIFE_MODELS.length,
+      badge: `Ridge`,
+    },
+    {
+      pos: highPassPt,
+      kind: 'shrine',
+      badge: `High Pass`,
+    },
+    {
+      pos: new THREE.Vector3(px, summitY, pz),
+      kind: 'chest',
+      badge: `🏔️ SUMMIT`,
+    },
   ];
 
-  siteOffsets.forEach((sCfg, sIdx) => {
-    const sx = cont.x + sCfg.dx * (cont.id === 0 ? 1.0 : 1.45);
-    const sz = cont.z + sCfg.dz * (cont.id === 0 ? 1.0 : 1.45);
-    const sy = getTerrainHeight(sx, sz);
-
+  objectives.forEach((obj, sIdx) => {
     const group = new THREE.Group();
-    group.position.set(sx, sy, sz);
+    group.position.copy(obj.pos);
 
-    // Dark Purple Blight Ring on the ground under every suffering site
+    const ringColor = obj.kind === 'chest' ? 0xfacc15 : 0xa855f7;
     const blightRing = new THREE.Mesh(
-      new THREE.RingGeometry(1.4, 1.85, 24).rotateX(-Math.PI / 2),
-      new THREE.MeshBasicMaterial({ color: 0x9333ea, side: THREE.DoubleSide, transparent: true, opacity: 0.75 })
+      new THREE.RingGeometry(1.4, 1.8, 32).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({ color: ringColor, side: THREE.DoubleSide, transparent: true, opacity: 0.8 })
     );
-    blightRing.position.y = 0.12;
+    blightRing.position.y = 0.14;
     group.add(blightRing);
 
-    let icon = '🦊';
+    let icon = '🎁';
     let name = '';
     let heightOffset = 2.6;
 
-    if (sCfg.type === 'wildlife') {
-      const wDef = WILDLIFE_MODELS[sCfg.wIdx];
+    if (obj.kind === 'wildlife') {
+      const wDef = WILDLIFE_MODELS[obj.wIdx];
       icon = wDef.icon;
-      name = `Suffering ${wDef.species}`;
+      name = `Distressed ${wDef.species}`;
       heightOffset = (wDef.flyHeight || 0) + 2.4;
 
       gltfLoader.load(wDef.url, (gltf) => {
@@ -802,42 +1191,28 @@ CONTINENTS.forEach((cont) => {
           mixers.push(m);
         }
       });
-    } else if (sCfg.type === 'grove') {
-      icon = '🪷';
-      name = `Withered Lotus Grove`;
-      heightOffset = 3.2;
-
-      const basin = new THREE.Mesh(new THREE.TorusGeometry(2.3, 0.3, 8, 20).rotateX(Math.PI / 2), stoneMat);
-      basin.position.y = 0.25;
-      group.add(basin);
-
-      const lotus = new THREE.Group();
-      lotus.position.y = 0.45;
-      lotus.scale.setScalar(0.45);
-      const petalMat = new THREE.MeshStandardMaterial({ color: 0xec4899, emissive: 0xbe185d, emissiveIntensity: 0.5 });
-      for (let p = 0; p < 8; p++) {
-        const a = (p * Math.PI * 2) / 8;
-        const petal = new THREE.Mesh(new THREE.ConeGeometry(0.45, 1.3, 5), petalMat);
-        petal.position.set(Math.cos(a) * 0.65, 0.35, Math.sin(a) * 0.65);
-        petal.rotation.z = -Math.cos(a) * 0.55;
-        petal.rotation.x = Math.sin(a) * 0.55;
-        lotus.add(petal);
-      }
-      group.add(lotus);
-      group._lotus = lotus;
-    } else {
+    } else if (obj.kind === 'shrine') {
       icon = '🔥';
-      name = `Blighted Guardstone Shrine`;
-      heightOffset = 7.8;
+      name = `${cont.shortName} High-Pass Cairn`;
+      heightOffset = 6.2;
 
-      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 1.15, 5.8, 6), stoneMat);
-      shaft.position.y = 2.9;
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.95, 4.6, 8), stoneMat);
+      shaft.position.y = 2.3;
       shaft.castShadow = true;
       group.add(shaft);
 
-      const cap = new THREE.Mesh(new THREE.ConeGeometry(0.95, 1.5, 6), stoneMat);
-      cap.position.y = 6.5;
+      const cap = new THREE.Mesh(new THREE.ConeGeometry(0.8, 1.3, 8), stoneMat);
+      cap.position.y = 5.1;
       group.add(cap);
+    } else {
+      // SUMMIT TREASURE CHEST!
+      icon = '🎁';
+      name = `🎁 ${cont.chestName}`;
+      heightOffset = 3.4;
+
+      const chestMesh = createTreasureChestMesh();
+      group.add(chestMesh);
+      group._chest = chestMesh;
     }
 
     scene.add(group);
@@ -847,16 +1222,17 @@ CONTINENTS.forEach((cont) => {
       id: `site-${cont.id}-${sIdx}`,
       continent: cont,
       tier: cont.tier,
-      kind: sCfg.type,
+      badge: obj.badge,
+      kind: obj.kind,
       icon,
       name,
-      hp: Math.round(maxHp * 0.12),
+      hp: Math.round(maxHp * 0.15),
       maxHp,
       rejuvenated: false,
       mesh: group,
       blightRing,
-      homeX: sx,
-      homeZ: sz,
+      homeX: obj.pos.x,
+      homeZ: obj.pos.z,
       wanderAngle: sIdx * 1.7 + cont.id,
       heightOffset,
     };
@@ -867,66 +1243,57 @@ CONTINENTS.forEach((cont) => {
 });
 
 // ============================================================================
-// 4. PLAYER HERO, GOLDEN GARUDA WINGS & SUDARSHANA CHAKRA HALO
+// 6. PLAYER HERO & ANIMATED 3D SKY-DRAGON PET / MOUNT (`Flamingo.glb` + Wings)
 // ============================================================================
 const playerGroup = new THREE.Group();
 playerGroup.position.set(0, getTerrainHeight(0, 9), 9);
 scene.add(playerGroup);
 
-// Ornate Lotus Staff in right hand
+// Ornate Lotus Trekking Staff
 const staffGroup = new THREE.Group();
 const staffPole = new THREE.Mesh(
-  new THREE.CylinderGeometry(0.05, 0.065, 2.4, 8),
+  new THREE.CylinderGeometry(0.048, 0.062, 2.4, 8),
   new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.7, roughness: 0.25 })
 );
 staffPole.position.y = 1.2;
 staffGroup.add(staffPole);
 const staffHead = new THREE.Mesh(
-  new THREE.OctahedronGeometry(0.26, 0),
-  new THREE.MeshStandardMaterial({ color: 0x34d399, emissive: 0x10b981, emissiveIntensity: 2.8 })
+  new THREE.OctahedronGeometry(0.24, 0),
+  new THREE.MeshStandardMaterial({ color: 0x34d399, emissive: 0x10b981, emissiveIntensity: 2.5 })
 );
 staffHead.position.y = 2.5;
 staffGroup.add(staffHead);
 staffGroup.position.set(0.5, 0.1, 0.25);
 playerGroup.add(staffGroup);
 
-// Golden Garuda Sky-Wings (Visible when Garuda Flight [F] is toggled ON!)
-const garudaWingsGroup = new THREE.Group();
-garudaWingsGroup.position.set(0, 1.45, -0.25);
-const wingMat = new THREE.MeshStandardMaterial({
-  color: 0xfde047,
-  emissive: 0xd97706,
-  emissiveIntensity: 1.4,
-  side: THREE.DoubleSide,
-});
-const leftWing = new THREE.Group();
-const rightWing = new THREE.Group();
-for (let f = 0; f < 5; f++) {
-  const featherGeo = new THREE.ConeGeometry(0.22, 2.2 - f * 0.25, 4);
-  featherGeo.rotateZ(Math.PI / 2);
-  const fl = new THREE.Mesh(featherGeo, wingMat);
-  fl.position.set(-0.9 - f * 0.28, f * 0.16, 0);
-  fl.rotation.z = -0.18 * f;
-  leftWing.add(fl);
+// 3D SKY-DRAGON COMPANION PET & SKYRIDING MOUNT!
+// Follows beside the player when trekking on foot; locks underneath the player when mounted with [F]!
+const dragonCompanionGroup = new THREE.Group();
+dragonCompanionGroup.position.set(-2.5, getTerrainHeight(0, 9) + 2.8, 7.5);
+scene.add(dragonCompanionGroup);
 
-  const fr = new THREE.Mesh(featherGeo.clone(), wingMat);
-  fr.scale.x = -1;
-  fr.position.set(0.9 + f * 0.28, f * 0.16, 0);
-  fr.rotation.z = 0.18 * f;
-  rightWing.add(fr);
-}
-garudaWingsGroup.add(leftWing, rightWing);
-garudaWingsGroup.visible = STATE.flyingActive;
-playerGroup.add(garudaWingsGroup);
-
-// Sudarshana Dharma Chakra Halo (orbiting above head)
-const chakraHalo = new THREE.Mesh(
-  new THREE.TorusGeometry(0.55, 0.045, 8, 24),
-  new THREE.MeshStandardMaterial({ color: 0xfef08a, emissive: 0xf59e0b, emissiveIntensity: 2.5 })
+// Sculpted Dragon Crest & Aura Ring on the Sky-Dragon
+const dragonAura = new THREE.Mesh(
+  new THREE.TorusGeometry(0.85, 0.05, 8, 24).rotateX(Math.PI / 2),
+  new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 2.2 })
 );
-chakraHalo.rotation.x = Math.PI / 2;
-chakraHalo.position.y = 2.45;
-playerGroup.add(chakraHalo);
+dragonCompanionGroup.add(dragonAura);
+
+gltfLoader.load('https://threejs.org/examples/models/gltf/Parrot.glb', (gltf) => {
+  const drake = gltf.scene;
+  drake.scale.setScalar(0.042);
+  drake.traverse((c) => {
+    if (c.isMesh) {
+      c.castShadow = true;
+    }
+  });
+  dragonCompanionGroup.add(drake);
+  if (gltf.animations && gltf.animations[0]) {
+    const dm = new THREE.AnimationMixer(drake);
+    dm.clipAction(gltf.animations[0]).play();
+    mixers.push(dm);
+  }
+});
 
 let playerMixer = null;
 let playerActions = {};
@@ -952,24 +1319,6 @@ gltfLoader.load('https://threejs.org/examples/models/gltf/Soldier.glb', (gltf) =
     activePlayerAction = playerActions['Idle'];
     activePlayerAction.play();
   }
-
-  // Spawn Vishwakarma Forge Master NPC & 2 Party Guardians near Jambudvipa Sanctuary
-  const NPCS = [
-    { name: 'Rishi Vishwakarma [K]', x: -5.5, z: 3.5 },
-    { name: 'Arjuna_Palak', x: 6.0, z: 4.0 },
-  ];
-  NPCS.forEach((n) => {
-    const clone = SkeletonUtils.clone(gltf.scene);
-    clone.scale.setScalar(1.3);
-    const ny = getTerrainHeight(n.x, n.z);
-    const ng = new THREE.Group();
-    ng.position.set(n.x, ny, n.z);
-    ng.add(clone);
-    scene.add(ng);
-    const cm = new THREE.AnimationMixer(clone);
-    mixers.push(cm);
-    if (gltf.animations[0]) cm.clipAction(gltf.animations[0]).play();
-  });
 });
 
 function setPlayerAnim(name) {
@@ -981,11 +1330,69 @@ function setPlayerAnim(name) {
 }
 
 // ============================================================================
-// 5. TARGETING, REJUVENATION ENGINE, KARMA POINTS & CONTINENT PROGRESSION
+// 7. PITCHING 3D MOUNTAIN CAMPFIRES [C] (TENT + LOGS + WARM FIRE LIGHT)
+// ============================================================================
+const activeCampfires = [];
+
+function pitchMountainCampfire() {
+  SFX.playCampfireCrackle();
+  const pos = playerGroup.position.clone();
+  pos.y = getTerrainHeight(pos.x, pos.z);
+
+  const campGroup = new THREE.Group();
+  campGroup.position.copy(pos);
+
+  // Canvas Expedition Tent beside the fire
+  const tentMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.8, side: THREE.DoubleSide });
+  const tent = new THREE.Mesh(new THREE.ConeGeometry(1.9, 2.2, 4), tentMat);
+  tent.position.set(-2.2, 1.1, -1.2);
+  tent.rotation.y = Math.PI / 4;
+  tent.castShadow = true;
+  campGroup.add(tent);
+
+  // Campfire Stone Ring & Glowing Flame
+  const fireOrb = new THREE.Mesh(
+    new THREE.ConeGeometry(0.55, 1.35, 8),
+    new THREE.MeshStandardMaterial({ color: 0xfde047, emissive: 0xf97316, emissiveIntensity: 3.2 })
+  );
+  fireOrb.position.set(0, 0.68, 1.4);
+  campGroup.add(fireOrb);
+
+  const fireLight = new THREE.PointLight(0xffedd5, 3.5, 22);
+  fireLight.position.set(0, 1.8, 1.4);
+  campGroup.add(fireLight);
+
+  scene.add(campGroup);
+  activeCampfires.push({ group: campGroup, fireOrb, x: pos.x, z: pos.z });
+
+  // Restore 100% Trek Stamina, Refill All 6 Dragon Vigor Orbs, Grant Well-Fed Speed Buff & Heal Nearby!
+  STATE.trekStamina = 100;
+  STATE.vigor = STATE.maxVigor;
+  STATE.wellFedTimer = 30.0;
+  updateVigorOrbsUI();
+
+  const campHeal = SHOP_TOOLS[3].rank * 90;
+  rejuvenateEnvironmentAround(pos.x, pos.z, 48.0);
+  spawnShockwave(pos, 0xf97316, 18.0, 0.9);
+  spawnFloatingText(pos, '⛺ CAMPFIRE PITCHED! (+100% Vigor & Well-Fed Speed)', '#fde047');
+  addChatMessage(
+    'gold',
+    `⛺ Pitched a <strong>Mountain Base Camp</strong>! Restored 100% Trek Stamina, 6/6 Dragon Vigor Orbs, and healed nearby wildlife for +${campHeal}!`
+  );
+
+  interactables.forEach((ent) => {
+    if (ent.mesh.position.distanceTo(pos) <= 45.0) {
+      applyRejuvenation(ent, campHeal, 'Campfire Warmth');
+    }
+  });
+}
+
+// ============================================================================
+// 8. TARGETING, SUMMIT CHEST LOOTING & REJUVENATION ENGINE
 // ============================================================================
 const targetRing = new THREE.Mesh(
-  new THREE.RingGeometry(1.45, 1.78, 32).rotateX(-Math.PI / 2),
-  new THREE.MeshBasicMaterial({ color: 0xfacc15, side: THREE.DoubleSide, transparent: true, opacity: 0.92 })
+  new THREE.RingGeometry(1.4, 1.75, 32).rotateX(-Math.PI / 2),
+  new THREE.MeshBasicMaterial({ color: 0xfde047, side: THREE.DoubleSide, transparent: true, opacity: 0.9 })
 );
 targetRing.visible = false;
 scene.add(targetRing);
@@ -1010,21 +1417,22 @@ function updateTargetFrameUI() {
   if (!t) return;
   document.getElementById('wow-target-icon').textContent = t.icon;
   document.getElementById('wow-target-name').textContent = t.name;
-  document.getElementById('wow-target-lvl').textContent = t.tier;
-  document.getElementById('wow-target-diff').textContent = `Tier ${t.continent.roman}`;
-
-  const nameBg = document.getElementById('wow-target-name-bg');
-  if (t.rejuvenated) nameBg.classList.add('rejuvenated');
-  else nameBg.classList.remove('rejuvenated');
+  const alt = Math.max(0, Math.round(t.mesh.position.y));
+  document.getElementById('wow-target-diff').textContent = `${t.badge} (${alt}m)`;
 
   const hpPct = Math.min(100, Math.round((t.hp / t.maxHp) * 100));
   const blightPct = Math.max(0, 100 - hpPct);
   document.getElementById('wow-target-hp-bar').style.width = `${hpPct}%`;
-  document.getElementById('wow-target-hp-txt').textContent = `${Math.round(t.hp)} / ${t.maxHp} Rejuvenation`;
+  document.getElementById('wow-target-hp-txt').textContent =
+    t.kind === 'chest' ? `${Math.round(t.hp)} / ${t.maxHp} Chest Seal` : `${Math.round(t.hp)} / ${t.maxHp} Vitality`;
   document.getElementById('wow-target-blight-bar').style.width = `${blightPct}%`;
   document.getElementById('wow-target-status-txt').textContent = t.rejuvenated
-    ? '🌟 Rejuvenated & Blossoming!'
-    : `🌑 ${blightPct}% Suffering — Cast [1] [2] [3] [R]`;
+    ? t.kind === 'chest'
+      ? '🎁 Summit Chest Looted!'
+      : '🌟 Rejuvenated & Blossoming!'
+    : t.kind === 'chest'
+    ? `🏔️ Climb to Summit & Cast [1] [2] to Open Chest!`
+    : `${blightPct}% Suffering — Cast [1] [2] [3] [R]`;
 }
 
 function spawnFloatingText(worldPos, text, color = '#4ade80') {
@@ -1042,7 +1450,7 @@ function spawnFloatingText(worldPos, text, color = '#4ade80') {
   el.style.color = color;
   el.textContent = text;
   document.getElementById('floating-text-container').appendChild(el);
-  setTimeout(() => el.remove(), 1350);
+  setTimeout(() => el.remove(), 1300);
 }
 
 function addChatMessage(colorClass, textHtml) {
@@ -1051,16 +1459,18 @@ function addChatMessage(colorClass, textHtml) {
   div.className = `chat-line ${colorClass}`;
   div.innerHTML = textHtml;
   box.appendChild(div);
-  box.scrollTop = box.scrollHeight;
+  while (box.children.length > 5) {
+    box.removeChild(box.firstChild);
+  }
 }
 
 function spawnShockwave(pos, colorHex, maxRadius = 12.0, duration = 0.85) {
-  const geo = new THREE.RingGeometry(0.5, 1.2, 36).rotateX(-Math.PI / 2);
+  const geo = new THREE.RingGeometry(0.45, 0.9, 40).rotateX(-Math.PI / 2);
   const mat = new THREE.MeshBasicMaterial({
     color: colorHex,
     side: THREE.DoubleSide,
     transparent: true,
-    opacity: 0.92,
+    opacity: 0.85,
   });
   const mesh = new THREE.Mesh(geo, mat);
   mesh.position.copy(pos);
@@ -1075,19 +1485,19 @@ function earnKarma(baseAmount, reasonText) {
   STATE.lifetimeKarma += gain;
   updateAllHUD();
   if (reasonText) {
-    addChatMessage('gold', `[Karma] ☸️ <strong>+${gain} Karma Points</strong> earned (${reasonText})!`);
+    addChatMessage('gold', `☸️ <strong>+${gain} Karma Points</strong> (${reasonText})`);
   }
   return gain;
 }
 
-// Rejuvenate nearby withered trees & ground shader whenever a site is healed!
-function rejuvenateEnvironmentAround(x, z, radius = 62.0) {
+function rejuvenateEnvironmentAround(x, z, radius = 64.0) {
   addRejuvenationZone(x, z, radius);
   continentTrees.forEach((tr) => {
     if (!tr.rejuvenated && Math.hypot(tr.x - x, tr.z - z) <= radius) {
       tr.rejuvenated = true;
-      tr.crown.material = hash2D(tr.x, tr.z) > 0.75 ? goldenCrownMat : lushCrownMat;
-      tr.crown.scale.setScalar(1.18);
+      const mat = hash2D(tr.x, tr.z) > 0.74 ? goldenCrownMat : lushCrownMat;
+      tr.meshes.forEach((m) => (m.material = mat));
+      tr.crownGroup.scale.setScalar(1.15);
     }
   });
 }
@@ -1099,10 +1509,10 @@ function applyRejuvenation(entity, rawAmount, spellLabel) {
     entity.npFillEl.style.width = `${(entity.hp / entity.maxHp) * 100}%`;
   }
 
+  SFX.playHealImpact();
   spawnFloatingText(entity.mesh.position, `+${rawAmount} ${spellLabel}`, '#4ade80');
-  spawnShockwave(entity.mesh.position, 0x10b981, 4.5, 0.55);
+  spawnShockwave(entity.mesh.position, 0x34d399, 4.2, 0.5);
 
-  // Small Karma reward on every healing pulse, huge Karma reward on full rejuvenation!
   if (prevHp < entity.maxHp) {
     const pulseKarma = earnKarma(Math.round(18 * entity.continent.diffMult), null);
     spawnFloatingText(
@@ -1117,34 +1527,48 @@ function applyRejuvenation(entity, rawAmount, spellLabel) {
     if (entity.nameplateEl) entity.nameplateEl.classList.add('rejuvenated');
     if (entity.npFillEl) entity.npFillEl.classList.add('rejuvenated');
     if (entity.blightRing) entity.blightRing.material.color.setHex(0x22c55e);
-    if (entity.mesh._lotus) entity.mesh._lotus.scale.setScalar(1.3);
 
-    // Transform the surrounding blighted land & withered trees into lush green paradise!
-    rejuvenateEnvironmentAround(entity.mesh.position.x, entity.mesh.position.z, 72.0);
+    // If this was a SUMMIT TREASURE CHEST, pop open its golden lid and award Mythic Loot + 2x Karma!
+    if (entity.kind === 'chest') {
+      STATE.relicsLooted += 1;
+      if (entity.mesh._chest && entity.mesh._chest._lid) {
+        entity.mesh._chest._lid.rotation.x = -0.85;
+      }
+      SFX.playWoWLevelUpFanfare();
+      const chestKarma = earnKarma(entity.continent.karmaReward * 2, `Looted ${entity.name}!`);
+      spawnFloatingText(
+        entity.mesh.position.clone().add(new THREE.Vector3(0, 2.2, 0)),
+        `🎁 CHEST LOOTED! +${chestKarma} ☸️ & +15% Relic Power!`,
+        '#fde047'
+      );
+      addChatMessage(
+        'gold',
+        `🎁 <strong>SUMMIT TREASURE LOOTED:</strong> Opened <strong>${entity.name}</strong> at the peak of ${entity.continent.shortName}! (+${chestKarma} ☸️ Karma & +15% Permanent Karma Bonus)`
+      );
+    } else {
+      earnKarma(entity.continent.karmaReward, `Rejuvenated ${entity.name}`);
+    }
+
+    rejuvenateEnvironmentAround(entity.mesh.position.x, entity.mesh.position.z, 76.0);
 
     const cont = entity.continent;
     cont.rejuvenatedCount = Math.min(cont.goalCount, cont.rejuvenatedCount + 1);
     STATE.totalRejuvenated += 1;
 
-    earnKarma(cont.karmaReward, `Rejuvenated ${entity.name} in ${cont.shortName}`);
-
-    // Check if the entire Continent is now 100% Rejuvenated!
     if (cont.rejuvenatedCount >= cont.goalCount && !cont.completed) {
       cont.completed = true;
       STATE.ascensionStage = Math.min(7, STATE.ascensionStage + 1);
-      if (cont.skyBeaconMat) cont.skyBeaconMat.color.setHex(0x22c55e);
-      rejuvenateEnvironmentAround(cont.x, cont.z, cont.radius * 1.15);
+      rejuvenateEnvironmentAround(cont.x, cont.z, cont.radius * 1.25);
 
-      document.getElementById('gift-tier').textContent = `🌟 CONTINENT ${cont.roman} REJUVENATED • VIRTUOUS BOON ATTAINED 🌟`;
+      SFX.playWoWLevelUpFanfare();
+
+      document.getElementById('gift-tier').textContent = `🏔️ PEAK ${cont.roman} CONQUERED • VIRTUOUS BOON ATTAINED`;
       document.getElementById('gift-icon').textContent = cont.boonIcon;
       document.getElementById('gift-title').textContent = cont.boonName;
-      document.getElementById('gift-desc').textContent = `You removed all suffering from ${cont.name}! ${cont.boonDesc}`;
+      document.getElementById('gift-desc').textContent = `You conquered ${cont.name} (${cont.realMeters.toLocaleString()}m)! ${cont.boonDesc}`;
       document.getElementById('gift-modal').classList.remove('wow-modal-hidden');
 
-      addChatMessage(
-        'green',
-        `🎉 [Continent Reborn] <strong>${cont.name}</strong> has been completely rejuvenated! Permanent Boon unlocked: <strong>${cont.boonName}</strong>!`
-      );
+      addChatMessage('green', `🎉 <strong>${cont.name} Conquered!</strong> Unlocked <strong>${cont.boonName}</strong>!`);
     }
   }
 
@@ -1153,15 +1577,36 @@ function applyRejuvenation(entity, rawAmount, spellLabel) {
 }
 
 // ============================================================================
-// 6. SPELLS, SPEED-RUNNING [4], GARUDA FLIGHT [F] & WORLD WARP
+// 9. DRAGONFLIGHT SKYRIDING, VIGOR ORBS, NO-FLY ZONES & CAMPING ACTIONS
 // ============================================================================
+function updateVigorOrbsUI() {
+  const fullOrbs = Math.floor(STATE.vigor);
+  const orbs = document.querySelectorAll('#vigor-orbs-row .v-orb');
+  orbs.forEach((el, idx) => {
+    el.classList.toggle('full', idx < fullOrbs);
+  });
+
+  const statusEl = document.getElementById('vigor-status-txt');
+  if (!canFlyOnContinent(STATE.currentContinent)) {
+    statusEl.textContent = '🥾 No-Fly Peak (Trek on Foot!)';
+    statusEl.style.color = '#fb7185';
+  } else if (STATE.mountedOnDragon) {
+    statusEl.textContent = `🐉 Skyriding (${fullOrbs}/6 Vigor)`;
+    statusEl.style.color = '#38bdf8';
+  } else {
+    statusEl.textContent = `🐉 Companion Ready [F] (${fullOrbs}/6)`;
+    statusEl.style.color = '#fef08a';
+  }
+}
+
 function triggerActionSlot(slot) {
+  SFX.init();
   if (STATE.cooldowns[slot] > 0) return;
 
   const healPwr = getHealPower();
   const aoeRad = getAoERadius();
 
-  // [1] Sanjeevani Bolt (Homing Emerald Bolt + Chain-Heal if Tier V Ganesha Boon unlocked)
+  // [1] Sanjeevani Bolt / Open Summit Chest
   if (slot === 1) {
     let target = STATE.selectedTarget;
     if (!target || target.rejuvenated) {
@@ -1170,15 +1615,15 @@ function triggerActionSlot(slot) {
     }
     if (!target) return;
 
-    const castDur = CONTINENTS[2].completed ? 0.28 : 0.42;
+    SFX.playCastStart();
+    const castDur = CONTINENTS[2].completed ? 0.25 : 0.38;
     STATE.casting = {
-      name: `Sanjeevani Bolt → ${target.name}`,
+      name: target.kind === 'chest' ? `Opening ${target.name}...` : `Sanjeevani Bolt → ${target.name}`,
       duration: castDur,
       elapsed: 0,
       onComplete: () => {
         STATE.cooldowns[1] = STATE.cdMax[1];
         launchProjectile(playerGroup.position, target, healPwr, 0x34d399);
-        // If Tier V Ganesha Boon unlocked, chain-fire to 2 additional nearby suffering targets!
         if (CONTINENTS[4].completed) {
           interactables
             .filter((e) => e !== target && !e.rejuvenated && e.mesh.position.distanceTo(target.mesh.position) < 28)
@@ -1192,16 +1637,17 @@ function triggerActionSlot(slot) {
     return;
   }
 
-  // [2] Ganga Jal Nova (Expanding Sacred Water Wave)
+  // [2] Ganga Jal Nova
   if (slot === 2) {
     STATE.cooldowns[2] = STATE.cdMax[2];
-    spawnShockwave(playerGroup.position, 0x38bdf8, aoeRad, 0.9);
-    rejuvenateEnvironmentAround(playerGroup.position.x, playerGroup.position.z, aoeRad * 1.4);
+    SFX.playNovaWave();
+    spawnShockwave(playerGroup.position, 0x38bdf8, aoeRad, 0.85);
+    rejuvenateEnvironmentAround(playerGroup.position.x, playerGroup.position.z, aoeRad * 1.45);
 
-    const aoeHeal = Math.round(healPwr * 0.85 + getAoEBonus());
+    const aoeHeal = Math.round(healPwr * 0.9);
     let hits = 0;
     interactables.forEach((ent) => {
-      if (ent.mesh.position.distanceTo(playerGroup.position) <= aoeRad + 6) {
+      if (ent.mesh.position.distanceTo(playerGroup.position) <= aoeRad + 8) {
         applyRejuvenation(ent, aoeHeal, 'Ganga Nova');
         hits++;
       }
@@ -1212,91 +1658,115 @@ function triggerActionSlot(slot) {
     return;
   }
 
-  // [3] Surya Sunbeam (Pillar of Solar Light on Target)
+  // [3] Surya Sunbeam
   if (slot === 3) {
     STATE.cooldowns[3] = STATE.cdMax[3];
+    SFX.playNovaWave();
     let target = STATE.selectedTarget || findNearestSufferingEntity();
     if (target) {
       selectTarget(target);
-      spawnSunbeam(target.mesh.position);
+      spawnShockwave(target.mesh.position, 0xfde047, 8.5, 0.75);
       applyRejuvenation(target, Math.round(healPwr * 1.45), 'Sunbeam');
     }
     return;
   }
 
-  // [4] Vayu Speed-Run Toggle (Instant Super-Speed Running!)
+  // [4] Trekking Trail-Sprint Toggle
   if (slot === 4) {
     STATE.cooldowns[4] = STATE.cdMax[4];
     STATE.speedRunActive = !STATE.speedRunActive;
-    document.getElementById('slot-4').classList.toggle('active-toggle', STATE.speedRunActive);
-    document.getElementById('buff-speed-txt').textContent = STATE.speedRunActive ? '3.2x' : '1.0x';
-    spawnShockwave(playerGroup.position, 0xfacc15, 6.0, 0.45);
+    SFX.playDragonRoarWingbeat();
+    document.getElementById('slot-4').classList.toggle('active-aura', STATE.speedRunActive);
+    spawnShockwave(playerGroup.position, 0xfacc15, 5.5, 0.45);
     spawnFloatingText(
       playerGroup.position,
-      STATE.speedRunActive ? '⚡ VAYU SPEED-RUN ON (3.2x)' : 'Speed Normal',
+      STATE.speedRunActive ? '🥾 TRAIL-SPRINT ON' : 'Pace Normal',
       '#fde047'
     );
-    updateAllHUD();
     return;
   }
 
-  // [5] Padma Sky-Leap (High Vault / Flight Boost)
+  // [5] Skyward Ascent / Crag Leap (Uses 1 Dragon Vigor Orb to surge 34m up a mountain cliff!)
   if (slot === 5) {
+    if (STATE.vigor < 1.0) {
+      addChatMessage('yellow', `⚠️ Need 1 Dragon Vigor Orb for Skyward Ascent! Pitch a <strong>Campfire [C]</strong> to refill Vigor.`);
+      return;
+    }
+    STATE.vigor = Math.max(0, STATE.vigor - 1.0);
+    updateVigorOrbsUI();
     STATE.cooldowns[5] = STATE.cdMax[5];
-    playerVelY = 26.0;
+    SFX.playDragonRoarWingbeat();
+
+    const forward = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
+    playerGroup.position.addScaledVector(forward, 16.0);
+    playerVelY = 30.0;
     isGrounded = false;
-    if (STATE.flyingActive) playerGroup.position.y += 14.0;
-    spawnShockwave(playerGroup.position, 0xf472b6, 6.0, 0.55);
-    spawnFloatingText(playerGroup.position, '🌸 PADMA SKY-LEAP!', '#f472b6');
+    if (STATE.mountedOnDragon) playerGroup.position.y += 22.0;
+
+    spawnShockwave(playerGroup.position, 0x38bdf8, 6.5, 0.5);
+    spawnFloatingText(playerGroup.position, '🚀 SKYWARD ASCENT! (-1 Vigor)', '#38bdf8');
     return;
   }
 
-  // [6] Akashic Warp Blink [T] (Instant 65m Spatial Dash forward in 3D camera direction)
+  // [6] Pitch Mountain Campfire [C]
   if (slot === 6) {
     STATE.cooldowns[6] = STATE.cdMax[6];
-    spawnShockwave(playerGroup.position, 0xa855f7, 5.0, 0.4);
-    const forward = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
-    playerGroup.position.addScaledVector(forward, 65.0);
-    if (!STATE.flyingActive) {
-      playerGroup.position.y = Math.max(-1.0, getTerrainHeight(playerGroup.position.x, playerGroup.position.z));
-    }
-    spawnShockwave(playerGroup.position, 0x38bdf8, 6.5, 0.5);
-    spawnFloatingText(playerGroup.position, '✨ AKASHIC WARP (+65m)', '#c084fc');
+    pitchMountainCampfire();
     return;
   }
 
-  // [7] Garuda Sky-Flight [F] (Boundless 3D Flight Across All 7 Continents!)
+  // [7] Summon Sky-Dragon Mount [F] (Checks Sacred No-Fly Trekking Rule!)
   if (slot === 7) {
     STATE.cooldowns[7] = STATE.cdMax[7];
-    STATE.flyingActive = !STATE.flyingActive;
-    garudaWingsGroup.visible = STATE.flyingActive;
-    document.getElementById('slot-7').classList.toggle('active-toggle', STATE.flyingActive);
-    document.getElementById('buff-flight-txt').textContent = STATE.flyingActive ? 'SOAR' : 'LAND';
-    if (STATE.flyingActive) {
-      playerGroup.position.y = Math.max(playerGroup.position.y + 8.0, 12.0);
-      spawnShockwave(playerGroup.position, 0xfde047, 8.0, 0.6);
-      spawnFloatingText(playerGroup.position, '🦅 GARUDA SKY-FLIGHT ACTIVE!', '#fde047');
-    } else {
-      spawnFloatingText(playerGroup.position, '🦅 Landed', '#94a3b8');
+    if (!STATE.mountedOnDragon && !canFlyOnContinent(STATE.currentContinent)) {
+      SFX.playTargetClick();
+      spawnFloatingText(playerGroup.position, '🥾 SACRED NO-FLY PEAK! TREK ON FOOT!', '#fb7185');
+      addChatMessage(
+        'cyan',
+        `🥾 <strong>${STATE.currentContinent.shortName}</strong> is a <strong>Sacred No-Fly Trekking Peak</strong>! Follow the golden torch cairns up the spiral mountain trail using <strong>Trek Sprint [4]</strong>, <strong>Crag Leap [5]</strong>, and <strong>Campfires [C]</strong>!`
+      );
+      return;
     }
+
+    STATE.mountedOnDragon = !STATE.mountedOnDragon;
+    SFX.playDragonRoarWingbeat();
+    document.getElementById('slot-7').classList.toggle('active-aura', STATE.mountedOnDragon);
+    if (STATE.mountedOnDragon) {
+      playerGroup.position.y = Math.max(playerGroup.position.y + 7.5, 10.0);
+      spawnShockwave(playerGroup.position, 0x38bdf8, 8.0, 0.55);
+      spawnFloatingText(playerGroup.position, '🐉 MOUNTED SKY-DRAGON!', '#38bdf8');
+    } else {
+      spawnFloatingText(playerGroup.position, '🥾 Dismounted (Trekking Mode)', '#fef08a');
+    }
+    updateVigorOrbsUI();
     updateAllHUD();
     return;
   }
 
-  // [8] Amrita World-Pulse [R] (Massive AoE Rejuvenation Supernova)
+  // [8] Whirling Surge / World Pulse [R]
   if (slot === 8) {
     STATE.cooldowns[8] = CONTINENTS[5].completed ? STATE.cdMax[8] * 0.5 : STATE.cdMax[8];
-    const pulseRad = aoeRad * 2.1;
-    spawnShockwave(playerGroup.position, 0xfacc15, pulseRad, 1.15);
+    SFX.playWoWLevelUpFanfare();
+
+    // Surge forward 35m if mounted on Sky-Dragon!
+    if (STATE.mountedOnDragon && STATE.vigor >= 1.0) {
+      STATE.vigor -= 1.0;
+      const forward = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
+      playerGroup.position.addScaledVector(forward, 38.0);
+      updateVigorOrbsUI();
+    }
+
+    const pulseRad = aoeRad * 2.0;
+    spawnShockwave(playerGroup.position, 0xfacc15, pulseRad, 1.1);
     rejuvenateEnvironmentAround(playerGroup.position.x, playerGroup.position.z, pulseRad * 1.35);
 
-    const burstHeal = Math.round(healPwr * 1.6 + getAoEBonus());
+    const burstHeal = Math.round(healPwr * 1.65);
     interactables.forEach((ent) => {
       if (ent.mesh.position.distanceTo(playerGroup.position) <= pulseRad + 8) {
-        applyRejuvenation(ent, burstHeal, 'World Pulse');
+        applyRejuvenation(ent, burstHeal, 'Whirling Surge');
       }
     });
-    spawnFloatingText(playerGroup.position, '🪷 AMRITA WORLD-PULSE!', '#fde047');
+    spawnFloatingText(playerGroup.position, '🌟 WHIRLING SURGE!', '#fde047');
   }
 }
 
@@ -1322,49 +1792,47 @@ function launchProjectile(fromPos, target, healAmount, colorHex) {
   orb.position.copy(fromPos);
   orb.position.y += 1.8;
   scene.add(orb);
-  activeProjectiles.push({ mesh: orb, target, healAmount, speed: 38.0 });
+  activeProjectiles.push({ mesh: orb, target, healAmount, speed: 40.0 });
 }
 
-function spawnSunbeam(pos) {
-  const beam = new THREE.Mesh(
-    new THREE.CylinderGeometry(1.4, 1.4, 65, 16, 1, true),
-    new THREE.MeshBasicMaterial({ color: 0xfde047, transparent: true, opacity: 0.7, side: THREE.DoubleSide })
-  );
-  beam.position.copy(pos);
-  beam.position.y += 32.5;
-  scene.add(beam);
-  spawnShockwave(pos, 0xfacc15, 9.0, 0.8);
-  setTimeout(() => scene.remove(beam), 550);
-}
-
-// Fast-Fly / Soar to any of the 7 Continents from the World Map or Quest Tracker!
-function flyToContinent(continentId) {
+// Travel to a Mountain's Base Camp (Respects No-Fly rule on arrival!)
+function travelToPeakBaseCamp(continentId) {
   const cont = CONTINENTS[continentId];
   if (!cont) return;
+  SFX.playDragonRoarWingbeat();
   document.getElementById('worldmap-modal').classList.add('wow-modal-hidden');
 
-  STATE.flyingActive = true;
-  garudaWingsGroup.visible = true;
-  document.getElementById('slot-7').classList.add('active-toggle');
-
-  const groundY = getTerrainHeight(cont.x, cont.z + 12);
-  playerGroup.position.set(cont.x, groundY + 6.5, cont.z + 12);
   STATE.currentContinent = cont;
+  const canFly = canFlyOnContinent(cont);
+  STATE.mountedOnDragon = canFly;
+  document.getElementById('slot-7').classList.toggle('active-aura', STATE.mountedOnDragon);
 
-  spawnShockwave(playerGroup.position, 0xfde047, 12.0, 0.8);
-  spawnFloatingText(playerGroup.position, `🦅 Soared to ${cont.shortName}!`, '#fde047');
+  const groundY = getTerrainHeight(cont.x, cont.z + 10);
+  playerGroup.position.set(cont.x, groundY + (canFly ? 6.0 : 0.2), cont.z + 10);
+
+  spawnShockwave(playerGroup.position, 0xfde047, 11.0, 0.75);
+  spawnFloatingText(
+    playerGroup.position,
+    canFly ? `🐉 Arrived at ${cont.shortName} (Skyriding)` : `🥾 Arrived at ${cont.shortName} Base Camp (No-Fly Trek!)`,
+    canFly ? '#38bdf8' : '#fb7185'
+  );
   addChatMessage(
     'cyan',
-    `🦅 [Sky-Flight] Arrived at <strong>${cont.name}</strong> (Difficulty Tier ${cont.roman} — ${cont.diffMult}x). Cleanse its 4 suffering sites!`
+    `🏔️ Arrived at <strong>${cont.name}</strong> (Summit: ${cont.realMeters.toLocaleString()}m • ${
+      canFly ? '🐉 Skyriding Allowed' : '🥾 Sacred No-Fly Trekking Peak — Follow the Torch Cairns up the Ridge!'
+    }).`
   );
 
-  const nextTarget = interactables.find((e) => e.continent.id === cont.id && !e.rejuvenated);
+  // Target the Summit Loot Chest or nearest objective on this mountain
+  const chestTarget = interactables.find((e) => e.continent.id === cont.id && e.kind === 'chest' && !e.rejuvenated);
+  const nextTarget = chestTarget || interactables.find((e) => e.continent.id === cont.id && !e.rejuvenated);
   if (nextTarget) selectTarget(nextTarget);
+  updateVigorOrbsUI();
   updateAllHUD();
 }
 
 // ============================================================================
-// 7. KARMA EMPORIUM SHOP & WORLD MAP MODALS
+// 10. KARMA FORGE SHOP & 7 WORLD PEAKS EXPEDITION MAP MODALS
 // ============================================================================
 function renderKarmaShopModal() {
   document.getElementById('shop-karma-balance').textContent = STATE.karma.toLocaleString();
@@ -1378,16 +1846,18 @@ function renderKarmaShopModal() {
     return `
       <div class="shop-card">
         <div class="shop-top">
-          <div class="shop-icon">${item.icon}</div>
-          <div>
-            <div class="shop-title">${item.name}</div>
-            <div class="shop-rank">${item.category} • ${item.isConsumable ? 'Instant' : `Rank ${item.rank}/${item.maxRank}`}</div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="shop-icon">${item.icon}</span>
+            <div>
+              <div class="shop-title">${item.name}</div>
+              <div class="shop-rank">${item.category} • ${item.isConsumable ? 'Instant' : `Rank ${item.rank}/${item.maxRank}`}</div>
+            </div>
           </div>
         </div>
         <div class="shop-desc">${item.desc}</div>
         <div class="shop-bonus">${item.bonusText(item.rank)}</div>
         <button class="shop-buy-btn ${canAfford ? '' : 'disabled'}" data-shop-id="${item.id}">
-          <span>${isMax ? 'MAX RANK FORGED' : item.isConsumable ? 'Invoke Elixir Now' : `Upgrade to Rank ${item.rank + 1}`}</span>
+          <span>${isMax ? 'MAX RANK FORGED' : item.isConsumable ? 'Invoke Elixir Now' : `Forge Rank ${item.rank + 1}`}</span>
           <span>☸️ ${isMax ? '—' : cost.toLocaleString()}</span>
         </button>
       </div>
@@ -1395,10 +1865,7 @@ function renderKarmaShopModal() {
   }).join('');
 
   grid.querySelectorAll('.shop-buy-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const id = btn.getAttribute('data-shop-id');
-      purchaseShopItem(id);
-    });
+    btn.addEventListener('click', () => purchaseShopItem(btn.getAttribute('data-shop-id')));
   });
 }
 
@@ -1407,27 +1874,28 @@ function purchaseShopItem(itemId) {
   if (!item || item.rank >= item.maxRank) return;
   const cost = Math.round(item.baseCost * Math.pow(item.costMult, item.rank));
   if (STATE.karma < cost) {
-    addChatMessage('yellow', `⚠️ You need <strong>☸️ ${cost} Karma Points</strong> to forge <strong>${item.name}</strong>! Heal suffering creatures to earn more Karma.`);
+    SFX.playTargetClick();
+    addChatMessage('yellow', `⚠️ Need <strong>☸️ ${cost} Karma</strong> to forge ${item.name}!`);
     return;
   }
 
   STATE.karma -= cost;
   item.rank += 1;
+  SFX.playForgeAnvil();
 
   if (item.isConsumable) {
-    // Soma-Sanjeevani Elixir: Instant 65m Supernova!
-    spawnShockwave(playerGroup.position, 0xfde047, 65.0, 1.3);
+    STATE.vigor = STATE.maxVigor;
+    updateVigorOrbsUI();
+    spawnShockwave(playerGroup.position, 0xfde047, 65.0, 1.25);
     rejuvenateEnvironmentAround(playerGroup.position.x, playerGroup.position.z, 75.0);
     interactables.forEach((ent) => {
       if (ent.mesh.position.distanceTo(playerGroup.position) <= 68.0) {
-        applyRejuvenation(ent, 320, 'Soma Elixir');
+        applyRejuvenation(ent, 340, 'Soma Elixir');
       }
     });
-    addChatMessage('green', `🧪 [Karma Emporium] Invoked <strong>${item.name}</strong>! A 65m Golden Supernova rejuvenated everything around you!`);
   } else {
     spawnShockwave(playerGroup.position, 0x38bdf8, 8.0, 0.6);
-    spawnFloatingText(playerGroup.position, `🛠️ Upgraded ${item.name} (Rank ${item.rank})!`, '#fde047');
-    addChatMessage('green', `🛠️ [Karma Emporium] Forged <strong>${item.name} (Rank ${item.rank})</strong> using ☸️ ${cost} Karma Points!`);
+    spawnFloatingText(playerGroup.position, `🛠️ Forged ${item.name} (Rank ${item.rank})!`, '#fde047');
   }
 
   updateAllHUD();
@@ -1438,99 +1906,90 @@ function renderWorldMapModal() {
   const grid = document.getElementById('continents-modal-grid');
   grid.innerHTML = CONTINENTS.map(
     (c) => `
-    <div class="continent-card ${c.completed ? 'rejuvenated' : ''}">
+    <div class="continent-card">
       <div class="cc-top">
         <span class="cc-title">${c.roman}. ${c.name}</span>
-        <span class="cc-tier">Tier ${c.roman} (${c.diffMult}x)</span>
+        <span class="cc-tier">${c.realMeters.toLocaleString()}m</span>
       </div>
       <div class="cc-desc">
-        Status: <strong>${c.rejuvenatedCount} / ${c.goalCount} Sites Rejuvenated</strong><br/>
-        Site Vitality Requirement: ${c.maxHpBase} • Reward: ☸️ ${c.karmaReward} Karma
+        Rule: <strong style="color:${c.allowFlying ? '#38bdf8' : '#fb7185'}">${
+          c.allowFlying ? '🐉 Skyriding Allowed [F]' : '🥾 Sacred No-Fly Trekking Peak'
+        }</strong><br/>
+        Objectives &amp; Summit Chest: <strong>${c.rejuvenatedCount} / ${c.goalCount}</strong> • Reward: ☸️ +${c.karmaReward}
       </div>
       <div class="cc-boon">${c.boonIcon} ${c.boonName}: ${c.boonDesc}</div>
       <button class="cc-fly-btn" data-cont-id="${c.id}">
-        🦅 Soar to ${c.shortName} (${c.completed ? 'Rejuvenated 🌟' : 'Cleanse Suffering'})
+        <span>${c.allowFlying ? '🐉 Fly to Base Camp' : '🥾 Trek Base Camp'}</span>
+        <span>${c.completed ? '🏔️ Conquered' : 'Embark'}</span>
       </button>
     </div>
   `
   ).join('');
 
   grid.querySelectorAll('.cc-fly-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const cid = parseInt(btn.getAttribute('data-cont-id'), 10);
-      flyToContinent(cid);
-    });
+    btn.addEventListener('click', () => travelToPeakBaseCamp(parseInt(btn.getAttribute('data-cont-id'), 10)));
   });
 }
 
 function updateAllHUD() {
-  // Player Frame & Karma Currency
-  document.getElementById('wow-player-lvl').textContent = STATE.ascensionStage;
-  document.getElementById('wow-current-stage').textContent = `Stage ${CONTINENTS[STATE.ascensionStage - 1].roman}/VII`;
-  document.getElementById('wow-player-hp-txt').textContent = `Heal Power: ${getHealPower()} • AoE: ${getAoERadius()}m`;
-  document.getElementById('wow-player-mp-txt').textContent = `☸️ ${STATE.karma.toLocaleString()} KARMA POINTS`;
-  document.getElementById('stat-karma').textContent = STATE.karma.toLocaleString();
-
-  // Top-Center Continent Banner
   const c = STATE.currentContinent;
-  document.getElementById('hud-continent-name').textContent = `${c.roman}. ${c.name.toUpperCase()} [TIER ${c.roman}]`;
-  const stateBadge = document.getElementById('hud-continent-state');
-  if (c.completed) {
-    stateBadge.textContent = `🌟 Continent Rejuvenated (${c.rejuvenatedCount}/${c.goalCount}) • ${c.boonName} Active`;
-    stateBadge.classList.add('rejuvenated');
-  } else {
-    stateBadge.textContent = `🌑 Suffering Under Blight (${c.rejuvenatedCount}/${c.goalCount} Rejuvenated • Diff ${c.diffMult}x)`;
-    stateBadge.classList.remove('rejuvenated');
-  }
+  document.getElementById('wow-player-lvl').textContent = STATE.ascensionStage;
+  document.getElementById('wow-current-stage').textContent = `Peak ${CONTINENTS[STATE.ascensionStage - 1].roman}/VII`;
+  document.getElementById('wow-player-hp-txt').textContent = `Trek Stamina: ${Math.round(STATE.trekStamina)}% • Power: ${getHealPower()}`;
+  document.getElementById('wow-player-mp-txt').textContent = `☸️ ${STATE.karma.toLocaleString()} KARMA • 🎁 ${STATE.relicsLooted}/7 CHESTS`;
+  document.getElementById('stat-karma').textContent = `${STATE.karma.toLocaleString()} ☸️`;
 
-  document.getElementById('minimap-zone-label').textContent = `${c.shortName} [Tier ${c.roman}]`;
+  document.getElementById('hud-continent-name').textContent = `${c.roman}. ${c.name.toUpperCase()}`;
+  const ruleEl = document.getElementById('hud-fly-rule');
+  const canFly = canFlyOnContinent(c);
+  ruleEl.textContent = canFly ? '🐉 Skyriding Allowed [F]' : '🥾 Sacred No-Fly Zone (Trek & Camp [C])';
+  ruleEl.className = `fly-rule-pill ${canFly ? 'allowed' : 'nofly'}`;
 
-  // Quest Tracker Right Panel
-  document.getElementById('wq-active-title').textContent = `Tier ${c.roman}: Cleanse ${c.shortName}`;
-  document.getElementById('wq-active-desc').textContent = `Difficulty: ${c.diffMult}x • Heal ${c.goalCount} suffering sites to unlock ${c.boonName}.`;
+  document.getElementById('hud-continent-state').textContent = c.completed
+    ? `🏔️ Summit Conquered (${c.rejuvenatedCount}/${c.goalCount})`
+    : `${c.rejuvenatedCount}/${c.goalCount} Summit Objectives`;
+
+  document.getElementById('wq-active-title').textContent = `PEAK ${c.roman} • ${c.shortName.toUpperCase()}`;
+  document.getElementById('wq-active-desc').textContent = canFly
+    ? `Fly [F] or climb to loot ${c.chestName} & heal wildlife`
+    : `No-Fly Peak: Sprint [4] up the torch trail & Camp [C] to reach ${c.chestName}`;
   document.getElementById('wq-active-bar').style.width = `${(c.rejuvenatedCount / c.goalCount) * 100}%`;
-  document.getElementById('wq-active-cnt').textContent = `${c.rejuvenatedCount} / ${c.goalCount}`;
+  document.getElementById('wq-active-cnt').textContent = `${c.rejuvenatedCount}/${c.goalCount}`;
 
   const listEl = document.getElementById('wq-continents-list');
   listEl.innerHTML = CONTINENTS.map(
     (cont) => `
-    <div class="wq-cont-item ${cont.id === c.id ? 'active-continent' : ''} ${cont.completed ? 'completed-continent' : ''}" data-goto-cont="${cont.id}" title="Click to fly directly to ${cont.name}">
-      <span class="wq-c-name">${cont.boonIcon} ${cont.shortName}</span>
-      <span class="wq-c-stat">${cont.completed ? '🌟 Reborn' : `${cont.rejuvenatedCount}/${cont.goalCount} ✈️`}</span>
+    <div class="wq-cont-item ${cont.id === c.id ? 'active-continent' : ''} ${cont.completed ? 'completed-continent' : ''}" data-goto-cont="${cont.id}">
+      <span>${cont.allowFlying ? '🐉' : '🥾'} ${cont.shortName} (${cont.realMeters}m)</span>
+      <span class="wq-c-stat">${cont.completed ? '🏔️' : `${cont.rejuvenatedCount}/${cont.goalCount}`}</span>
     </div>
   `
   ).join('');
 
   listEl.querySelectorAll('.wq-cont-item').forEach((row) => {
-    row.addEventListener('click', () => {
-      flyToContinent(parseInt(row.getAttribute('data-goto-cont'), 10));
-    });
+    row.addEventListener('click', () => travelToPeakBaseCamp(parseInt(row.getAttribute('data-goto-cont'), 10)));
   });
 
-  // Bottom WoW XP & World Renewal Strips
-  const stagePct = Math.min(100, (STATE.ascensionStage / 7) * 100);
-  document.getElementById('wow-xp-fill').style.width = `${stagePct}%`;
-  document.getElementById('wow-xp-label').textContent = `ASCENSION STAGE ${STATE.ascensionStage} / 7 • LIFETIME KARMA GENERATED: ${STATE.lifetimeKarma.toLocaleString()} ☸️`;
-
   const worldPct = Math.min(100, (STATE.totalRejuvenated / STATE.totalSites) * 100);
-  const rebornContinents = CONTINENTS.filter((ct) => ct.completed).length;
+  const conqueredPeaks = CONTINENTS.filter((ct) => ct.completed).length;
   document.getElementById('wow-rep-fill').style.width = `${worldPct}%`;
-  document.getElementById('wow-rep-label').textContent = `WORLD RENEWAL: ${STATE.totalRejuvenated} / ${STATE.totalSites} Suffering Sites Rejuvenated (${rebornContinents} / 7 Continents Reborn)`;
+  document.getElementById('wow-rep-label').textContent = `EXPEDITION PROGRESS: ${STATE.totalRejuvenated} / ${STATE.totalSites} Summit Objectives • ${conqueredPeaks}/7 World Peaks Conquered • 🎁 ${STATE.relicsLooted} Summit Chests Looted`;
 }
 
 // ============================================================================
-// 8. INPUT CONTROLS, 3D FLIGHT PHYSICS & CAMERA ORBIT
+// 11. INPUT CONTROLS, SKYRIDING / TREKKING PHYSICS & CAMERA ORBIT
 // ============================================================================
 const keys = {};
 let cameraYaw = 0;
-let cameraPitch = 0.36;
-let cameraDist = 15.5;
+let cameraPitch = 0.18;
+let cameraDist = 17.5;
 let isDragging = false;
 let prevMouse = { x: 0, y: 0 };
 let playerVelY = 0;
 let isGrounded = true;
 
 window.addEventListener('keydown', (e) => {
+  SFX.init();
   if (document.activeElement === document.getElementById('chat-input')) {
     if (e.key === 'Enter') {
       const inp = document.getElementById('chat-input');
@@ -1548,6 +2007,7 @@ window.addEventListener('keydown', (e) => {
 
   if (e.key === 'Tab') {
     e.preventDefault();
+    SFX.playTargetClick();
     const near = findNearestSufferingEntity();
     if (near) selectTarget(near);
   } else if (e.key === '1') triggerActionSlot(1);
@@ -1555,15 +2015,16 @@ window.addEventListener('keydown', (e) => {
   else if (e.key === '3') triggerActionSlot(3);
   else if (e.key === '4') triggerActionSlot(4);
   else if (e.key === '5') triggerActionSlot(5);
-  else if (k === 't') triggerActionSlot(6);
+  else if (k === 'c') triggerActionSlot(6);
   else if (k === 'f') triggerActionSlot(7);
   else if (k === 'r') triggerActionSlot(8);
-  else if (k === 'k' || k === 'b' || k === 'c') toggleModal('shop-modal');
+  else if (k === 'k' || k === 'b') toggleModal('shop-modal');
   else if (k === 'm') toggleModal('worldmap-modal');
   else if (e.key === 'Enter') {
     document.getElementById('gift-modal').classList.add('wow-modal-hidden');
-  } else if (e.key === ' ' && !STATE.flyingActive && isGrounded) {
-    playerVelY = 16.5;
+  } else if (e.key === ' ' && !STATE.mountedOnDragon && isGrounded) {
+    SFX.playDragonRoarWingbeat();
+    playerVelY = 18.0;
     isGrounded = false;
   }
 });
@@ -1573,6 +2034,7 @@ window.addEventListener('keyup', (e) => {
 });
 
 function toggleModal(id) {
+  SFX.playTargetClick();
   const el = document.getElementById(id);
   if (!el) return;
   const hidden = el.classList.contains('wow-modal-hidden');
@@ -1585,39 +2047,30 @@ function toggleModal(id) {
   }
 }
 
-// Wire UI Buttons
 for (let s = 1; s <= 8; s++) {
   const el = document.getElementById(`slot-${s}`);
   if (el) el.addEventListener('click', () => triggerActionSlot(s));
 }
-document.getElementById('slot-4').classList.add('active-toggle');
 
 document.getElementById('btn-shop').addEventListener('click', () => toggleModal('shop-modal'));
-document.getElementById('btn-bags').addEventListener('click', () => toggleModal('shop-modal'));
-document.getElementById('btn-left-shop').addEventListener('click', () => toggleModal('shop-modal'));
-document.getElementById('buff-shop').addEventListener('click', () => toggleModal('shop-modal'));
-document.getElementById('hud-karma-box').addEventListener('click', () => toggleModal('shop-modal'));
 document.getElementById('btn-close-shop').addEventListener('click', () =>
   document.getElementById('shop-modal').classList.add('wow-modal-hidden')
 );
-
 document.getElementById('btn-worldmap').addEventListener('click', () => toggleModal('worldmap-modal'));
-document.getElementById('btn-open-map').addEventListener('click', () => toggleModal('worldmap-modal'));
-document.getElementById('btn-tracker-map').addEventListener('click', () => toggleModal('worldmap-modal'));
+document.getElementById('minimap-canvas').addEventListener('click', () => toggleModal('worldmap-modal'));
 document.getElementById('btn-close-map').addEventListener('click', () =>
   document.getElementById('worldmap-modal').classList.add('wow-modal-hidden')
 );
 document.getElementById('btn-claim-gift').addEventListener('click', () =>
   document.getElementById('gift-modal').classList.add('wow-modal-hidden')
 );
-document.getElementById('buff-speed').addEventListener('click', () => triggerActionSlot(4));
-document.getElementById('buff-flight').addEventListener('click', () => triggerActionSlot(7));
+document.getElementById('btn-audio-toggle').addEventListener('click', () => SFX.toggleMute());
 
-// Mouse Orbit & Raycast Entity Selection
 const raycaster = new THREE.Raycaster();
 const mouseNDC = new THREE.Vector2();
 
 renderer.domElement.addEventListener('pointerdown', (e) => {
+  SFX.init();
   isDragging = true;
   prevMouse.x = e.clientX;
   prevMouse.y = e.clientY;
@@ -1627,7 +2080,7 @@ renderer.domElement.addEventListener('pointerdown', (e) => {
   raycaster.setFromCamera(mouseNDC, camera);
 
   let best = null;
-  let bestD = 5.0;
+  let bestD = 5.5;
   interactables.forEach((ent) => {
     const d = raycaster.ray.distanceToPoint(ent.mesh.position);
     if (d < bestD) {
@@ -1635,7 +2088,10 @@ renderer.domElement.addEventListener('pointerdown', (e) => {
       best = ent;
     }
   });
-  if (best) selectTarget(best);
+  if (best) {
+    SFX.playTargetClick();
+    selectTarget(best);
+  }
 });
 
 window.addEventListener('pointermove', (e) => {
@@ -1645,7 +2101,7 @@ window.addEventListener('pointermove', (e) => {
   prevMouse.x = e.clientX;
   prevMouse.y = e.clientY;
   cameraYaw -= dx * 0.0065;
-  cameraPitch = Math.max(0.08, Math.min(1.25, cameraPitch + dy * 0.0055));
+  cameraPitch = Math.max(0.08, Math.min(1.22, cameraPitch + dy * 0.0055));
 });
 
 window.addEventListener('pointerup', () => {
@@ -1653,11 +2109,11 @@ window.addEventListener('pointerup', () => {
 });
 
 window.addEventListener('wheel', (e) => {
-  cameraDist = Math.max(7.0, Math.min(42.0, cameraDist + e.deltaY * 0.015));
+  cameraDist = Math.max(7.0, Math.min(44.0, cameraDist + e.deltaY * 0.015));
 });
 
 // ============================================================================
-// 9. CIRCULAR WOW MINIMAP (SHOWING ALL 7 CONTINENTS & SUFFERING SITES)
+// 12. BORDERLESS RADAR & 3D FLOATING NAMEPLATES
 // ============================================================================
 const minimapCanvas = document.getElementById('minimap-canvas');
 const mCtx = minimapCanvas.getContext('2d');
@@ -1667,48 +2123,56 @@ function drawMinimap() {
   const h = minimapCanvas.height;
   const cx = w / 2;
   const cy = h / 2;
-  const scale = STATE.flyingActive ? 0.14 : 0.45; // Zoom out automatically when flying across continents!
+  const scale = STATE.mountedOnDragon ? 0.14 : 0.42;
 
   mCtx.clearRect(0, 0, w, h);
-  mCtx.fillStyle = '#09192b';
-  mCtx.fillRect(0, 0, w, h);
+  mCtx.fillStyle = 'rgba(7, 16, 28, 0.52)';
+  mCtx.beginPath();
+  mCtx.arc(cx, cy, cx - 2, 0, Math.PI * 2);
+  mCtx.fill();
 
-  // Draw all 7 Continents on the Radar
   CONTINENTS.forEach((cont) => {
     const dx = (cont.x - playerGroup.position.x) * scale;
     const dz = (cont.z - playerGroup.position.z) * scale;
-    const r = Math.max(10, cont.radius * scale * 0.72);
+    const r = Math.max(9, cont.radius * scale * 0.7);
+    if (Math.hypot(dx, dz) > cx + r) return;
 
-    mCtx.fillStyle = cont.completed ? 'rgba(34, 197, 94, 0.45)' : 'rgba(88, 28, 135, 0.48)';
-    mCtx.strokeStyle = cont.completed ? '#4ade80' : '#c084fc';
-    mCtx.lineWidth = 1.5;
+    mCtx.fillStyle = cont.completed
+      ? 'rgba(34, 197, 94, 0.42)'
+      : cont.allowFlying
+      ? 'rgba(14, 165, 233, 0.35)'
+      : 'rgba(244, 63, 94, 0.35)';
     mCtx.beginPath();
     mCtx.arc(cx + dx, cy + dz, r, 0, Math.PI * 2);
     mCtx.fill();
-    mCtx.stroke();
   });
 
-  // Draw Suffering Sites
   interactables.forEach((ent) => {
     const sx = cx + (ent.mesh.position.x - playerGroup.position.x) * scale;
     const sz = cy + (ent.mesh.position.z - playerGroup.position.z) * scale;
-    if (sx < 4 || sx > w - 4 || sz < 4 || sz > h - 4) return;
-    mCtx.fillStyle = ent.rejuvenated ? '#4ade80' : '#facc15';
+    if (Math.hypot(sx - cx, sz - cy) > cx - 6) return;
+    mCtx.fillStyle = ent.rejuvenated ? '#4ade80' : ent.kind === 'chest' ? '#fde047' : '#38bdf8';
     mCtx.beginPath();
-    mCtx.arc(sx, sz, ent === STATE.selectedTarget ? 4.2 : 2.8, 0, Math.PI * 2);
+    mCtx.arc(sx, sz, ent.kind === 'chest' ? 4.2 : 2.8, 0, Math.PI * 2);
     mCtx.fill();
   });
 
-  // Player center dot
   mCtx.fillStyle = '#ffffff';
   mCtx.beginPath();
-  mCtx.arc(cx, cy, 4, 0, Math.PI * 2);
+  mCtx.arc(cx, cy, 3.5, 0, Math.PI * 2);
   mCtx.fill();
 
-  const alt = Math.max(0, Math.round(playerGroup.position.y - getTerrainHeight(playerGroup.position.x, playerGroup.position.z)));
+  const curAlt = Math.max(0, Math.round(playerGroup.position.y));
+  const scaledAlt = Math.min(
+    STATE.currentContinent.realMeters,
+    Math.round((curAlt / STATE.currentContinent.peakHeight) * STATE.currentContinent.realMeters)
+  );
   document.getElementById('minimap-coords').textContent = `${Math.round(playerGroup.position.x)}, ${Math.round(
     playerGroup.position.z
-  )} • Alt: ${alt}m`;
+  )} • Alt ${scaledAlt}m`;
+  document.getElementById(
+    'hud-altimeter'
+  ).textContent = `⛰️ Elevation: ${scaledAlt.toLocaleString()}m / ${STATE.currentContinent.realMeters.toLocaleString()}m`;
 }
 
 const projVec = new THREE.Vector3();
@@ -1719,7 +2183,7 @@ function updateWorldNameplates() {
   interactables.forEach((ent) => {
     if (!ent.nameplateEl) return;
     const dist = camera.position.distanceTo(ent.mesh.position);
-    if (dist > 110) {
+    if (dist > 135) {
       ent.nameplateEl.style.display = 'none';
       return;
     }
@@ -1737,14 +2201,16 @@ function updateWorldNameplates() {
 }
 
 // ============================================================================
-// 10. MAIN 60FPS GAME LOOP (SHADER EXPANSION, FLIGHT, AUTO-CHAKRA, AI)
+// 13. MAIN 60FPS GAME LOOP (DRAGON COMPANION, NO-FLY ENFORCEMENT, VIGOR, BLOOM)
 // ============================================================================
 const clock = new THREE.Clock();
 let chakraTimer = 0;
 
 setTimeout(() => {
-  const first = findNearestSufferingEntity();
-  if (first) selectTarget(first);
+  // Select the Sahyadri Summit Chest or nearest wildlife on launch
+  const firstChest = interactables.find((e) => e.continent.id === 0 && e.kind === 'chest');
+  selectTarget(firstChest || interactables[0]);
+  updateVigorOrbsUI();
   updateAllHUD();
 }, 300);
 
@@ -1756,7 +2222,6 @@ function animate() {
   oceanMat.uniforms.uTime.value = elapsed;
   terrainShaderMat.uniforms.uTime.value = elapsed;
 
-  // Smoothly expand GPU Rejuvenation Circles on the terrain!
   for (let i = 0; i < MAX_CLEANSE_ZONES; i++) {
     const cz = cleanseCenters[i];
     if (cz.z < cz.w) {
@@ -1764,15 +2229,50 @@ function animate() {
     }
   }
 
-  // Animate Garuda Golden Wings & Sudarshana Chakra Halo
-  chakraHalo.rotation.z = elapsed * 2.5;
-  if (STATE.flyingActive) {
-    const flap = Math.sin(elapsed * 9.0) * 0.38;
-    leftWing.rotation.z = flap;
-    rightWing.rotation.z = -flap;
+  // Recharge Dragonflight Vigor Orbs automatically over time
+  const vigorRegenRate = (0.32 + (SHOP_TOOLS[1].rank - 1) * 0.08) * (CONTINENTS[0].completed ? 1.4 : 1.0);
+  if (STATE.vigor < STATE.maxVigor) {
+    const prevFloor = Math.floor(STATE.vigor);
+    STATE.vigor = Math.min(STATE.maxVigor, STATE.vigor + vigorRegenRate * dt);
+    if (Math.floor(STATE.vigor) !== prevFloor) updateVigorOrbsUI();
   }
 
-  // Sudarshana Chakra Artifact Passive Auto-Heal (from Karma Shop) + Tier VII Vishnu Avatar Aura
+  if (STATE.wellFedTimer > 0) {
+    STATE.wellFedTimer = Math.max(0, STATE.wellFedTimer - dt);
+  }
+
+  CONTINENTS.forEach((c) => {
+    if (c.crystalMesh) {
+      c.crystalMesh.rotation.y = elapsed * 1.4;
+      c.crystalMesh.position.y = 2.6 + Math.sin(elapsed * 2.2) * 0.22;
+    }
+  });
+
+  activeCampfires.forEach((cf) => {
+    cf.fireOrb.scale.y = 0.9 + Math.sin(elapsed * 12.0 + cf.x) * 0.18;
+  });
+
+  // Update 3D Sky-Dragon Companion Position:
+  // If mounted [F], Dragon locks directly beneath the player as a Skyriding Mount!
+  // If trekking on foot, Dragon circles gracefully beside/above the player as a loyal Pet!
+  if (STATE.mountedOnDragon) {
+    dragonCompanionGroup.position.set(
+      playerGroup.position.x,
+      playerGroup.position.y + 0.6,
+      playerGroup.position.z
+    );
+    dragonCompanionGroup.rotation.y = playerGroup.rotation.y + Math.PI;
+  } else {
+    const petTargetX = playerGroup.position.x + Math.cos(elapsed * 1.1) * 3.2;
+    const petTargetZ = playerGroup.position.z + Math.sin(elapsed * 1.1) * 3.2;
+    const petTargetY = playerGroup.position.y + 3.2 + Math.sin(elapsed * 2.6) * 0.45;
+    dragonCompanionGroup.position.x = THREE.MathUtils.lerp(dragonCompanionGroup.position.x, petTargetX, dt * 3.5);
+    dragonCompanionGroup.position.z = THREE.MathUtils.lerp(dragonCompanionGroup.position.z, petTargetZ, dt * 3.5);
+    dragonCompanionGroup.position.y = THREE.MathUtils.lerp(dragonCompanionGroup.position.y, petTargetY, dt * 3.5);
+    dragonCompanionGroup.rotation.y = elapsed * 1.1 + Math.PI / 2;
+  }
+
+  // Sudarshana Chakra Auto-Pulse
   chakraTimer += dt;
   if (chakraTimer >= 1.4) {
     chakraTimer = 0;
@@ -1780,7 +2280,7 @@ function animate() {
     if (chakraRank > 0 || CONTINENTS[6].completed) {
       const near = findNearestSufferingEntity();
       if (near && near.mesh.position.distanceTo(playerGroup.position) <= 38) {
-        const autoAmt = chakraRank * 45 + (CONTINENTS[6].completed ? 120 : 0);
+        const autoAmt = chakraRank * 50 + (CONTINENTS[6].completed ? 130 : 0);
         launchProjectile(playerGroup.position, near, autoAmt, 0xfde047);
       }
     }
@@ -1790,7 +2290,7 @@ function animate() {
     mixers[i].update(dt);
   }
 
-  // Player Movement (Speed-Running & Full 3D Sky-Flight!)
+  // Player Movement (Skyriding vs Mountain Trail Trekking)
   let moveX = 0;
   let moveZ = 0;
   if (keys['w'] || keys['arrowup']) moveZ -= 1;
@@ -1799,26 +2299,23 @@ function animate() {
   if (keys['d'] || keys['arrowright']) moveX += 1;
 
   const isMoving = moveX !== 0 || moveZ !== 0;
-  const mobMult = getMobilityMultiplier();
 
   if (isMoving) {
     const len = Math.hypot(moveX, moveZ);
     moveX /= len;
     moveZ /= len;
 
-    const baseSpeed = STATE.flyingActive
-      ? 48.0 * mobMult
-      : STATE.speedRunActive
-      ? 24.5 * mobMult
-      : 10.5 * mobMult;
+    const speed = STATE.mountedOnDragon
+      ? 52.0 * getDragonMobilityMult()
+      : (STATE.speedRunActive ? 25.0 : 11.5) * getTrekMobilityMult();
 
     const sinY = Math.sin(cameraYaw);
     const cosY = Math.cos(cameraYaw);
     const dx = moveX * cosY + moveZ * sinY;
     const dz = -moveX * sinY + moveZ * cosY;
 
-    playerGroup.position.x += dx * baseSpeed * dt;
-    playerGroup.position.z += dz * baseSpeed * dt;
+    playerGroup.position.x += dx * speed * dt;
+    playerGroup.position.z += dz * speed * dt;
     playerGroup.rotation.y = Math.atan2(dx, dz) + Math.PI;
     setPlayerAnim('Run');
   } else {
@@ -1826,9 +2323,9 @@ function animate() {
   }
 
   const groundY = Math.max(-1.2, getTerrainHeight(playerGroup.position.x, playerGroup.position.z));
-  if (STATE.flyingActive) {
-    if (keys[' ']) playerGroup.position.y += 28.0 * dt;
-    if (keys['c'] || keys['shift']) playerGroup.position.y -= 28.0 * dt;
+  if (STATE.mountedOnDragon) {
+    if (keys[' ']) playerGroup.position.y += 32.0 * dt;
+    if (keys['c'] || keys['shift']) playerGroup.position.y -= 30.0 * dt;
     playerGroup.position.y = Math.max(groundY + 2.5, playerGroup.position.y);
   } else {
     playerVelY -= 32.0 * dt;
@@ -1840,26 +2337,39 @@ function animate() {
     }
   }
 
-  // Detect Continent Change as Player Flies Across the World
+  // Detect Mountain Range Entry & Enforce Sacred No-Fly Trekking Rule!
   const nearCont = getNearestContinent(playerGroup.position.x, playerGroup.position.z);
   if (nearCont !== STATE.currentContinent) {
     STATE.currentContinent = nearCont;
+    SFX.playDragonRoarWingbeat();
+    if (STATE.mountedOnDragon && !canFlyOnContinent(nearCont)) {
+      STATE.mountedOnDragon = false;
+      document.getElementById('slot-7').classList.remove('active-aura');
+      spawnFloatingText(playerGroup.position, `🥾 ENTERED NO-FLY TREKKING PEAK: ${nearCont.shortName}!`, '#fb7185');
+      addChatMessage(
+        'cyan',
+        `🥾 Entered <strong>${nearCont.name}</strong> — Sacred No-Fly Trekking Zone! Your Sky-Dragon switched to Pet Companion mode. Sprint up the torch-lit ridge trail!`
+      );
+    } else {
+      addChatMessage('cyan', `🏔️ Entered <strong>${nearCont.name}</strong> (Peak: ${nearCont.realMeters.toLocaleString()}m).`);
+    }
+    updateVigorOrbsUI();
     updateAllHUD();
-    addChatMessage('cyan', `🗺️ Entered <strong>${nearCont.name}</strong> (Difficulty Tier ${nearCont.roman}).`);
   }
 
-  // Wander Wildlife
   interactables.forEach((ent) => {
     if (ent.kind === 'wildlife') {
       ent.wanderAngle += dt * 0.55;
-      const tx = ent.homeX + Math.cos(ent.wanderAngle) * 4.0;
-      const tz = ent.homeZ + Math.sin(ent.wanderAngle * 0.8) * 4.0;
+      const tx = ent.homeX + Math.cos(ent.wanderAngle) * 3.5;
+      const tz = ent.homeZ + Math.sin(ent.wanderAngle * 0.8) * 3.5;
       const dx = tx - ent.mesh.position.x;
       const dz = tz - ent.mesh.position.z;
       ent.mesh.position.x += dx * dt;
       ent.mesh.position.z += dz * dt;
       ent.mesh.position.y = getTerrainHeight(ent.mesh.position.x, ent.mesh.position.z);
       ent.mesh.rotation.y = Math.atan2(dx, dz);
+    } else if (ent.kind === 'chest' && !ent.rejuvenated) {
+      ent.mesh.rotation.y = Math.sin(elapsed * 1.5) * 0.15;
     }
   });
 
@@ -1869,7 +2379,6 @@ function animate() {
     targetRing.rotation.z = elapsed * 2.0;
   }
 
-  // Update Castbar
   if (STATE.casting) {
     STATE.casting.elapsed += dt;
     const pct = Math.min(100, (STATE.casting.elapsed / STATE.casting.duration) * 100);
@@ -1883,7 +2392,6 @@ function animate() {
     }
   }
 
-  // Update Cooldowns
   for (let s = 1; s <= 8; s++) {
     if (STATE.cooldowns[s] > 0) {
       STATE.cooldowns[s] = Math.max(0, STATE.cooldowns[s] - dt);
@@ -1892,13 +2400,12 @@ function animate() {
     }
   }
 
-  // Update Projectiles
   for (let i = activeProjectiles.length - 1; i >= 0; i--) {
     const p = activeProjectiles[i];
     const tPos = p.target.mesh.position.clone();
     tPos.y += 1.3;
     const dir = tPos.sub(p.mesh.position);
-    if (dir.length() < 1.0) {
+    if (dir.length() < 1.1) {
       scene.remove(p.mesh);
       activeProjectiles.splice(i, 1);
       applyRejuvenation(p.target, p.healAmount, 'Sanjeevani');
@@ -1908,7 +2415,6 @@ function animate() {
     }
   }
 
-  // Update Shockwaves
   for (let i = activeShockwaves.length - 1; i >= 0; i--) {
     const sw = activeShockwaves[i];
     sw.elapsed += dt;
@@ -1919,12 +2425,11 @@ function animate() {
     } else {
       const sc = 1.0 + t * sw.maxRadius;
       sw.mesh.scale.set(sc, sc, 1);
-      sw.mesh.material.opacity = (1.0 - t) * 0.85;
+      sw.mesh.material.opacity = (1.0 - t) * 0.78;
     }
   }
 
-  // Third-Person WoW Orbit Camera
-  const camTarget = new THREE.Vector3(playerGroup.position.x, playerGroup.position.y + 2.2, playerGroup.position.z);
+  const camTarget = new THREE.Vector3(playerGroup.position.x, playerGroup.position.y + 2.3, playerGroup.position.z);
   const camX = camTarget.x + Math.sin(cameraYaw) * Math.cos(cameraPitch) * cameraDist;
   const camZ = camTarget.z + Math.cos(cameraYaw) * Math.cos(cameraPitch) * cameraDist;
   const camY = camTarget.y + Math.sin(cameraPitch) * cameraDist;
@@ -1935,13 +2440,14 @@ function animate() {
 
   updateWorldNameplates();
   drawMinimap();
-  renderer.render(scene, camera);
+  composer.render();
 }
 
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  composer.setSize(window.innerWidth, window.innerHeight);
 });
 
 animate();

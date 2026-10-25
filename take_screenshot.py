@@ -13,24 +13,23 @@ async def take_screenshot():
         page.on("pageerror", lambda err: print(f"[PAGE ERROR] {err}"))
         print("Opening http://localhost:8080...")
         await page.goto("http://localhost:8080", wait_until="networkidle")
-        # Wait 5 seconds for all rigged GLB models, 7 continents shader, and WoW UI to render
+        # Wait 5 seconds for all rigged GLB models, Western Ghats/Himalayas peak shaders, and Dragon companion to render
         await asyncio.sleep(5)
-        # Cast [2] Ganga Nova so the screenshot shows live blight-to-lush terrain rejuvenation!
-        await page.keyboard.press("2")
-        await asyncio.sleep(0.95)
-        # Cast [1] Sanjeevani Bolt to show the WoW Castbar & projectile
+        # Pitch a Mountain Campfire [C] and cast [2] Ganga Nova so the screenshot shows the 3D Tent, Campfire, Sky-Dragon Companion, and towering Mountain Peak!
+        await page.keyboard.press("c")
+        await asyncio.sleep(0.6)
         await page.keyboard.press("1")
-        await asyncio.sleep(0.25)
+        await asyncio.sleep(0.22)
         screenshot_path = r"g:\My Drive\GitHub\RobloxGames\screenshot_proof.png"
         await page.screenshot(path=screenshot_path, full_page=False)
         print(f"Screenshot successfully captured to {screenshot_path}")
 
-        # Also capture a second screenshot with the Karma Emporium Shop [K] open!
-        await page.keyboard.press("k")
+        # Also capture a second screenshot with the 7 World Mountains Expedition Map [M] open!
+        await page.keyboard.press("m")
         await asyncio.sleep(0.4)
-        shop_path = r"g:\My Drive\GitHub\RobloxGames\shop_proof.png"
-        await page.screenshot(path=shop_path, full_page=False)
-        print(f"Shop screenshot successfully captured to {shop_path}")
+        map_path = r"g:\My Drive\GitHub\RobloxGames\shop_proof.png"
+        await page.screenshot(path=map_path, full_page=False)
+        print(f"7 Peaks Map screenshot successfully captured to {map_path}")
         await browser.close()
 
 if __name__ == "__main__":

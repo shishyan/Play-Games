@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>World of Dharma — 7 Continents, Karma Currency &amp; Sacred Forge MMORPG</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☸️</text></svg>">
+  <title>World of Dharma (2026) — Skyriding Dragons, 7 Sacred Peaks, Trekking &amp; Camping MMORPG</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐉</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
   <script type="importmap">
     {
@@ -19,327 +19,245 @@
   </script>
 </head>
 <body>
-  <!-- 3D WebGL World Canvas -->
+  <!-- 3D WebGL2 PBR + UnrealBloom Canvas -->
   <div id="canvas-container"></div>
 
-  <!-- 3D World-Space Floating Nameplates -->
+  <!-- 3D World-Space Floating Nameplates (Chests, Wildlife, Shrines, Base Camps) -->
   <div id="nameplates-container"></div>
 
   <!-- =====================================================================
-       1. WORLD OF WARCRAFT CLASSIC TOP-LEFT PLAYER & TARGET UNIT FRAMES
+       1. BORDERLESS TRANSPARENT TOP-LEFT UNIT FRAMES (2026 Modern WoW ElvUI)
        ===================================================================== -->
-  <div id="wow-unit-frames">
-    <!-- PLAYER UNIT FRAME -->
-    <div class="wow-unit-frame" id="wow-player-frame">
-      <div class="wow-portrait-ring">
-        <div class="wow-portrait-inner player-portrait">🧙‍♂️</div>
-        <div class="wow-level-circle" id="wow-player-lvl">1</div>
+  <div id="hud-unit-frames">
+    <!-- PLAYER UNIT -->
+    <div class="unit-block" id="player-unit">
+      <div class="unit-header">
+        <span class="unit-lvl" id="wow-player-lvl">1</span>
+        <span class="unit-name">Sadhak</span>
+        <span class="unit-sub" id="wow-current-stage">Peak I/VII</span>
       </div>
-      <div class="wow-bars-column">
-        <div class="wow-name-plate player-name-bg">
-          <span id="wow-player-name">Sadhak (Vaidya)</span>
-          <span class="wow-realm-tag" id="wow-current-stage">Stage I/VII</span>
-        </div>
-        <div class="wow-bar-track hp-track">
-          <div class="wow-bar-fill hp-fill" id="wow-player-hp-bar" style="width: 100%;"></div>
-          <span class="wow-bar-text" id="wow-player-hp-txt">Power: 100 • Radius: 22m</span>
-        </div>
-        <div class="wow-bar-track mana-track">
-          <div class="wow-bar-fill mana-fill" id="wow-player-mp-bar" style="width: 100%;"></div>
-          <span class="wow-bar-text" id="wow-player-mp-txt">☸️ 350 KARMA POINTS</span>
-        </div>
+      <div class="bar-slim hp-slim">
+        <div class="bar-slim-fill player-hp" id="wow-player-hp-bar" style="width: 100%;"></div>
+        <span class="bar-slim-txt" id="wow-player-hp-txt">Trek Stamina: 100% • Power: 85</span>
+      </div>
+      <div class="bar-slim karma-slim">
+        <div class="bar-slim-fill player-karma" id="wow-player-mp-bar" style="width: 100%;"></div>
+        <span class="bar-slim-txt" id="wow-player-mp-txt">☸️ 350 KARMA • 💎 0 RELICS</span>
       </div>
     </div>
 
-    <!-- TARGET UNIT FRAME (Directly beside Player Frame like WoW) -->
-    <div class="wow-unit-frame" id="wow-target-frame">
-      <div class="wow-bars-column target-column">
-        <div class="wow-name-plate target-name-bg" id="wow-target-name-bg">
-          <span id="wow-target-name">Suffering Forest Fox</span>
-          <span class="wow-target-diff" id="wow-target-diff">Tier I</span>
-        </div>
-        <div class="wow-bar-track hp-track">
-          <div class="wow-bar-fill target-hp-fill" id="wow-target-hp-bar" style="width: 15%;"></div>
-          <span class="wow-bar-text" id="wow-target-hp-txt">15 / 120 Rejuvenation</span>
-        </div>
-        <div class="wow-bar-track status-track">
-          <div class="wow-bar-fill blight-fill" id="wow-target-blight-bar" style="width: 85%;"></div>
-          <span class="wow-bar-text" id="wow-target-status-txt">🌑 Suffering — Cast [1] [2] [3] [R]</span>
-        </div>
+    <!-- TARGET UNIT (Summit Chest / Suffering Wildlife / Shrine) -->
+    <div class="unit-block" id="target-unit">
+      <div class="unit-header">
+        <span class="unit-icon" id="wow-target-icon">🎁</span>
+        <span class="unit-name" id="wow-target-name">Sahyadri Summit Chest</span>
+        <span class="unit-sub" id="wow-target-diff">Alt 52m</span>
       </div>
-      <div class="wow-portrait-ring target-ring">
-        <div class="wow-portrait-inner target-portrait" id="wow-target-icon">🦊</div>
-        <div class="wow-level-circle target-lvl" id="wow-target-lvl">1</div>
+      <div class="bar-slim hp-slim">
+        <div class="bar-slim-fill target-hp" id="wow-target-hp-bar" style="width: 20%;"></div>
+        <span class="bar-slim-txt" id="wow-target-hp-txt">20 / 120 Rejuvenation</span>
+      </div>
+      <div class="bar-slim blight-slim">
+        <div class="bar-slim-fill target-blight" id="wow-target-blight-bar" style="width: 80%;"></div>
+        <span class="bar-slim-txt" id="wow-target-status-txt">Climb or Fly to Summit • Cast [1] [2]</span>
       </div>
     </div>
   </div>
 
   <!-- =====================================================================
-       2. WOW PARTY & SANCTUARY VENDOR QUICK-ACCESS (Left Side)
+       2. BORDERLESS TOP-CENTER PEAK, ALTIMETER & NO-FLY ZONE BANNER
        ===================================================================== -->
-  <aside id="wow-party-frames">
-    <div class="wow-party-unit vendor-unit" id="btn-left-shop" title="Click or press [K] to open the Karma Emporium &amp; Sacred Tool Forge">
-      <div class="wow-party-portrait">🛠️<span class="p-lvl">★</span></div>
-      <div class="wow-party-bars">
-        <div class="p-name" style="color:#fde047;">Rishi Vishwakarma</div>
-        <div style="font-size:9.5px;color:#38bdf8;font-weight:700;">[K] Karma Shop &amp; Forge</div>
-      </div>
-    </div>
-    <div class="wow-party-unit">
-      <div class="wow-party-portrait">🛡️<span class="p-lvl">7</span></div>
-      <div class="wow-party-bars">
-        <div class="p-name">Arjuna_Palak</div>
-        <div class="p-hp"><div style="width:94%"></div></div>
-        <div class="p-mp"><div style="width:82%"></div></div>
-      </div>
-    </div>
-    <div class="wow-party-unit">
-      <div class="wow-party-portrait">💧<span class="p-lvl">7</span></div>
-      <div class="wow-party-bars">
-        <div class="p-name">Rishi_Kashi</div>
-        <div class="p-hp"><div style="width:89%"></div></div>
-        <div class="p-mp"><div style="width:96%"></div></div>
-      </div>
-    </div>
-  </aside>
-
-  <!-- =====================================================================
-       3. TOP-CENTER CONTINENT BANNER & LIVE KARMA / MOBILITY STATUS
-       ===================================================================== -->
-  <div id="wow-zone-header">
-    <div class="zone-continent-title" id="hud-continent-name">I. JAMBUDVIPA — THE ASHEN GROVES</div>
-    <div class="zone-sub-status">
-      <span id="hud-continent-state" class="blighted-badge">🌑 Suffering Under Blight (0/4 Rejuvenated)</span>
-      <span class="sep">•</span>
-      <span id="hud-mobility-state" class="mobility-badge">⚡ [4] Speed-Run • 🦅 [F] Garuda Flight • 🛠️ [K] Karma Shop</span>
+  <div id="hud-top-center">
+    <div class="zone-title" id="hud-continent-name">I. WESTERN GHATS (SAHYADRI) — KALSUBAI &amp; ANAMUDI</div>
+    <div class="zone-subtitle">
+      <span id="hud-fly-rule" class="fly-rule-pill allowed">🐉 Skyriding Allowed</span>
+      <span class="dot-sep">•</span>
+      <span id="hud-altimeter" class="alt-pill">⛰️ Elevation: 120m / 2,695m</span>
+      <span class="dot-sep">•</span>
+      <span id="hud-continent-state">0/4 Summit Objectives</span>
+      <span class="dot-sep">•</span>
+      <span id="btn-audio-toggle" class="audio-pill" title="Toggle WoW Orchestral &amp; Spatial Sound Engine">🔊 WoW Audio: ON</span>
     </div>
   </div>
 
   <!-- =====================================================================
-       4. WOW CIRCULAR ORNATE MINIMAP & BUFFS (Top Right)
+       3. BORDERLESS TOP-RIGHT COMPASS RADAR & 7 WORLD PEAKS TRACKER
        ===================================================================== -->
-  <div id="wow-top-right">
-    <!-- Active Buffs Row (Left of Minimap like WoW) -->
-    <div id="wow-buff-frame">
-      <div class="wow-buff-slot active" id="buff-shop" title="Open Karma Shop &amp; Sacred Tool Upgrades [K]">
-        <span class="b-icon">☸️</span>
-        <span class="b-time" id="buff-karma-txt">SHOP</span>
-      </div>
-      <div class="wow-buff-slot active" id="buff-speed" title="Vayu Wind-Stride [4]: Toggle Super-Speed Running!">
-        <span class="b-icon">⚡</span>
-        <span class="b-time" id="buff-speed-txt">RUN</span>
-      </div>
-      <div class="wow-buff-slot active" id="buff-flight" title="Garuda Sky-Flight [F]: Boundless 3D Flight Across All 7 Continents!">
-        <span class="b-icon">🦅</span>
-        <span class="b-time" id="buff-flight-txt">FLY</span>
-      </div>
+  <div id="hud-top-right">
+    <div class="radar-wrap">
+      <canvas id="minimap-canvas" width="146" height="146"></canvas>
+      <div class="radar-coords" id="minimap-coords">0, 0 • Alt 0m</div>
     </div>
 
-    <!-- Ornate Gold Circular Minimap -->
-    <div id="wow-minimap-cluster">
-      <div class="minimap-zone-banner" id="minimap-zone-label">Jambudvipa [Tier I]</div>
-      <div class="minimap-gold-bezel">
-        <canvas id="minimap-canvas" width="168" height="168"></canvas>
-        <div class="minimap-compass-n">N</div>
-        <button class="minimap-worldmap-btn" id="btn-open-map" title="Open 7 Continents World Map &amp; Fast-Fly [M]">🗺️</button>
+    <div id="hud-quest-list">
+      <div class="q-heading">
+        <span id="wq-active-title">PEAK I • WESTERN GHATS</span>
+        <span id="wq-active-cnt" class="q-cnt">0/4</span>
       </div>
-      <div class="minimap-coords-pill" id="minimap-coords">0, 0 • Alt: 0m</div>
+      <div class="q-sub" id="wq-active-desc">Climb or Skyride to open the Summit Loot Chest &amp; heal wildlife</div>
+      <div class="q-bar-track"><div class="q-bar-fill" id="wq-active-bar" style="width:0%"></div></div>
+      <div id="wq-continents-list" class="q-continents"></div>
     </div>
   </div>
 
   <!-- =====================================================================
-       5. WOW QUEST & 7-CONTINENT REJUVENATION TRACKER (Right Side)
+       4. BORDERLESS BOTTOM-LEFT EXPEDITION & LOOT STREAM
        ===================================================================== -->
-  <aside id="wow-quest-tracker">
-    <div class="wq-header">
-      <span>📜 7 CONTINENTS REJUVENATION</span>
-      <button class="wq-map-btn" id="btn-tracker-map">[M] 7 Continents</button>
+  <div id="hud-chat">
+    <div id="chat-messages" class="chat-stream">
+      <div class="chat-line gold">🐉 <strong>Dragonflight Skyriding &amp; 7 World Peaks Ready!</strong> Summon your <strong>Sky-Dragon [F]</strong> (6 Vigor Orbs) to soar up mountains and loot <strong>🎁 Summit Chests</strong>!</div>
+      <div class="chat-line cyan">🥾 <strong>Sacred No-Fly Trekking Peaks:</strong> Peaks II (Nilgiris), IV (Mount Kailash) &amp; VI (Mount Everest) are <strong>No-Fly Trekking Zones</strong>—sprint up the winding ridge trails with <strong>[4]</strong>, leap chasms with <strong>[5]</strong>, and pitch a <strong>⛺ Campfire [C]</strong> to rest!</div>
+      <div class="chat-line green">☸️ Every healed creature &amp; looted Summit Chest grants <strong>Karma Points</strong> &amp; Mythic Relics. Press <strong>[K]</strong> for the Karma Forge or <strong>[M]</strong> to view all 7 Peaks!</div>
     </div>
-    <div class="wq-current-box">
-      <div class="wq-quest-title" id="wq-active-title">Tier I: Cleanse Jambudvipa</div>
-      <div class="wq-quest-desc" id="wq-active-desc">Difficulty: 1.0x • Remove suffering to earn Karma Points (☸️) &amp; upgrade your Sacred Tools [K].</div>
-      <div class="wq-progress-row">
-        <div class="wq-bar"><div class="wq-fill" id="wq-active-bar" style="width: 0%;"></div></div>
-        <span class="wq-count" id="wq-active-cnt">0 / 4</span>
-      </div>
-    </div>
-    <div class="wq-continents-list" id="wq-continents-list">
-      <!-- Dynamically populated with all 7 Continents & click-to-fly -->
-    </div>
-  </aside>
-
-  <!-- =====================================================================
-       6. WOW CHAT & COMBAT LOG (Bottom Left)
-       ===================================================================== -->
-  <div id="wow-chat-frame">
-    <div class="wow-chat-tabs">
-      <button class="c-tab active">World</button>
-      <button class="c-tab">Karma Log</button>
-      <button class="c-tab">Forge</button>
-      <span class="c-hint">WASD Move • Space/C Fly Up/Down • [K] Karma Shop • [M] 7 Continents</span>
-    </div>
-    <div class="wow-chat-messages" id="chat-messages">
-      <div class="chat-line yellow">[Universe] Welcome to <strong>World of Dharma</strong>. Just like the real universe, <strong>☸️ Karma Points</strong> are the sole currency!</div>
-      <div class="chat-line green">[Rejuvenation] Suffering covers all <strong>7 Continents</strong>. Heal distressed wildlife, dead trees &amp; shrines with <strong>[1] [2] [3] [R]</strong> to turn blighted lands lush green and earn Karma!</div>
-      <div class="chat-line cyan">[Sacred Shop] Press <strong>[K]</strong> (or click the Shop button) to spend Karma Points on <strong>Sacred Tools, Relics &amp; Ability Upgrades</strong> needed to conquer Tiers II–VII!</div>
-    </div>
-    <div class="wow-chat-input-row">
-      <input type="text" id="chat-input" placeholder="Press Enter to chat..." />
-    </div>
+    <input type="text" id="chat-input" placeholder="Press Enter to chat..." />
   </div>
 
   <!-- =====================================================================
-       7. WOW CAST BAR & BOTTOM GRYPHON ACTION BAR (Bottom Center)
+       5. BORDERLESS BOTTOM CENTER: DRAGONFLIGHT VIGOR ORBS + HOTBAR
        ===================================================================== -->
-  <div id="wow-bottom-ui">
-    <!-- WoW Golden Channeled Castbar -->
+  <div id="hud-bottom-center">
+    <!-- WoW Dragonflight 6 Vigor Orbs Bar -->
+    <div id="dragon-vigor-bar" title="Dragonflight Skyriding Vigor (Recharges automatically &amp; at Campfires [C])">
+      <span class="vigor-label">🐉 DRAGON VIGOR</span>
+      <div class="vigor-orbs" id="vigor-orbs-row">
+        <div class="v-orb full"></div>
+        <div class="v-orb full"></div>
+        <div class="v-orb full"></div>
+        <div class="v-orb full"></div>
+        <div class="v-orb full"></div>
+        <div class="v-orb full"></div>
+      </div>
+      <span class="vigor-status" id="vigor-status-txt">Companion Following</span>
+    </div>
+
+    <!-- Minimal Floating Castbar -->
     <div id="wow-castbar" class="cast-hidden">
-      <div class="wow-cast-fill" id="cast-fill"></div>
-      <span class="wow-cast-text" id="cast-label">Sanjeevani Bolt</span>
-      <span class="wow-cast-time" id="cast-timer">0.5s</span>
+      <div class="cast-bar-track">
+        <div class="cast-bar-fill" id="cast-fill"></div>
+      </div>
+      <div class="cast-meta">
+        <span id="cast-label">Sanjeevani Bolt</span>
+        <span id="cast-timer">0.4s</span>
+      </div>
     </div>
 
-    <!-- Main Gryphon Dock -->
-    <div class="wow-main-dock">
-      <!-- Left Gryphon Endcap -->
-      <div class="wow-gryphon left-gryphon" title="Golden Gryphon Guard">🦅</div>
-
-      <div class="wow-dock-center">
-        <!-- Double Thin Progression Bars (Top of Action Bar like WoW) -->
-        <div class="wow-xp-strip" title="Cosmic Ascension Stage (1 to 7) &amp; Total Karma Generated">
-          <div class="wow-xp-fill" id="wow-xp-fill" style="width: 14%;"></div>
-          <div class="wow-xp-ticks">
-            <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
-          </div>
-          <span class="wow-xp-label" id="wow-xp-label">ASCENSION STAGE I / VII • LIFETIME KARMA GENERATED: 350 ☸️</span>
-        </div>
-
-        <div class="wow-reputation-strip" title="Global Rejuvenation across all 7 Continents">
-          <div class="wow-rep-fill" id="wow-rep-fill" style="width: 0%;"></div>
-          <span class="wow-rep-label" id="wow-rep-label">WORLD RENEWAL: 0 / 28 Suffering Sites Rejuvenated (0 / 7 Continents Reborn)</span>
-        </div>
-
-        <!-- 8 Action Slots + Karma Currency & Micro Menu Bar -->
-        <div class="wow-action-row">
-          <div class="wow-action-slots">
-            <div class="wow-slot" id="slot-1" data-slot="1" title="Sanjeevani Bolt [1]: Homing emerald life-bolt that removes suffering from a target">
-              <span class="s-hotkey">1</span>
-              <div class="s-icon">🌿</div>
-              <div class="s-name">Sanjeevani</div>
-              <div class="s-cd" id="cd-1"></div>
-            </div>
-            <div class="wow-slot" id="slot-2" data-slot="2" title="Ganga Jal Nova [2]: Expanding sacred water wave that rejuvenates all nearby blighted flora &amp; wildlife">
-              <span class="s-hotkey">2</span>
-              <div class="s-icon">💧</div>
-              <div class="s-name">Ganga Nova</div>
-              <div class="s-cd" id="cd-2"></div>
-            </div>
-            <div class="wow-slot" id="slot-3" data-slot="3" title="Surya Sunbeam [3]: Pillar of solar grace that sanctifies corrupted Guardstones &amp; heals deeply">
-              <span class="s-hotkey">3</span>
-              <div class="s-icon">☀️</div>
-              <div class="s-name">Sunbeam</div>
-              <div class="s-cd" id="cd-3"></div>
-            </div>
-            <div class="wow-slot" id="slot-4" data-slot="4" title="Vayu Wind-Sprint [4]: Toggle Super Speed-Running!">
-              <span class="s-hotkey">4</span>
-              <div class="s-icon">⚡</div>
-              <div class="s-name">Speed Run</div>
-              <div class="s-cd" id="cd-4"></div>
-            </div>
-            <div class="wow-slot" id="slot-5" data-slot="5" title="Padma Sky-Leap [5]: Vault high into the sky or boost upward while flying!">
-              <span class="s-hotkey">5</span>
-              <div class="s-icon">🌸</div>
-              <div class="s-name">Sky Leap</div>
-              <div class="s-cd" id="cd-5"></div>
-            </div>
-            <div class="wow-slot" id="slot-6" data-slot="6" title="Akashic Blink [T]: Instant spatial warp forward!">
-              <span class="s-hotkey">T</span>
-              <div class="s-icon">✨</div>
-              <div class="s-name">Warp Blink</div>
-              <div class="s-cd" id="cd-6"></div>
-            </div>
-            <div class="wow-slot active-toggle" id="slot-7" data-slot="7" title="Garuda Sky-Flight [F]: Toggle high-speed 3D flight to soar far and wide across all 7 Continents!">
-              <span class="s-hotkey">F</span>
-              <div class="s-icon">🦅</div>
-              <div class="s-name">Garuda Fly</div>
-              <div class="s-cd" id="cd-7"></div>
-            </div>
-            <div class="wow-slot" id="slot-8" data-slot="8" title="Amrita World-Pulse [R]: Massive AoE Rejuvenation wave!">
-              <span class="s-hotkey">R</span>
-              <div class="s-icon">🌟</div>
-              <div class="s-name">World Pulse</div>
-              <div class="s-cd" id="cd-8"></div>
-            </div>
-          </div>
-
-          <!-- WoW Karma Currency & Micro-Menu -->
-          <div class="wow-micro-menu">
-            <div class="wow-gold-counter" id="hud-karma-box" title="Universal Currency: Karma Points (Earned by removing suffering)">
-              <span>☸️</span> <strong id="stat-karma">350</strong> <small>KARMA</small>
-            </div>
-            <div class="wow-micro-buttons">
-              <button class="micro-btn highlight" id="btn-shop" title="Karma Emporium: Sacred Tools, Relics &amp; Ability Upgrades [K]">🛠️</button>
-              <button class="micro-btn" id="btn-bags" title="Equipped Tools &amp; Inventory [B]">🎒</button>
-              <button class="micro-btn highlight" id="btn-worldmap" title="World Map of the 7 Continents [M]">🗺️</button>
-            </div>
-          </div>
-        </div>
+    <!-- Borderless Floating Action Hotbar -->
+    <div class="floating-hotbar">
+      <div class="action-icon" id="slot-1" data-slot="1" title="Sanjeevani Bolt [1]: Heal suffering wildlife or open Summit Loot Chest">
+        <span class="hk">1</span>
+        <span class="ic">🌿</span>
+        <span class="lb">Heal/Loot</span>
+        <div class="cd-overlay" id="cd-1"></div>
+      </div>
+      <div class="action-icon" id="slot-2" data-slot="2" title="Ganga Jal Nova [2]: AoE Rejuvenation &amp; Chest Opener">
+        <span class="hk">2</span>
+        <span class="ic">💧</span>
+        <span class="lb">Nova</span>
+        <div class="cd-overlay" id="cd-2"></div>
+      </div>
+      <div class="action-icon" id="slot-3" data-slot="3" title="Surya Sunbeam [3]: Solar Pillar on Summit Shrine or Creature">
+        <span class="hk">3</span>
+        <span class="ic">☀️</span>
+        <span class="lb">Sunbeam</span>
+        <div class="cd-overlay" id="cd-3"></div>
+      </div>
+      <div class="action-icon active-aura" id="slot-4" data-slot="4" title="Vayu Trail-Sprint [4]: Essential for No-Fly Trekking Peaks!">
+        <span class="hk">4</span>
+        <span class="ic">🥾</span>
+        <span class="lb">Trek Run</span>
+        <div class="cd-overlay" id="cd-4"></div>
+      </div>
+      <div class="action-icon" id="slot-5" data-slot="5" title="Skyward Ascent / Crag Leap [5]: Uses 1 Vigor Orb to surge 35m up a cliff or boost your Sky-Dragon!">
+        <span class="hk">5</span>
+        <span class="ic">🚀</span>
+        <span class="lb">Ascent</span>
+        <div class="cd-overlay" id="cd-5"></div>
+      </div>
+      <div class="action-icon" id="slot-6" data-slot="6" title="Pitch Mountain Campfire [C]: Spawns a 3D Tent &amp; Warm Fire! Restores 100% Stamina, Vigor &amp; +25% Well-Fed Speed!">
+        <span class="hk">C</span>
+        <span class="ic">⛺</span>
+        <span class="lb">Campfire</span>
+        <div class="cd-overlay" id="cd-6"></div>
+      </div>
+      <div class="action-icon" id="slot-7" data-slot="7" title="Summon Sky-Dragon Mount [F]: Mount your Dragon Companion to soar up mountains (Blocked in Sacred No-Fly Trekking Zones!)">
+        <span class="hk">F</span>
+        <span class="ic">🐉</span>
+        <span class="lb">Dragon</span>
+        <div class="cd-overlay" id="cd-7"></div>
+      </div>
+      <div class="action-icon" id="slot-8" data-slot="8" title="Whirling Surge / World Pulse [R]: Forward Dragon Surge + 45m Rejuvenation Burst!">
+        <span class="hk">R</span>
+        <span class="ic">🌟</span>
+        <span class="lb">Surge</span>
+        <div class="cd-overlay" id="cd-8"></div>
       </div>
 
-      <!-- Right Gryphon Endcap -->
-      <div class="wow-gryphon right-gryphon" title="Golden Gryphon Guard">🦅</div>
+      <div class="hotbar-divider"></div>
+
+      <div class="action-icon util-icon" id="btn-shop" title="Vishwakarma's Karma &amp; Trekking Gear Forge [K]">
+        <span class="hk">K</span>
+        <span class="ic">🛠️</span>
+        <span class="lb" id="stat-karma">350 ☸️</span>
+      </div>
+      <div class="action-icon util-icon" id="btn-worldmap" title="7 World Mountains &amp; Base Camp Map [M]">
+        <span class="hk">M</span>
+        <span class="ic">🏔️</span>
+        <span class="lb">7 Peaks</span>
+      </div>
     </div>
+
+    <!-- Ultra-Thin Bottom Progress Line -->
+    <div class="world-progress-line">
+      <div class="world-progress-fill" id="wow-rep-fill" style="width: 0%;"></div>
+    </div>
+    <div class="world-progress-caption" id="wow-rep-label">EXPEDITION PROGRESS: 0 / 28 Summit Objectives &amp; Chests Claimed • 0 / 7 World Peaks Conquered</div>
   </div>
 
   <!-- =====================================================================
-       8. KARMA EMPORIUM: SHOPS, SACRED TOOLS, ITEMS & ABILITY UPGRADES [K]
+       6. KARMA & MOUNTAINEERING FORGE MODAL [K]
        ===================================================================== -->
   <div id="shop-modal" class="wow-modal-hidden">
-    <div class="wow-window">
-      <div class="wow-window-header">
-        <span>☸️ VISHWAKARMA'S KARMA EMPORIUM — SACRED TOOLS, ITEMS &amp; ABILITY UPGRADES</span>
-        <div style="display:flex;align-items:center;gap:12px;">
-          <span class="karma-balance-pill">☸️ Balance: <strong id="shop-karma-balance">350</strong> Karma</span>
-          <button class="wow-close-btn" id="btn-close-shop">✕</button>
+    <div class="sleek-modal">
+      <div class="sleek-modal-header">
+        <div>
+          <div class="sm-title">☸️ VISHWAKARMA'S EXPEDITION FORGE — DRAGON HARNESS, TREK BOOTS &amp; TOOLS</div>
+          <div class="sm-sub">Currency: <strong>☸️ <span id="shop-karma-balance">350</span> Karma Points</strong> (Earned by healing wildlife &amp; looting Summit Chests)</div>
         </div>
-      </div>
-      <div class="wow-window-sub">
-        In this universe, <strong>☸️ Karma Points</strong> are the only currency. Every compassionate deed generates Karma. Spend Karma below to forge stronger <strong>Sacred Tools, Relics, and Consumables</strong> so you can cleanse higher-difficulty Continents (Tiers II–VII)!
+        <button class="sleek-close" id="btn-close-shop">✕</button>
       </div>
       <div class="shop-grid" id="shop-items-grid"></div>
     </div>
   </div>
 
   <!-- =====================================================================
-       9. WORLD MAP OF THE 7 CONTINENTS & 7 VIRTUOUS BOONS MODAL [M]
+       7. THE 7 SACRED MOUNTAINS OF THE WORLD EXPEDITION MAP [M]
        ===================================================================== -->
   <div id="worldmap-modal" class="wow-modal-hidden">
-    <div class="wow-window">
-      <div class="wow-window-header">
-        <span>🗺️ THE 7 CONTINENTS (SAPTA DVIPA) &amp; 7 LEVELS OF VIRTUOUS BOONS</span>
-        <button class="wow-close-btn" id="btn-close-map">✕</button>
-      </div>
-      <div class="wow-window-sub">
-        Fly physically across the oceans with <strong>Garuda Flight [F]</strong> or click <strong>"Soar to Continent"</strong> below to fly directly to any of the 7 Continents! Each continent has escalating blight difficulty and rewards a permanent <strong>Virtuous Boon</strong>.
+    <div class="sleek-modal">
+      <div class="sleek-modal-header">
+        <div>
+          <div class="sm-title">🏔️ THE 7 GREAT MOUNTAINS — WESTERN GHATS, HIMALAYAS &amp; WORLD SUMMITS</div>
+          <div class="sm-sub">Some peaks allow <strong>🐉 Dragonflight Skyriding [F]</strong>, while Sacred Peaks enforce <strong>🥾 No-Fly Trekking &amp; Camping [C]</strong> along winding ridge trails!</div>
+        </div>
+        <button class="sleek-close" id="btn-close-map">✕</button>
       </div>
       <div class="continents-grid" id="continents-modal-grid"></div>
     </div>
   </div>
 
   <!-- =====================================================================
-       10. CONTINENT REJUVENATED / MYTHIC BOON AWAKENED MODAL
+       8. SUMMIT CONQUERED / TREASURE CHEST LOOTED TOAST
        ===================================================================== -->
   <div id="gift-modal" class="wow-modal-hidden">
-    <div class="wow-boon-popup">
-      <div class="boon-banner" id="gift-tier">🌟 CONTINENT REJUVENATED • VIRTUOUS BOON ATTAINED 🌟</div>
-      <div class="boon-icon" id="gift-icon">🪷</div>
-      <h2 class="boon-title" id="gift-title">Boon of Jambudvipa</h2>
-      <p class="boon-desc" id="gift-desc">You removed all suffering from this continent! The withered land has blossomed into eternal life.</p>
-      <button class="wow-gold-btn" id="btn-claim-gift">Accept Divine Boon [Enter]</button>
+    <div class="sleek-boon-toast">
+      <div class="sbt-tag" id="gift-tier">🏔️ SUMMIT CONQUERED &amp; TREASURE LOOTED</div>
+      <div class="sbt-icon" id="gift-icon">🎁</div>
+      <div class="sbt-title" id="gift-title">Crown of the Sahyadris</div>
+      <div class="sbt-desc" id="gift-desc">You climbed to the summit and unlocked a permanent Virtuous Boon!</div>
+      <button class="sbt-btn" id="btn-claim-gift">Continue Expedition [Enter]</button>
     </div>
   </div>
 
-  <!-- Floating Combat / Rejuvenation Numbers -->
   <div id="floating-text-container"></div>
 
   <script type="module" src="game.js"></script>
