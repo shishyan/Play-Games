@@ -1,7 +1,3 @@
-# Roblox binary place files
-*.rbxl
-*.rbxlx
-
 # Rojo build output
 build/
 

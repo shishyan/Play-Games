@@ -1,121 +1,70 @@
 --[[
     init.server.luau
     ────────────────
-    Server bootstrap. Boots all services in the order defined in PRD §1.3.
-    Remotes are created first (shared/Remotes.luau creates them on server require).
+    Server bootstrap for Dharma Sanctuary (धर्म क्षेत्र).
+    1. Builds the 3D Open-World Terrain & Spawn FIRST so players never fall into the void.
+    2. Initializes all Dharma Services (Virtues, Sacred Garden, Abilities, Legends Arena, 7 Gods & Empire).
 ]]
 
 local Players           = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService        = game:GetService("RunService")
 
--- ─── Package paths ────────────────────────────────────────────────────────────
-local ServerPackages = script.Parent:FindFirstChild("ServerPackages")
-	or game:GetService("ServerScriptService"):FindFirstChild("ServerPackages")
+local Shared = ReplicatedStorage:WaitForChild("Shared")
 
--- ─── Remotes (must be required first — creates all RemoteEvent instances) ──────
-local Shared  = ReplicatedStorage:WaitForChild("Shared")
-local _Remotes = require(Shared.Remotes)   -- side-effect: creates Remotes folder
-
--- ─── T-126: Streaming + LOD configuration ─────────────────────────────────────
-local StreamingConfig = require(script.StreamingConfig)
-StreamingConfig.configure()
-
--- ─── Services ─────────────────────────────────────────────────────────────────
+-- ─── 1. BUILD THE 3D WORLD IMMEDIATELY BEFORE ANY PLAYER SPAWNS ───────────────
 local Services = script.Services
 
-local DataService        = require(Services.DataService)
-local SeasonService      = require(Services.SeasonService)
-local CahayaService      = require(Services.CahayaService)
-local WingService        = require(Services.WingService)
-local FlightService      = require(Services.FlightService)
-local KegelapanService   = require(Services.KegelapanService)
-local SpiritService      = require(Services.SpiritService)
-local IkatanService      = require(Services.IkatanService)
-local DailyTaskService   = require(Services.DailyTaskService)
-local InstrumentService  = require(Services.InstrumentService)
-local EmoteService       = require(Services.EmoteService)
-local CosmeticService    = require(Services.CosmeticService)
-local SkysPeakService    = require(Services.SkysPeakService)
-local MonetizationService  = require(Services.MonetizationService)
-local LocalizationService  = require(Services.LocalizationService)
+local WorldBuilderService  = require(Services.WorldBuilderService)
+WorldBuilderService.start()
+
+-- ─── 2. LOAD CORE DHARMA SANCTUARY SERVICES ──────────────────────────────────
 local VirtueService        = require(Services.VirtueService)
 local GardenService        = require(Services.GardenService)
 local AbilityService       = require(Services.AbilityService)
 local LegendsService       = require(Services.LegendsService)
 local GodsAndEmpireService = require(Services.GodsAndEmpireService)
-local WorldBuilderService  = require(Services.WorldBuilderService)
 
--- Boot order (PRD §1.3): each service in this table receives init/cleanup calls
-local SERVICE_BOOT_ORDER = {
-	LocalizationService,   -- runs once; builds LocalizationTable before any player UI loads
-	DataService,
-	SeasonService,
-	CahayaService,
-	WingService,
-	FlightService,
-	KegelapanService,
-	SpiritService,
-	IkatanService,
-	DailyTaskService,
-	InstrumentService,
-	EmoteService,
-	CosmeticService,
-	SkysPeakService,
-	MonetizationService,
-	VirtueService,
+-- Initialize global listeners and 3D interactive stations
+VirtueService.init()
+GardenService.start()
+AbilityService.start()
+LegendsService.start()
+GodsAndEmpireService.start()
+
+local DHARMA_SERVICES = {
+	WorldBuilderService,
 	GardenService,
 	AbilityService,
 	LegendsService,
 	GodsAndEmpireService,
-	WorldBuilderService,
 }
 
--- ─── T-128: RunService policy (server) ───────────────────────────────────────
--- ALL RunService connections on the server must use Heartbeat.
--- RenderStepped does not fire on the server and must never be used here.
--- Audit (verified): KegelapanService.Heartbeat, SkysPeakService.Heartbeat,
--- FlightService.Heartbeat, NagaGelapAI.Heartbeat — all gameplay, no CFrame writes.
-
--- ─── Player lifecycle ─────────────────────────────────────────────────────────
-
+-- ─── 3. PLAYER LIFECYCLE ─────────────────────────────────────────────────────
 local function onPlayerAdded(player: Player)
-	-- Services init in order; DataService must load data before any other service
-	-- relies on DataService.get(player).
-	for _, service in SERVICE_BOOT_ORDER do
-		local ok, err = pcall(service.init, player)
-		if not ok then
-			warn("[Server] Service init failed for", tostring(service), ":", err)
+	for _, service in DHARMA_SERVICES do
+		if type(service.init) == "function" then
+			local ok, err = pcall(service.init, player)
+			if not ok then
+				warn("[Server] Service init warning:", err)
+			end
 		end
 	end
 end
 
 local function onPlayerRemoving(player: Player)
-	-- Cleanup in reverse order so dependent services clean up before DataService saves
-	for i = #SERVICE_BOOT_ORDER, 1, -1 do
-		local service = SERVICE_BOOT_ORDER[i]
-		local ok, err = pcall(service.cleanup, player)
-		if not ok then
-			warn("[Server] Service cleanup failed for", tostring(service), ":", err)
+	for i = #DHARMA_SERVICES, 1, -1 do
+		local service = DHARMA_SERVICES[i]
+		if type(service.cleanup) == "function" then
+			pcall(service.cleanup, player)
 		end
 	end
 end
 
--- Connect new joins
 Players.PlayerAdded:Connect(onPlayerAdded)
 Players.PlayerRemoving:Connect(onPlayerRemoving)
 
--- Handle players who joined before this script ran (Studio play-test edge case)
 for _, player in Players:GetPlayers() do
 	task.spawn(onPlayerAdded, player)
 end
 
-GardenService.start()
-
-AbilityService.start()
-
-LegendsService.start()
-
-GodsAndEmpireService.start()
-
-WorldBuilderService.start()
+print("[Server] Dharma Sanctuary Open-World Server Fully Online!")

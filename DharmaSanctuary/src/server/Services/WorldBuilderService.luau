@@ -1,13 +1,14 @@
 --!strict
--- WorldBuilderService: Generates a grand open-world GTA-level Indian Sanctuary landscape:
--- 1. Expansive Terrain Baseplate (Grass, Stone Paths, Sacred River, Ghats)
+-- WorldBuilderService: Generates a grand open-world GTA-level Indian Sanctuary landscape
+-- WITH 3D Floating Billboard Signposts & Illuminated Stone Pathways so any new player can navigate effortlessly!
+-- 1. Expansive Terrain Baseplate (Grass, Illuminated Stone Roads, Sacred River, Ghats)
 -- 2. Ancient Mandir / Temple Complex (Central Golden Shikhara, Mandapa, Torana arches)
 -- 3. Sacred Garden Courtyard (Enclosed walled terrace, lotus pond, flowering banyan trees)
 -- 4. Legends Akhada & Martial Testing Grounds (Terracotta earth, training rings, wrestling arena)
 -- 5. Seven God Shrines (Dedicated pavilions with celestial fire braziers and glowing idols)
 -- 6. Ancient City Bazaar & Companies (Merchant market stalls, silk weavers, bronze foundries)
 -- 7. High-Altitude Himalayan Meditation Peaks (Ascended mountain shrines with stairs)
--- 8. Safe Spawn Point with decorative lotus fountain so player never falls into the void!
+-- 8. Safe Spawn Point with decorative lotus fountain & Directional Signposts!
 
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
@@ -31,6 +32,54 @@ local function createPart(name: string, size: Vector3, cframe: CFrame, color: Co
 	return part
 end
 
+-- Create a towering 3D Floating Billboard Banner so players can read landmarks from anywhere on the map
+local function createLandmarkBillboard(parentPart: BasePart, titleText: string, subtitleText: string, badgeColor: Color3, heightOffset: number?)
+	local bg = Instance.new("BillboardGui")
+	bg.Name = "LandmarkSign"
+	bg.Adornee = parentPart
+	bg.Size = UDim2.new(0, 260, 0, 64)
+	bg.StudsOffset = Vector3.new(0, heightOffset or 16, 0)
+	bg.AlwaysOnTop = true
+	bg.MaxDistance = 600
+	bg.Parent = parentPart
+
+	local frame = Instance.new("Frame")
+	frame.Size = UDim2.new(1, 0, 1, 0)
+	frame.BackgroundColor3 = Color3.fromRGB(14, 18, 26)
+	frame.BackgroundTransparency = 0.2
+	frame.BorderSizePixel = 0
+	frame.Parent = bg
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 10)
+	corner.Parent = frame
+
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = badgeColor
+	stroke.Thickness = 2
+	stroke.Parent = frame
+
+	local title = Instance.new("TextLabel")
+	title.Size = UDim2.new(1, -12, 0, 32)
+	title.Position = UDim2.new(0, 6, 0, 4)
+	title.BackgroundTransparency = 1
+	title.Font = Enum.Font.GothamBlack
+	title.Text = titleText
+	title.TextColor3 = badgeColor
+	title.TextSize = 15
+	title.Parent = frame
+
+	local sub = Instance.new("TextLabel")
+	sub.Size = UDim2.new(1, -12, 0, 22)
+	sub.Position = UDim2.new(0, 6, 0, 34)
+	sub.BackgroundTransparency = 1
+	sub.Font = Enum.Font.GothamBold
+	sub.Text = subtitleText
+	sub.TextColor3 = Color3.fromRGB(235, 240, 245)
+	sub.TextSize = 11
+	sub.Parent = frame
+end
+
 function WorldBuilderService.buildWorld()
 	if Workspace:FindFirstChild("DharmaWorldEnvironment") then
 		return
@@ -43,7 +92,7 @@ function WorldBuilderService.buildWorld()
 	-- =========================================================================
 	-- 1. MASSIVE CONTINENTAL TERRAIN & RIVERS
 	-- =========================================================================
-	-- Main Great Baseplate (2000 x 2000 studs - solid emerald grass and earth)
+	-- Main Great Baseplate (2400 x 2400 studs - solid emerald grass and earth)
 	local mainTerrain = createPart("GreatSanctuaryGround", Vector3.new(2400, 10, 2400), CFrame.new(0, -5, 0), Color3.fromRGB(80, 130, 65), Enum.Material.Grass, worldFolder)
 	
 	-- Sacred Holy River Ganga (Flowing sparkling river traversing the realm)
@@ -55,11 +104,30 @@ function WorldBuilderService.buildWorld()
 		local zPos = i * 150
 		for step = 1, 5 do
 			local stepPart = createPart("GhatStep_" .. i .. "_" .. step, Vector3.new(15, 2, 120), CFrame.new(-110 + (step * 8), step, zPos), Color3.fromRGB(195, 175, 145), Enum.Material.Cobblestone, worldFolder)
+			if i == 0 and step == 3 then
+				createLandmarkBillboard(stepPart, "🌊 SACRED RIVER GANGA GHATS", "Perform Seva & Purify Spirit", Color3.fromRGB(60, 190, 255), 14)
+			end
 		end
 	end
 
-	-- Central Grand Marble Courtyard (300 x 300 studs)
+	-- Central Grand Marble Courtyard (350 x 350 studs)
 	local centralPlaza = createPart("CentralDharmaPlaza", Vector3.new(350, 2, 350), CFrame.new(0, 0.5, 0), Color3.fromRGB(235, 230, 220), Enum.Material.Marble, worldFolder)
+
+	-- =========================================================================
+	-- 1B. ILLUMINATED GOLDEN STONE PATHWAYS CONNECTING ALL ZONES
+	-- =========================================================================
+	local roadsFolder = Instance.new("Folder")
+	roadsFolder.Name = "SacredPathways"
+	roadsFolder.Parent = worldFolder
+
+	-- Path South to Sacred Garden
+	createPart("PathToGarden", Vector3.new(18, 2.2, 60), CFrame.new(0, 0.6, 30), Color3.fromRGB(240, 205, 120), Enum.Material.Sandstone, roadsFolder)
+	-- Path North to Grand Mandir
+	createPart("PathToMandir", Vector3.new(22, 2.2, 90), CFrame.new(0, 0.6, -50), Color3.fromRGB(240, 205, 120), Enum.Material.Sandstone, roadsFolder)
+	-- Path East to Legends Arena
+	createPart("PathToArena", Vector3.new(120, 2.2, 18), CFrame.new(60, 0.6, -25), Color3.fromRGB(220, 140, 100), Enum.Material.Sandstone, roadsFolder)
+	-- Path West to River Ghats & Bazaar
+	createPart("PathToBazaar", Vector3.new(110, 2.2, 18), CFrame.new(-55, 0.6, 0), Color3.fromRGB(180, 200, 230), Enum.Material.Sandstone, roadsFolder)
 
 	-- =========================================================================
 	-- 2. SAFE SPAWN LOCATION & GOLDEN LOTUS FOUNTAIN
@@ -80,6 +148,8 @@ function WorldBuilderService.buildWorld()
 	local goldenLotus = createPart("GoldenLotusCore", Vector3.new(5, 5, 5), CFrame.new(0, 7.5, 0), Color3.fromRGB(255, 220, 40), Enum.Material.Neon, worldFolder)
 	goldenLotus.Shape = Enum.PartType.Ball
 
+	createLandmarkBillboard(goldenLotus, "🪷 CENTRAL DHARMA PLAZA (SPAWN)", "Follow the Golden Beam or Use GPS Map on Left!", Color3.fromRGB(255, 215, 0), 10)
+
 	local light = Instance.new("PointLight")
 	light.Color = Color3.fromRGB(255, 230, 120)
 	light.Range = 40
@@ -96,7 +166,7 @@ function WorldBuilderService.buildWorld()
 	local templeCenter = Vector3.new(0, 0, -120)
 
 	-- Temple Raised Plinth (Jagati)
-	createPart("TemplePlinth", Vector3.new(120, 8, 140), CFrame.new(templeCenter + Vector3.new(0, 4, 0)), Color3.fromRGB(180, 145, 115), Enum.Material.Cobblestone, templeFolder)
+	local templePlinth = createPart("TemplePlinth", Vector3.new(120, 8, 140), CFrame.new(templeCenter + Vector3.new(0, 4, 0)), Color3.fromRGB(180, 145, 115), Enum.Material.Cobblestone, templeFolder)
 
 	-- Mandapa (Pillared Outer Hall)
 	for x = -40, 40, 20 do
@@ -121,13 +191,16 @@ function WorldBuilderService.buildWorld()
 	kalash.Shape = Enum.PartType.Ball
 
 	-- Torana (Ornate Ceremonial Gateways on 4 cardinal directions)
-	local function buildTorana(name: string, cf: CFrame)
+	local function buildTorana(name: string, cf: CFrame, labelTitle: string?)
 		local left = createPart("PillarL", Vector3.new(4, 22, 4), cf * CFrame.new(-12, 11, 0), Color3.fromRGB(200, 150, 110), Enum.Material.Granite, templeFolder)
 		local right = createPart("PillarR", Vector3.new(4, 22, 4), cf * CFrame.new(12, 11, 0), Color3.fromRGB(200, 150, 110), Enum.Material.Granite, templeFolder)
 		local arch = createPart("ArchTop", Vector3.new(32, 6, 6), cf * CFrame.new(0, 23, 0), Color3.fromRGB(240, 180, 80), Enum.Material.Marble, templeFolder)
+		if labelTitle then
+			createLandmarkBillboard(arch, labelTitle, "Meditate Inside & Commune with the 7 Gods", Color3.fromRGB(255, 215, 0), 10)
+		end
 	end
 
-	buildTorana("SouthTorana", CFrame.new(0, 0, -45))
+	buildTorana("SouthTorana", CFrame.new(0, 0, -45), "🛕 GRAND DHARMA MANDIR (TEMPLE)")
 	buildTorana("NorthTorana", CFrame.new(0, 0, -195))
 	buildTorana("EastTorana", CFrame.new(65, 0, -120) * CFrame.Angles(0, math.rad(90), 0))
 	buildTorana("WestTorana", CFrame.new(-65, 0, -120) * CFrame.Angles(0, math.rad(90), 0))
@@ -140,10 +213,10 @@ function WorldBuilderService.buildWorld()
 	gardenDistrict.Parent = worldFolder
 
 	-- Enclosed Garden Terraced Floor
-	createPart("GardenCourtyard", Vector3.new(160, 2, 140), CFrame.new(0, 0.8, 80), Color3.fromRGB(110, 80, 50), Enum.Material.Ground, gardenDistrict)
+	local gardenFloor = createPart("GardenCourtyard", Vector3.new(160, 2, 140), CFrame.new(0, 0.8, 80), Color3.fromRGB(110, 80, 50), Enum.Material.Ground, gardenDistrict)
+	createLandmarkBillboard(gardenFloor, "🌿 QUEST 1: SACRED GARDEN OF DHARMA", "Use Bottom Green Tools: Till ➔ Sow ➔ Water ➔ Harvest!", Color3.fromRGB(80, 240, 130), 22)
 
-	-- Decorative Carved Stone Boundary Walls
-	createPart("GardenWallN", Vector3.new(164, 6, 3), CFrame.new(0, 4, 10), Color3.fromRGB(210, 195, 175), Enum.Material.Cobblestone, gardenDistrict)
+	-- Decorative Carved Stone Boundary Walls (leaving wide North entrance open at Z=10)
 	createPart("GardenWallS", Vector3.new(164, 6, 3), CFrame.new(0, 4, 150), Color3.fromRGB(210, 195, 175), Enum.Material.Cobblestone, gardenDistrict)
 	createPart("GardenWallE", Vector3.new(3, 6, 140), CFrame.new(80, 4, 80), Color3.fromRGB(210, 195, 175), Enum.Material.Cobblestone, gardenDistrict)
 	createPart("GardenWallW", Vector3.new(3, 6, 140), CFrame.new(-80, 4, 80), Color3.fromRGB(210, 195, 175), Enum.Material.Cobblestone, gardenDistrict)
@@ -171,19 +244,18 @@ function WorldBuilderService.buildWorld()
 	akhadaDistrict.Name = "AkhadaDistrict"
 	akhadaDistrict.Parent = worldFolder
 
-	local akhadaCenter = Vector3.new(180, 0, -55)
-
-	-- Terracotta Red Clay Platform
-	createPart("AkhadaTerrace", Vector3.new(160, 2, 160), CFrame.new(akhadaCenter + Vector3.new(0, 1, 0)), Color3.fromRGB(155, 75, 45), Enum.Material.Sand, akhadaDistrict)
+	local akhadaCenter = Vector3.new(60, 0, -55)
 
 	-- Wrestling Ring Boundary Rings (Circular Ring)
 	local ringCenter = createPart("WrestlingPit", Vector3.new(45, 2.5, 45), CFrame.new(akhadaCenter + Vector3.new(0, 1.2, 0)), Color3.fromRGB(180, 95, 60), Enum.Material.Sand, akhadaDistrict)
 	ringCenter.Shape = Enum.PartType.Cylinder
 	ringCenter.CFrame = CFrame.new(akhadaCenter + Vector3.new(0, 1.3, 0)) * CFrame.Angles(0, 0, math.rad(90))
 
+	createLandmarkBillboard(ringCenter, "⚔️ QUEST 2: LEGENDS TESTING GROUNDS", "Train at 4 Stations & Press [1, 2, Q, G] for Martial Combos!", Color3.fromRGB(255, 110, 50), 22)
+
 	-- Training Weapon Racks (Gada, Bows, Staffs)
 	for i = -2, 2 do
-		local rack = createPart("WeaponRack_" .. i, Vector3.new(3, 8, 12), CFrame.new(akhadaCenter + Vector3.new(55, 4, i * 25)), Color3.fromRGB(110, 80, 50), Enum.Material.WoodPlanks, akhadaDistrict)
+		local rack = createPart("WeaponRack_" .. i, Vector3.new(3, 8, 12), CFrame.new(akhadaCenter + Vector3.new(42, 4, i * 18)), Color3.fromRGB(110, 80, 50), Enum.Material.WoodPlanks, akhadaDistrict)
 	end
 
 	-- =========================================================================
@@ -207,10 +279,13 @@ function WorldBuilderService.buildWorld()
 		-- Left side stalls
 		local stallL = createPart("StallL_" .. i, Vector3.new(16, 10, 16), CFrame.new(-90, 5, zOffset), Color3.fromRGB(180, 140, 100), Enum.Material.WoodPlanks, bazaarDistrict)
 		local canopyL = createPart("CanopyL_" .. i, Vector3.new(18, 2, 18), CFrame.new(-90, 11, zOffset), stallColors[(i % #stallColors) + 1], Enum.Material.Fabric, bazaarDistrict)
+		if i == 5 then
+			createLandmarkBillboard(canopyL, "🏪 ROYAL BAZAAR & EMPIRE MARKET", "Press [M] to Buy Lands, Farms & Guild Companies!", Color3.fromRGB(210, 130, 255), 14)
+		end
 
 		-- Right side stalls
-		local stallR = createPart("StallR_" .. i, Vector3.new(16, 10, 16), CFrame.new(90, 5, zOffset), Color3.fromRGB(180, 140, 100), Enum.Material.WoodPlanks, bazaarDistrict)
-		local canopyR = createPart("CanopyR_" .. i, Vector3.new(18, 2, 18), CFrame.new(90, 11, zOffset), stallColors[((i + 2) % #stallColors) + 1], Enum.Material.Fabric, bazaarDistrict)
+		local stallR = createPart("StallR_" .. i, Vector3.new(16, 10, 16), CFrame.new(125, 5, zOffset), Color3.fromRGB(180, 140, 100), Enum.Material.WoodPlanks, bazaarDistrict)
+		local canopyR = createPart("CanopyR_" .. i, Vector3.new(18, 2, 18), CFrame.new(125, 11, zOffset), stallColors[((i + 2) % #stallColors) + 1], Enum.Material.Fabric, bazaarDistrict)
 	end
 
 	-- =========================================================================
@@ -259,18 +334,23 @@ function WorldBuilderService.buildWorld()
 		atmosphere.Parent = Lighting
 	end
 
-	print("[WorldBuilderService] Grand Open-World GTA-Level Sanctuary Built Successfully!")
+	print("[WorldBuilderService] Grand Open-World GTA-Level Sanctuary with 3D Signposts Built!")
 end
 
 function WorldBuilderService.init(player: Player)
-	-- Teleport player to safe central lotus courtyard upon character load
-	player.CharacterAdded:Connect(function(character)
-		task.wait(0.2)
+	-- Teleport player to safe central lotus courtyard upon character load, facing the Sacred Garden
+	local function placeCharacterSafely(character: Model)
+		task.wait(0.15)
 		local root = character:WaitForChild("HumanoidRootPart", 5) :: BasePart?
 		if root then
-			root.CFrame = CFrame.new(Vector3.new(0, 6, 15))
+			root.CFrame = CFrame.new(Vector3.new(0, 5, 12), Vector3.new(0, 5, 40))
 		end
-	end)
+	end
+
+	if player.Character then
+		task.spawn(placeCharacterSafely, player.Character)
+	end
+	player.CharacterAdded:Connect(placeCharacterSafely)
 end
 
 function WorldBuilderService.cleanup(player: Player)

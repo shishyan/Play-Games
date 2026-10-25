@@ -123,11 +123,15 @@ local function buildPhysicalArena()
 
 		-- Proximity Prompt for interaction
 		local prompt = Instance.new("ProximityPrompt")
-		prompt.ActionText = "Train " .. station.name
+		prompt.ActionText = "⚔️ Train: " .. station.name
 		prompt.ObjectText = station.sanskritName
-		prompt.HoldDuration = 0.5
-		prompt.MaxActivationDistance = 14
+		prompt.HoldDuration = 0.25
+		prompt.MaxActivationDistance = 16
 		prompt.Parent = dummy
+
+		prompt.Triggered:Connect(function(triggerPlayer)
+			LegendsService.trainAtStation(triggerPlayer, station.id)
+		end)
 	end
 end
 
@@ -186,34 +190,40 @@ function LegendsService.cleanup(player: Player)
 	playerLegendsData[player] = nil
 end
 
+function LegendsService.trainAtStation(player: Player, stationId: string): (boolean, string)
+	local data = playerLegendsData[player]
+	if not data then return false, "No data" end
+
+	local station = LegendsDefs.STATIONS[stationId]
+	if not station then return false, "Invalid station" end
+
+	data.stationProgress[stationId] = (data.stationProgress[stationId] or 0) + 1
+	data.awakeningMeter = math.clamp(data.awakeningMeter + 20, 0, 100)
+
+	-- Check Quest mappings
+	if stationId == "gada_swing" then
+		recordQuestStep(player, "train_gada")
+	elseif stationId == "archery_focus" then
+		recordQuestStep(player, "train_archery")
+	elseif stationId == "malla_sparring" then
+		recordQuestStep(player, "train_malla")
+	else
+		recordQuestStep(player, "train_malla")
+	end
+
+	-- Award Virtue
+	local VirtueService = require(script.Parent.VirtueService)
+	VirtueService.awardVirtue(player, "Shanti", 1.2)
+
+	return true, "Completed 1 rep of " .. station.name
+end
+
 function LegendsService.start()
 	buildPhysicalArena()
 
 	-- Station Training
 	LegendsStationActionRemote.OnServerInvoke = function(player: Player, stationId: string)
-		local data = playerLegendsData[player]
-		if not data then return false, "No data" end
-
-		local station = LegendsDefs.STATIONS[stationId]
-		if not station then return false, "Invalid station" end
-
-		data.stationProgress[stationId] = (data.stationProgress[stationId] or 0) + 1
-		data.awakeningMeter = math.clamp(data.awakeningMeter + 15, 0, 100)
-
-		-- Check Quest mappings
-		if stationId == "gada_swing" then
-			recordQuestStep(player, "train_gada")
-		elseif stationId == "archery_focus" then
-			recordQuestStep(player, "train_archery")
-		elseif stationId == "malla_sparring" then
-			recordQuestStep(player, "train_malla")
-		end
-
-		-- Award Virtue
-		local VirtueService = require(script.Parent.VirtueService)
-		VirtueService.awardVirtue(player, "Shanti", 1.2)
-
-		return true, "Completed 1 rep of " .. station.name
+		return LegendsService.trainAtStation(player, stationId)
 	end
 
 	-- Combat Moves (M1, Vajra Smash, Danda Whirlwind, Agni Dash, Rudra Awakening)
