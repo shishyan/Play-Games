@@ -56,7 +56,7 @@ class WoWSoundEngine {
 
   createCathedralReverb(duration, decay) {
     const rate = this.ctx.sampleRate;
-    const length = rate * duration;
+    const length = Math.floor(rate * 0.9);
     const impulse = this.ctx.createBuffer(2, length, rate);
     for (let ch = 0; ch < 2; ch++) {
       const channelData = impulse.getChannelData(ch);
@@ -592,7 +592,7 @@ scene.background = new THREE.Color(0x0d3b66);
 const camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.5, 16000);
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.35));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -602,15 +602,15 @@ container.appendChild(renderer.domElement);
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
 const bloomPass = new UnrealBloomPass(
-  new THREE.Vector2(window.innerWidth, window.innerHeight),
-  0.38,
-  0.55,
-  0.78
+  new THREE.Vector2(Math.floor(window.innerWidth * 0.5), Math.floor(window.innerHeight * 0.5)),
+  0.34,
+  0.5,
+  0.82
 );
 composer.addPass(bloomPass);
 
 // Dynamic Biome Sky Dome (Smoothly transitions sky zenith & horizon colors across the 7 Weather Regions!)
-const skyGeo = new THREE.SphereGeometry(12000, 32, 24);
+const skyGeo = new THREE.SphereGeometry(12000, 24, 16);
 const skyMat = new THREE.ShaderMaterial({
   side: THREE.BackSide,
   depthWrite: false,
@@ -652,8 +652,8 @@ scene.add(hemiLight);
 const sunLight = new THREE.DirectionalLight(0xffeacc, 2.35);
 sunLight.position.set(170, 240, -165);
 sunLight.castShadow = true;
-sunLight.shadow.mapSize.width = 2048;
-sunLight.shadow.mapSize.height = 2048;
+sunLight.shadow.mapSize.width = 1024;
+sunLight.shadow.mapSize.height = 1024;
 sunLight.shadow.camera.near = 10;
 sunLight.shadow.camera.far = 750;
 const d = 150;
@@ -667,7 +667,7 @@ scene.add(sunLight);
 // ============================================================================
 // 4. 3D WEATHER PARTICLE ENGINE (RAIN, SNOW, AUTUMN LEAVES, BLOSSOMS, STARLIGHT)
 // ============================================================================
-const WEATHER_COUNT = 1400;
+const WEATHER_COUNT = 550;
 const weatherGeo = new THREE.BufferGeometry();
 const weatherPos = new Float32Array(WEATHER_COUNT * 3);
 const weatherVel = new Float32Array(WEATHER_COUNT * 3);
@@ -801,10 +801,10 @@ function fbm(x, z) {
 // Sharp Ridged Multifractal Noise for Jagged Himalayan / Sahyadri Knife-Edge Arêtes & Crags
 function ridgedMultifractal(x, z) {
   let sum = 0.0;
-  let amp = 0.55;
+  let amp = 0.58;
   let freq = 1.0;
   let weight = 1.0;
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 3; i++) {
     let n = 1.0 - Math.abs(valueNoise(x * freq, z * freq) * 2.0 - 1.0);
     n = n * n * weight;
     weight = Math.min(1.0, Math.max(0.15, n * 1.9));
@@ -824,17 +824,20 @@ function getTerrainHeight(x, z) {
 
   for (let i = 0; i < CONTINENTS.length; i++) {
     const c = CONTINENTS[i];
-    const distIsland = Math.hypot(x - c.x, z - c.z);
+    const dx = x - c.x;
+    const dz = z - c.z;
+    const maxR = c.radius * 1.55;
+    // Fast bounding-box reject before Math.hypot or noise evaluation!
+    if (Math.abs(dx) > maxR || Math.abs(dz) > maxR) continue;
+    const distIsland = Math.hypot(dx, dz);
 
-    if (distIsland < c.radius * 1.55) {
+    if (distIsland < maxR) {
       const normD = distIsland / (c.radius * 1.45);
       const mask = Math.max(0.0, 1.0 - normD * normD);
       const smoothMask = mask * mask * (3.0 - 2.0 * mask);
 
       const n1 = fbm((x + i * 37) * 0.011, (z + i * 53) * 0.011);
-      const n2 = fbm(x * 0.042, z * 0.042);
-      const rNoise = ridgedMultifractal((x + i * 71) * 0.014, (z + i * 29) * 0.016);
-      const rFine = ridgedMultifractal((x - i * 43) * 0.038, (z + i * 19) * 0.038);
+      const n2 = valueNoise(x * 0.042, z * 0.042);
 
       // Base Continental Valley & Rolling Foothills
       let h = -7.5 + smoothMask * (8.5 + (n1 - 0.35) * 8.0 + (n2 - 0.5) * 2.5);
@@ -851,6 +854,8 @@ function getTerrainHeight(x, z) {
       const depthNorm = distFromSpineZ / 390.0;
 
       if (lateralNorm < 1.0 && depthNorm < 1.0) {
+        const rNoise = ridgedMultifractal((x + i * 71) * 0.014, (z + i * 29) * 0.016);
+        const rFine = 1.0 - Math.abs(valueNoise((x - i * 43) * 0.038, (z + i * 19) * 0.038) * 2.0 - 1.0);
         const latEnv = Math.pow(1.0 - lateralNorm * lateralNorm, 0.75);
         const depthEnv = Math.pow(1.0 - depthNorm, 1.45);
         const rangeEnvelope = latEnv * depthEnv;
@@ -875,9 +880,8 @@ function getTerrainHeight(x, z) {
       }
 
       // Wide Scenic Base Camp Valley (Radius 95m) so the foreground is flat and the colossal range rises across the entire horizon!
-      const distBaseCamp = Math.hypot(x - c.x, z - c.z);
-      if (distBaseCamp < 95.0) {
-        const flatF = 1.0 - Math.min(1.0, Math.max(0.0, (distBaseCamp - 42.0) / 53.0));
+      if (distIsland < 95.0) {
+        const flatF = 1.0 - Math.min(1.0, Math.max(0.0, (distIsland - 42.0) / 53.0));
         const smoothFlat = flatF * flatF * (3.0 - 2.0 * flatF);
         h = h * (1.0 - smoothFlat * 0.96) + 2.6 * (smoothFlat * 0.96);
       }
@@ -910,7 +914,7 @@ function getNearestContinent(x, z) {
   return best;
 }
 
-const MAX_CLEANSE_ZONES = 36;
+const MAX_CLEANSE_ZONES = 16;
 const cleanseCenters = [];
 for (let i = 0; i < MAX_CLEANSE_ZONES; i++) {
   cleanseCenters.push(new THREE.Vector4(99999, 99999, 0.0, 0.0));
@@ -925,7 +929,7 @@ function addRejuvenationZone(x, z, radius = 78.0) {
 }
 
 const WORLD_SIZE = 5200;
-const terrainGeo = new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, 560, 560);
+const terrainGeo = new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, 220, 220);
 terrainGeo.rotateX(-Math.PI / 2);
 const posAttr = terrainGeo.attributes.position;
 for (let i = 0; i < posAttr.count; i++) {
@@ -979,20 +983,15 @@ const terrainShaderMat = new THREE.ShaderMaterial({
 
     float fbmDetail(vec2 p) {
       float v = 0.0;
-      v += 0.50 * noise(p);
-      v += 0.25 * noise(p * 2.1);
-      v += 0.125 * noise(p * 4.3);
-      v += 0.0625 * noise(p * 8.7);
+      v += 0.60 * noise(p);
+      v += 0.30 * noise(p * 2.15);
+      v += 0.10 * noise(p * 4.5);
       return v;
     }
 
     void main() {
-      float hC = fbmDetail(vWorldPos.xz * 0.45);
-      float hX = fbmDetail((vWorldPos.xz + vec2(0.18, 0.0)) * 0.45);
-      float hZ = fbmDetail((vWorldPos.xz + vec2(0.0, 0.18)) * 0.45);
-      vec3 bumpNormal = normalize(vNormal + vec3(hC - hX, 0.0, hC - hZ) * 1.65);
-
-      float macro = fbmDetail(vWorldPos.xz * 0.055);
+      float hC = fbmDetail(vWorldPos.xz * 0.38);
+      float macro = noise(vWorldPos.xz * 0.055);
       float slope = 1.0 - max(dot(vNormal, vec3(0.0, 1.0, 0.0)), 0.0);
 
       float cleanse = 0.0;
@@ -1001,10 +1000,12 @@ const terrainShaderMat = new THREE.ShaderMaterial({
         vec4 cz = uCleanseZones[i];
         if (cz.z > 0.1) {
           float d = distance(vWorldPos.xz, cz.xy);
-          float factor = 1.0 - smoothstep(cz.z - 8.0, cz.z + 2.0, d);
-          cleanse = max(cleanse, factor);
-          float edge = smoothstep(cz.z - 2.2, cz.z - 0.4, d) * (1.0 - smoothstep(cz.z - 0.4, cz.z + 1.4, d));
-          ringEdge = max(ringEdge, edge);
+          if (d < cz.z + 2.5) {
+            float factor = 1.0 - smoothstep(cz.z - 8.0, cz.z + 2.0, d);
+            cleanse = max(cleanse, factor);
+            float edge = smoothstep(cz.z - 2.2, cz.z - 0.4, d) * (1.0 - smoothstep(cz.z - 0.4, cz.z + 1.4, d));
+            ringEdge = max(ringEdge, edge);
+          }
         }
       }
 
@@ -1019,10 +1020,9 @@ const terrainShaderMat = new THREE.ShaderMaterial({
       if (slope > 0.14 || vWorldPos.y > 16.0) {
         float rk = clamp((slope - 0.12) * 2.8 + max(0.0, (vWorldPos.y - 16.0) / 38.0), 0.0, 1.0);
         float strata = noise(vec2(vWorldPos.x * 0.08 + vWorldPos.z * 0.08, vWorldPos.y * 0.35));
-        float cragDetail = fbmDetail(vWorldPos.xz * 0.18 + vec2(vWorldPos.y * 0.12));
         vec3 darkBasalt = vec3(0.19, 0.20, 0.22);
         vec3 lightGranite = vec3(0.46, 0.44, 0.42);
-        vec3 cliff = mix(darkBasalt, lightGranite, strata * 0.65 + cragDetail * 0.35);
+        vec3 cliff = mix(darkBasalt, lightGranite, strata * 0.68 + hC * 0.32);
         col = mix(col, cliff, rk * 0.92);
       }
 
@@ -1039,10 +1039,10 @@ const terrainShaderMat = new THREE.ShaderMaterial({
 
       vec3 viewDir = normalize(cameraPosition - vWorldPos);
       vec3 halfVec = normalize(uSunDir + viewDir);
-      float NdotL = max(dot(bumpNormal, uSunDir), 0.0);
-      float spec = pow(max(dot(bumpNormal, halfVec), 0.0), 28.0) * 0.22;
+      float NdotL = max(dot(vNormal, uSunDir), 0.0);
+      float spec = pow(max(dot(vNormal, halfVec), 0.0), 28.0) * 0.18;
 
-      vec3 ambient = mix(vec3(0.24, 0.28, 0.38), vec3(0.44, 0.54, 0.66), bumpNormal.y * 0.5 + 0.5);
+      vec3 ambient = mix(vec3(0.24, 0.28, 0.38), vec3(0.44, 0.54, 0.66), vNormal.y * 0.5 + 0.5);
       vec3 lit = col * (ambient + vec3(1.05, 0.96, 0.82) * NdotL * 0.82) + vec3(1.0, 0.92, 0.75) * spec;
 
       float camDist = length(cameraPosition - vWorldPos);
@@ -1109,14 +1109,14 @@ scene.add(oceanMesh);
 // ============================================================================
 function createFoliageTexture(baseR, baseG, baseB) {
   const c = document.createElement('canvas');
-  c.width = 256;
-  c.height = 256;
+  c.width = 64;
+  c.height = 64;
   const ctx = c.getContext('2d');
-  const img = ctx.createImageData(256, 256);
-  for (let i = 0; i < 256 * 256; i++) {
-    const x = i % 256;
-    const y = Math.floor(i / 256);
-    const n = fbm(x * 0.08, y * 0.08);
+  const img = ctx.createImageData(64, 64);
+  for (let i = 0; i < 64 * 64; i++) {
+    const x = i % 64;
+    const y = Math.floor(i / 64);
+    const n = valueNoise(x * 0.16, y * 0.16);
     const grain = (hash2D(x, y) - 0.5) * 28;
     img.data[i * 4] = Math.min(255, Math.max(0, baseR + (n - 0.5) * 55 + grain));
     img.data[i * 4 + 1] = Math.min(255, Math.max(0, baseG + (n - 0.5) * 65 + grain));
@@ -1146,13 +1146,13 @@ const snowCrownMat = new THREE.MeshStandardMaterial({ map: snowLeafTex, bumpMap:
 const stoneMat = new THREE.MeshStandardMaterial({ map: stoneTex, bumpMap: stoneTex, bumpScale: 0.06, roughness: 0.75 });
 
 function createSculptedCanopyGeometry(radius) {
-  const geo = new THREE.IcosahedronGeometry(radius, 3);
+  const geo = new THREE.IcosahedronGeometry(radius, 2);
   const p = geo.attributes.position;
   for (let i = 0; i < p.count; i++) {
     const vx = p.getX(i);
     const vy = p.getY(i);
     const vz = p.getZ(i);
-    const n = 0.78 + 0.38 * fbm(vx * 0.7 + 5.1, vz * 0.7 + vy * 0.5);
+    const n = 0.78 + 0.38 * valueNoise(vx * 0.7 + 5.1, vz * 0.7 + vy * 0.5);
     p.setXYZ(i, vx * n, vy * (0.72 + 0.28 * n), vz * n);
   }
   geo.computeVertexNormals();
@@ -1259,6 +1259,25 @@ function createNameplateDOM(entity) {
 
 const gltfLoader = new GLTFLoader();
 const mixers = [];
+const modelCache = {};
+const modelLoadCallbacks = {};
+
+function loadSharedGLTF(url, onReady) {
+  if (modelCache[url]) {
+    onReady(modelCache[url]);
+    return;
+  }
+  if (!modelLoadCallbacks[url]) {
+    modelLoadCallbacks[url] = [onReady];
+    gltfLoader.load(url, (gltf) => {
+      modelCache[url] = gltf;
+      modelLoadCallbacks[url].forEach((cb) => cb(gltf));
+      delete modelLoadCallbacks[url];
+    });
+  } else {
+    modelLoadCallbacks[url].push(onReady);
+  }
+}
 
 const WILDLIFE_MODELS = [
   {
@@ -1379,57 +1398,8 @@ CONTINENTS.forEach((cont) => {
     let icon = '🎁';
     let name = '';
     let heightOffset = 2.6;
-
-    if (obj.kind === 'wildlife') {
-      const wDef = WILDLIFE_MODELS[obj.wIdx];
-      icon = wDef.icon;
-      name = `Distressed ${wDef.species}`;
-      heightOffset = (wDef.flyHeight || 0) + 2.4;
-
-      gltfLoader.load(wDef.url, (gltf) => {
-        const model = gltf.scene;
-        model.scale.setScalar(wDef.scale);
-        model.position.y = wDef.flyHeight || 0;
-        model.traverse((c) => {
-          if (c.isMesh) {
-            c.castShadow = true;
-            c.receiveShadow = true;
-          }
-        });
-        group.add(model);
-        if (gltf.animations && gltf.animations.length > 0) {
-          const m = new THREE.AnimationMixer(model);
-          const clip = gltf.animations.length > 1 ? gltf.animations[1] : gltf.animations[0];
-          m.clipAction(clip).play();
-          mixers.push(m);
-        }
-      });
-    } else if (obj.kind === 'shrine') {
-      icon = '🔥';
-      name = `${cont.shortName} High-Pass Cairn`;
-      heightOffset = 6.2;
-
-      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.95, 4.6, 8), stoneMat);
-      shaft.position.y = 2.3;
-      shaft.castShadow = true;
-      group.add(shaft);
-
-      const cap = new THREE.Mesh(new THREE.ConeGeometry(0.8, 1.3, 8), stoneMat);
-      cap.position.y = 5.1;
-      group.add(cap);
-    } else {
-      icon = '🎁';
-      name = `🎁 ${cont.chestName}`;
-      heightOffset = 3.4;
-
-      const chestMesh = createTreasureChestMesh();
-      group.add(chestMesh);
-      group._chest = chestMesh;
-    }
-
-    scene.add(group);
-
     const maxHp = cont.maxHpBase;
+
     const entity = {
       id: `site-${cont.id}-${sIdx}`,
       continent: cont,
@@ -1447,8 +1417,57 @@ CONTINENTS.forEach((cont) => {
       homeZ: obj.pos.z,
       wanderAngle: sIdx * 1.7 + cont.id,
       heightOffset,
+      mixer: null,
     };
 
+    if (obj.kind === 'wildlife') {
+      const wDef = WILDLIFE_MODELS[obj.wIdx];
+      entity.icon = wDef.icon;
+      entity.name = `Distressed ${wDef.species}`;
+      entity.heightOffset = (wDef.flyHeight || 0) + 2.4;
+
+      loadSharedGLTF(wDef.url, (gltf) => {
+        const model = SkeletonUtils.clone(gltf.scene);
+        model.scale.setScalar(wDef.scale);
+        model.position.y = wDef.flyHeight || 0;
+        model.traverse((c) => {
+          if (c.isMesh) {
+            c.castShadow = true;
+            c.receiveShadow = true;
+          }
+        });
+        group.add(model);
+        if (gltf.animations && gltf.animations.length > 0) {
+          const m = new THREE.AnimationMixer(model);
+          const clip = gltf.animations.length > 1 ? gltf.animations[1] : gltf.animations[0];
+          m.clipAction(clip).play();
+          entity.mixer = m;
+        }
+      });
+    } else if (obj.kind === 'shrine') {
+      entity.icon = '🔥';
+      entity.name = `${cont.shortName} High-Pass Cairn`;
+      entity.heightOffset = 6.2;
+
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.95, 4.6, 8), stoneMat);
+      shaft.position.y = 2.3;
+      shaft.castShadow = true;
+      group.add(shaft);
+
+      const cap = new THREE.Mesh(new THREE.ConeGeometry(0.8, 1.3, 8), stoneMat);
+      cap.position.y = 5.1;
+      group.add(cap);
+    } else {
+      entity.icon = '🎁';
+      entity.name = `🎁 ${cont.chestName}`;
+      entity.heightOffset = 3.4;
+
+      const chestMesh = createTreasureChestMesh();
+      group.add(chestMesh);
+      group._chest = chestMesh;
+    }
+
+    scene.add(group);
     createNameplateDOM(entity);
     interactables.push(entity);
   });
@@ -1504,9 +1523,9 @@ mountGroup.add(mountWingsGroup);
 let mountMixer = null;
 let mountAction = null;
 
-// Load Rigged `Horse.glb` Mount
-gltfLoader.load('https://threejs.org/examples/models/gltf/Horse.glb', (gltf) => {
-  const horse = gltf.scene;
+// Load Rigged `Horse.glb` Mount via Shared Cache
+loadSharedGLTF('https://threejs.org/examples/models/gltf/Horse.glb', (gltf) => {
+  const horse = SkeletonUtils.clone(gltf.scene);
   horse.scale.setScalar(0.0155);
   horse.rotation.y = Math.PI; // Align with rider forward direction (-Z)
   horse.traverse((c) => {
@@ -2829,9 +2848,8 @@ function animate() {
   if (mountAction) {
     mountAction.timeScale = isMoving || STATE.isFlying ? 1.15 : 0.0;
   }
-  for (let i = 0; i < mixers.length; i++) {
-    mixers[i].update(dt);
-  }
+  if (playerMixer) playerMixer.update(dt);
+  if (mountMixer && (isMoving || STATE.isFlying)) mountMixer.update(dt);
   applySeatedRiderPose(elapsed, isMoving || STATE.isFlying);
 
   // Vertical Flight & Realistic High-Altitude Mountain Thin-Air Resistance
@@ -2888,7 +2906,14 @@ function animate() {
     }
   }
 
+  const px = playerGroup.position.x;
+  const pz = playerGroup.position.z;
   interactables.forEach((ent) => {
+    const distSq = (ent.mesh.position.x - px) ** 2 + (ent.mesh.position.z - pz) ** 2;
+    // Skip CPU physics & skeletal updates for distant continents (>180m away)
+    if (distSq > 32400) return;
+
+    if (ent.mixer) ent.mixer.update(dt);
     if (ent.kind === 'wildlife') {
       ent.wanderAngle += dt * 0.55;
       const tx = ent.homeX + Math.cos(ent.wanderAngle) * 3.5;
@@ -2988,6 +3013,7 @@ window.addEventListener('resize', () => {
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
   composer.setSize(window.innerWidth, window.innerHeight);
+  bloomPass.setSize(Math.floor(window.innerWidth * 0.5), Math.floor(window.innerHeight * 0.5));
 });
 
 animate();
