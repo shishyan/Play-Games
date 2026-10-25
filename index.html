@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dharma Sanctuary (धर्म क्षेत्र) — AAA 3D Open-World Virtue & Sacred Realm</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <!-- 3D WebGL Viewport -->
+  <div id="canvas-container"></div>
+
+  <!-- Welcome / Path Selection Onboarding Overlay -->
+  <div id="welcome-modal" class="modal-backdrop">
+    <div class="modal-card welcome-card">
+      <div class="sacred-emblem">🪷 धर्मो रक्षति रक्षितः • Dharmo Rakshati Rakshitah</div>
+      <h1>DHARMA SANCTUARY</h1>
+      <p class="subtitle">An Open-World Journey of Virtue, Sacred Gardening, Martial Discipline &amp; Divine Boons</p>
+      
+      <div class="path-grid">
+        <div class="path-card garden-card" id="start-garden-btn">
+          <div class="path-badge">QUEST I • NURTURING PATH</div>
+          <h3>🌿 Sacred Garden of Dharma</h3>
+          <p>Cultivate Holy Tulsi, Padma Lotus, Parijata &amp; Kalpavriksha along the marble courtyard. Every harvested blossom grants supernatural Siddhis: Graceful Stride, Solar Sprint, Lotus Leap, Garuda Flight &amp; Astral Teleportation.</p>
+          <span class="cta-pill green-pill">Begin in Sacred Garden ➔</span>
+        </div>
+
+        <div class="path-card arena-card" id="start-arena-btn">
+          <div class="path-badge">QUEST II • WARRIOR PATH</div>
+          <h3>⚔️ Veer Bhumi (Testing Grounds)</h3>
+          <p>Enter the sacred terracotta Akhada arena. Master Hanuman's Gada mace, Dhanurveda archery, Kalaripayattu agility &amp; Malla sparring to awaken <strong>Rudra Tejas</strong> without malice.</p>
+          <span class="cta-pill orange-pill">Enter Testing Grounds ➔</span>
+        </div>
+      </div>
+
+      <div class="controls-bar">
+        <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / Arrows: Move</span>
+        <span><kbd>Mouse Drag</kbd>: Orbit Camera</span>
+        <span><kbd>Space</kbd>: Jump / Ascend</span>
+        <span><kbd>E</kbd>: Interact (Garden / Arena / Shrines)</span>
+        <span><kbd>F</kbd>: Toggle Garuda Flight</span>
+        <span><kbd>T</kbd>: Astral Teleport</span>
+        <span><kbd>M</kbd>: 7 Gods &amp; Empire</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Navigation & Compass Ribbon -->
+  <header id="top-hud">
+    <!-- Left: Spiritual Grade & Virtue Progress -->
+    <div class="hud-glass grade-panel">
+      <div class="grade-header">
+        <span id="grade-badge" class="rank-pill">GRADE I</span>
+        <div>
+          <div id="grade-title" class="cinzel-title">Seeker (Sadhak) • जिज्ञासु</div>
+          <div id="grade-subtitle" class="sub-text">The Novice of Truth (1.0x Virtue Mult)</div>
+        </div>
+      </div>
+      <div class="progress-track">
+        <div id="virtue-bar-fill" class="progress-fill" style="width: 5%;"></div>
+      </div>
+      <div class="stats-row">
+        <span>✨ Virtue (पुण्य): <strong id="virtue-val">0</strong> / <span id="virtue-next">100</span></span>
+        <span>🪙 Gold (स्वर्ण): <strong id="gold-val">1,500</strong></span>
+        <span>🌟 Fame (कीर्ति): <strong id="fame-val">100</strong></span>
+      </div>
+    </div>
+
+    <!-- Center: Live Golden Path Compass & Objective Distance -->
+    <div class="hud-glass compass-panel">
+      <div id="compass-direction" class="compass-title">🧭 GOLDEN PATH ➔ 🌿 Sacred Garden of Dharma (18m)</div>
+      <div id="interaction-hint" class="interaction-prompt">Walk to the glowing Golden Beam or press [E] near any sacred plot, shrine, or station</div>
+    </div>
+
+    <!-- Right: Active Quests Tracker -->
+    <div class="hud-glass quests-panel">
+      <div class="quest-tabs">
+        <button class="q-tab active" data-q="garden">🌿 Quest 1: Garden</button>
+        <button class="q-tab" data-q="arena">⚔️ Quest 2: Arena</button>
+      </div>
+      <div id="quest-content-garden" class="quest-body">
+        <div class="q-title">The Sacred Garden (धर्म वाटिका)</div>
+        <ul class="q-steps">
+          <li id="q-till">○ Till 3 Sacred Soil Beds (<span class="cnt">0/3</span>)</li>
+          <li id="q-plant">○ Sow 3 Holy Seeds (<span class="cnt">0/3</span>)</li>
+          <li id="q-water">○ Water Saplings with Ganga Jal (<span class="cnt">0/3</span>)</li>
+          <li id="q-harvest">○ Harvest Blooms &amp; Unlock Siddhis (<span class="cnt">0/3</span>)</li>
+        </ul>
+      </div>
+      <div id="quest-content-arena" class="quest-body hidden">
+        <div class="q-title">Legends Testing Ground (वीर भूमि)</div>
+        <ul class="q-steps">
+          <li id="q-gada">○ Hanuman Gada Mace Swings (<span class="cnt">0/5</span>)</li>
+          <li id="q-archery">○ Dhanurveda Target Bullseyes (<span class="cnt">0/5</span>)</li>
+          <li id="q-malla">○ Akhada Golem Sparring (<span class="cnt">0/5</span>)</li>
+          <li id="q-awaken">○ Unleash Rudra Tejas Awakening [G] (<span class="cnt">0/1</span>)</li>
+        </ul>
+      </div>
+    </div>
+  </header>
+
+  <!-- Left Dock: 1-Click World GPS & Active Supernatural Siddhi Boons -->
+  <aside id="left-dock">
+    <div class="hud-glass gps-card">
+      <div class="panel-heading">🗺️ WORLD GPS &amp; INSTANT TRAVEL</div>
+      <div class="gps-buttons">
+        <button class="gps-btn" data-target="garden">🌿 Sacred Garden Courtyard <span>GO</span></button>
+        <button class="gps-btn" data-target="mandir">🛕 Grand Golden Mandir <span>GO</span></button>
+        <button class="gps-btn" data-target="arena">⚔️ Legends Akhada Arena <span>GO</span></button>
+        <button class="gps-btn" data-target="ghats">🌊 Sacred River Ganga Ghats <span>GO</span></button>
+        <button class="gps-btn" data-target="shrines">🔥 Circle of the 7 Gods <span>GO</span></button>
+        <button class="gps-btn" data-target="empire">🏛️ Royal Bazaar &amp; Estates <span>GO</span></button>
+      </div>
+    </div>
+
+    <div class="hud-glass boons-card">
+      <div class="panel-heading">✨ ACTIVE SIDDHIS &amp; BOONS</div>
+      <div id="active-boons-list" class="boons-list">
+        <div class="empty-boon">Harvest sacred flowers or commune with the 7 Gods to unlock Walk, Sprint, Lotus Jump, Flight &amp; Teleportation Siddhis!</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Center Floating Contextual [E] Prompt when near interactive 3D object -->
+  <div id="context-prompt" class="context-prompt hidden">
+    <span class="key-badge">E</span>
+    <div class="prompt-details">
+      <div id="prompt-action">Till Sacred Soil Bed</div>
+      <div id="prompt-object">Mandala Plot #1</div>
+    </div>
+  </div>
+
+  <!-- Bottom Action Bar: Dual Mode (Garden Tools + Martial Arts + Virtues + Empire) -->
+  <footer id="bottom-hud">
+    <div class="hud-glass action-dock">
+      <!-- Garden & Virtue Quick Actions -->
+      <div class="dock-group">
+        <span class="dock-label">🌿 GARDEN &amp; SEVA</span>
+        <button class="act-btn green" id="btn-interact-nearest" title="Interact with nearest plot or station (E)"><strong>[E]</strong> Smart Interact</button>
+        <button class="act-btn" id="btn-seed-select" title="Cycle Seed Type">🌱 Seed: <span id="current-seed-label">Holy Tulsi</span></button>
+        <button class="act-btn" id="btn-meditate" title="Meditate for Dhyana Virtue">🧘 Dhyana</button>
+        <button class="act-btn" id="btn-annadana" title="Offer Food &amp; Flowers for Daan Virtue">🪔 Offer Annadana</button>
+      </div>
+
+      <div class="dock-divider"></div>
+
+      <!-- Legends Martial Combos -->
+      <div class="dock-group">
+        <span class="dock-label">⚔️ VEER BHUMI COMBAT</span>
+        <button class="act-btn orange" id="btn-strike"><strong>[1]</strong> Vajra Strike</button>
+        <button class="act-btn orange" id="btn-whirlwind"><strong>[2]</strong> Danda Spin</button>
+        <button class="act-btn orange" id="btn-dash"><strong>[Q]</strong> Agni Dash</button>
+        <button class="act-btn red" id="btn-awaken"><strong>[G]</strong> Rudra Awaken (<span id="awaken-pct">20%</span>)</button>
+      </div>
+
+      <div class="dock-divider"></div>
+
+      <!-- Mobility Siddhis & Empire Modal -->
+      <div class="dock-group">
+        <span class="dock-label">🕊️ SIDDHIS &amp; EMPIRE</span>
+        <button class="act-btn cyan" id="btn-fly"><strong>[F]</strong> Garuda Flight</button>
+        <button class="act-btn cyan" id="btn-teleport"><strong>[T]</strong> Astral Blink</button>
+        <button class="act-btn gold" id="btn-open-empire"><strong>[M]</strong> 🏛️ 7 Gods &amp; Empire</button>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Surprise Divine Gift Toast / Popup -->
+  <div id="gift-popup" class="gift-toast hidden">
+    <div class="gift-header">✨ SURPRISE DIVINE BLESSING! ✨</div>
+    <div id="gift-tier" class="gift-tier">[LEGENDARY RELIC]</div>
+    <div id="gift-name" class="gift-name">Maha Rudraksha Mala of 108 Beads</div>
+    <p id="gift-quote" class="gift-quote">"A passing Sadhu smiles warmly and bequeaths you his blessed Rudraksha!"</p>
+    <div id="gift-reward" class="gift-reward">+300 Virtue (पुण्य) • +500 Gold</div>
+    <button id="gift-claim-btn" class="cta-pill gold-pill">Accept Prasadam 🙏</button>
+  </div>
+
+  <!-- 7 Gods & Open-World Tycoon Empire Modal [M] -->
+  <div id="empire-modal" class="modal-backdrop hidden">
+    <div class="modal-card empire-modal-card">
+      <div class="modal-top-bar">
+        <div>
+          <h2>🏛️ THE SEVEN GODS &amp; DHARMA TYCOON EMPIRE</h2>
+          <p id="empire-summary-line">Passive Income: +0 Gold/min • +0 Virtue/min • Owned Estates: 0 / 7 • Divine Boons: 0 / 7</p>
+        </div>
+        <button id="close-empire-btn" class="close-btn">✕</button>
+      </div>
+
+      <div class="empire-columns">
+        <!-- Left Column: 7 Gods -->
+        <div class="empire-col">
+          <h3>🔥 THE 7 DEITIES &amp; MAJOR QUEST BOONS (वरदान)</h3>
+          <div id="gods-list" class="scroll-list"></div>
+        </div>
+
+        <!-- Right Column: Lands, Mega-Farms & Guild Companies -->
+        <div class="empire-col">
+          <h3>🏰 ACQUIRE LANDS, MEGA-FARMS &amp; COMPANIES (भूमि व उद्योग)</h3>
+          <div id="properties-list" class="scroll-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="game.js"></script>
+</body>
+</html>
