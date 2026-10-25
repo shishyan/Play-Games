@@ -2762,6 +2762,12 @@ function updateAllHUD() {
 //    • LMB + RMB Held Together: WoW Dual-Mouse-Button Forward Run/Fly!
 //    • Scroll Wheel: Smooth Zoom from 3.5m up to 65m
 // ============================================================================
+function lerpAngle(current, target, factor) {
+  let diff = ((target - current + Math.PI) % (Math.PI * 2)) - Math.PI;
+  if (diff < -Math.PI) diff += Math.PI * 2;
+  return current + diff * Math.min(1.0, factor);
+}
+
 const keys = {};
 let cameraYaw = 0;
 let cameraPitch = 0.04;
@@ -3145,10 +3151,15 @@ function animate() {
     rightWing.rotation.z = -flap;
   }
 
-  // Movement Input (WASD + QE Strafe + Auto-Run + WoW Dual-Mouse-Button LMB+RMB Run!)
+  // Movement Input (100% Default WoW Keyboard Steering + Camera Follow + Mouse Control)
+  // • [A / LeftArrow] & [D / RightArrow]: Turn BOTH Character & Viewing Angle (unless holding RMB, where A/D strafes)
+  // • [Q] & [E]: Strafe Left / Right
+  // • Moving forward/diagonally automatically rotates the viewing angle to follow your movement direction!
   let moveX = 0;
   let moveZ = 0;
+  let turnDir = 0;
   const dualMouseRun = isLeftMouseDown && isRightMouseDown;
+
   if (keys['w'] || keys['arrowup'] || dualMouseRun) {
     moveZ -= 1;
     if (!dualMouseRun) STATE.autoRun = false;
@@ -3158,9 +3169,27 @@ function animate() {
     STATE.autoRun = false;
   }
   if (STATE.autoRun) moveZ -= 1;
-  // In WoW, holding RMB turns A/D into Strafe Left/Right!
-  if (keys['a'] || keys['arrowleft'] || keys['q']) moveX -= 1;
-  if (keys['d'] || keys['arrowright'] || keys['e']) moveX += 1;
+
+  if (isRightMouseDown) {
+    // When holding Right-Mouse-Button, A/D strafes (authentic WoW behavior)
+    if (keys['a'] || keys['arrowleft'] || keys['q']) moveX -= 1;
+    if (keys['d'] || keys['arrowright'] || keys['e']) moveX += 1;
+  } else {
+    // Default Settings: [A / D / Left / Right] turns both character and viewing angle!
+    if (keys['a'] || keys['arrowleft']) turnDir += 1;
+    if (keys['d'] || keys['arrowright']) turnDir -= 1;
+    if (keys['q']) moveX -= 1;
+    if (keys['e']) moveX += 1;
+  }
+
+  if (turnDir !== 0) {
+    const turnSpeed = 2.35 * dt;
+    playerGroup.rotation.y += turnDir * turnSpeed;
+    // Rotate viewing angle (cameraYaw) directly with turning direction unless LMB is free-looking!
+    if (!isLeftMouseDown) {
+      cameraYaw += turnDir * turnSpeed;
+    }
+  }
 
   const isMoving = moveX !== 0 || moveZ !== 0;
 
@@ -3176,14 +3205,28 @@ function animate() {
       ? 32.0 * getMountSpeedMult()
       : (STATE.speedRunActive ? 24.0 : 11.5) * getTrekSpeedMult();
 
-    const sinY = Math.sin(cameraYaw);
-    const cosY = Math.cos(cameraYaw);
+    // If neither mouse button is held, move relative to character's current facing (or cameraYaw) and smoothly lock viewing angle behind movement direction!
+    const refYaw = isRightMouseDown ? cameraYaw : playerGroup.rotation.y;
+    const sinY = Math.sin(refYaw);
+    const cosY = Math.cos(refYaw);
     const dx = moveX * cosY + moveZ * sinY;
     const dz = -moveX * sinY + moveZ * cosY;
 
     playerGroup.position.x += dx * speed * dt;
     playerGroup.position.z += dz * speed * dt;
-    playerGroup.rotation.y = Math.atan2(dx, dz) + Math.PI;
+
+    // Face character in movement direction (unless backpedaling with S)
+    const moveHeading = Math.atan2(dx, dz) + Math.PI;
+    if (moveZ <= 0) {
+      playerGroup.rotation.y = lerpAngle(playerGroup.rotation.y, moveHeading, dt * 10.0);
+    }
+
+    // Default WoW Smart Camera Follow: moving automatically swings the viewing angle to align with your movement direction!
+    if (!isLeftMouseDown && !isRightMouseDown) {
+      const targetCamYaw = moveZ > 0 ? playerGroup.rotation.y : moveHeading;
+      cameraYaw = lerpAngle(cameraYaw, targetCamYaw, dt * 6.5);
+    }
+
     // RMB or Pitch-guided 3D Flight: when flying and holding RMB (or pitching up/down), fly directly along camera pitch!
     if (STATE.isMounted && STATE.isFlying && (isRightMouseDown || Math.abs(cameraPitch) > 0.22)) {
       const pitchClimb = -Math.sin(cameraPitch) * speed * 0.18 * dt;
