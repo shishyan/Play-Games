@@ -30,7 +30,7 @@ export type TrainingStation = {
 
 local LegendsDefs = {}
 
--- 4 Sacred Martial Stations in the Arena (Veer Bhumi)
+-- 4 Sacred Martial Stations in the Arena (Veer Bhumi - set in the Grand Courtyard at X=-1260, Y=16, Z=-1740)
 LegendsDefs.STATIONS = {
 	gada_swing = {
 		id = "gada_swing",
@@ -39,7 +39,7 @@ LegendsDefs.STATIONS = {
 		description = "Swing heavy granite and brass maces to build righteous physical power.",
 		requiredRepetitions = 5,
 		statTrained = "Strength",
-		position = Vector3.new(45, 1, -40),
+		position = Vector3.new(-1245, 16, -1725),
 		virtueReward = 30,
 	},
 	archery_focus = {
@@ -49,7 +49,7 @@ LegendsDefs.STATIONS = {
 		description = "Concentrate breath and strike the eye of the sacred fish target.",
 		requiredRepetitions = 5,
 		statTrained = "InnerFocus",
-		position = Vector3.new(70, 1, -40),
+		position = Vector3.new(-1275, 16, -1725),
 		virtueReward = 35,
 	},
 	malla_sparring = {
@@ -59,7 +59,7 @@ LegendsDefs.STATIONS = {
 		description = "Grapple against reactive clay training golems without harming them (Ahimsa principle).",
 		requiredRepetitions = 5,
 		statTrained = "Discipline",
-		position = Vector3.new(45, 1, -70),
+		position = Vector3.new(-1245, 16, -1755),
 		virtueReward = 40,
 	},
 	kalaripayattu_agility = {
@@ -69,7 +69,7 @@ LegendsDefs.STATIONS = {
 		description = "Balance and leap across ancient wooden poles at high speed.",
 		requiredRepetitions = 5,
 		statTrained = "Agility",
-		position = Vector3.new(70, 1, -70),
+		position = Vector3.new(-1275, 16, -1755),
 		virtueReward = 35,
 	},
 }

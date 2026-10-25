@@ -301,8 +301,8 @@ local function createPhysicalPlotsForPlayer(player: Player)
 
 	local plotsState: { [string]: GardenDefs.PlotState } = {}
 
-	-- Base garden sanctuary terrace position
-	local basePos = Vector3.new(0, 1.9, 45)
+	-- Base garden sanctuary terrace position (set in Downtown City Plaza at X=500, Y=16.5, Z=750)
+	local basePos = Vector3.new(500, 16.5, 750)
 	local cols = 3
 	local rows = 2
 	local spacing = 8

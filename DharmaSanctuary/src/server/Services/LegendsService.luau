@@ -58,11 +58,11 @@ end
 local function buildPhysicalArena()
 	if arenaFolder:FindFirstChild("ArenaFloor") then return end
 
-	-- Main Akhada Clay Arena Floor
+	-- Main Akhada Clay Arena Floor in the Grand Courtyard
 	local floor = Instance.new("Part")
 	floor.Name = "ArenaFloor"
-	floor.Size = Vector3.new(90, 2, 90)
-	floor.Position = Vector3.new(60, 0, -55)
+	floor.Size = Vector3.new(90, 0.8, 90)
+	floor.Position = Vector3.new(-1260, 15.6, -1740)
 	floor.Anchored = true
 	floor.Material = Enum.Material.Sand
 	floor.Color = Color3.fromRGB(160, 100, 60) -- Terracotta Akhada earth
@@ -71,13 +71,13 @@ local function buildPhysicalArena()
 	-- Stone arena perimeter pillars
 	for angle = 0, 315, 45 do
 		local rad = math.rad(angle)
-		local px = 60 + math.cos(rad) * 42
-		local pz = -55 + math.sin(rad) * 42
+		local px = -1260 + math.cos(rad) * 42
+		local pz = -1740 + math.sin(rad) * 42
 
 		local pillar = Instance.new("Part")
 		pillar.Name = "TemplePillar_" .. angle
 		pillar.Size = Vector3.new(3, 14, 3)
-		pillar.Position = Vector3.new(px, 7, pz)
+		pillar.Position = Vector3.new(px, 22, pz)
 		pillar.Anchored = true
 		pillar.Material = Enum.Material.Cobblestone
 		pillar.Color = Color3.fromRGB(140, 130, 120)
@@ -291,11 +291,11 @@ function LegendsService.start()
 		if not root then return false, "No root" end
 
 		if destination == "garden" then
-			root.CFrame = CFrame.new(Vector3.new(0, 4, 35))
-			return true, "Traveled to the Sacred Garden Sanctuary"
+			root.CFrame = CFrame.new(Vector3.new(500, 21, 770), Vector3.new(500, 18, 750))
+			return true, "Traveled to the Sacred Garden Sanctuary in Downtown City"
 		else
-			root.CFrame = CFrame.new(Vector3.new(60, 4, -40))
-			return true, "Entered the Legends Testing Grounds (Akhada)"
+			root.CFrame = CFrame.new(Vector3.new(-1260, 21, -1705), Vector3.new(-1260, 18, -1740))
+			return true, "Entered the Legends Testing Grounds (Akhada Courtyard)"
 		end
 	end
 

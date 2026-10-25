@@ -21,48 +21,48 @@ local remoteFolder = ReplicatedStorage:WaitForChild("DharmaRemotes", 10)
 local SwitchActivePathRemote = remoteFolder and remoteFolder:WaitForChild("SwitchActivePath", 5) :: RemoteFunction
 
 local screenGui: ScreenGui
-local activeWaypointTarget: Vector3? = Vector3.new(0, 2, 40) -- Default to Sacred Garden
+local activeWaypointTarget: Vector3? = Vector3.new(500, 17, 750) -- Default to Sacred Garden in Downtown City
 local activeWaypointName: string = "🌿 Sacred Garden of Dharma (Quest 1)"
 local guideBeam: Beam?
 local beamPart0: Part?
 local beamPart1: Part?
 local distanceLabel: TextLabel?
 
--- Major Open-World Landmarks for Easy 1-Click Navigation & Waypoint Tracking
+-- Major Open-World Landmarks across the Real 61MB City, Courtyards, Vehicles & Mountains
 local LANDMARKS = {
 	{
 		id = "garden",
-		name = "🌿 Sacred Garden (Quest 1)",
+		name = "🌿 Sacred Garden (Downtown)",
 		desc = "Till soil, plant holy Tulsi & Lotus, water crops, and unlock flight/speed boons!",
-		pos = Vector3.new(0, 3, 40),
+		pos = Vector3.new(500, 18, 750),
 		color = Color3.fromRGB(80, 220, 120),
 	},
 	{
 		id = "arena",
-		name = "⚔️ Legends Arena (Quest 2)",
+		name = "⚔️ Legends Arena (Courtyard)",
 		desc = "Swing the Hanuman Gada, practice archery, spar with golems, and Awaken Rudra Tejas!",
-		pos = Vector3.new(60, 3, -55),
+		pos = Vector3.new(-1260, 18, -1740),
 		color = Color3.fromRGB(255, 110, 50),
 	},
 	{
 		id = "mandir",
-		name = "🛕 Grand Mandir (Central Temple)",
-		desc = "Visit the towering golden Shikhara temple to meditate and multiply your Virtue!",
-		pos = Vector3.new(0, 5, -100),
+		name = "🛕 Lakshmi Treasury & Bank",
+		desc = "Commune with Mata Lakshmi & build your financial empire in the city center!",
+		pos = Vector3.new(45, 18, 820),
 		color = Color3.fromRGB(255, 215, 0),
 	},
 	{
 		id = "ghats",
-		name = "🌊 Sacred River Ganga & Ghats",
-		desc = "Perform morning Seva and bathe in the sacred river along the stone steps.",
-		pos = Vector3.new(-110, 3, 0),
+		name = "🚁 Helicopter & Supercars Pad",
+		desc = "Pilot helicopters and drive sports cars across the entire open world!",
+		pos = Vector3.new(-1156, 66, -1567),
 		color = Color3.fromRGB(60, 180, 255),
 	},
 	{
 		id = "bazaar",
-		name = "🏪 Royal Bazaar & Companies",
-		desc = "Buy lands, silk guilds, spice plantations, and build your Tycoon Empire!",
-		pos = Vector3.new(-90, 4, -50),
+		name = "🏔️ Mount Kailash Shiva Peak",
+		desc = "Ascend the highest mountain peak to receive Mahadeva Shiva's cosmic boon!",
+		pos = Vector3.new(-1740, 154, -1635),
 		color = Color3.fromRGB(210, 130, 255),
 	},
 }
