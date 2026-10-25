@@ -862,6 +862,72 @@ function getPeakCenter(c) {
   return { px: c.x, pz: c.z - 520 };
 }
 
+// Compute the exact (x, z, roadY) along the 3.5-Turn Spiral Mountain Ghat Roadway from Town Plaza (s=0) to Summit (s=1)!
+function getSpiralRoadPoint(c, s) {
+  const { px, pz } = getPeakCenter(c);
+  if (s <= 0.16) {
+    // Straight Grand Bazaar & Foothill Approach Highway from Town Plaza (c.z + 40) to the southern base of the mountain (pz + 340)
+    const t = s / 0.16;
+    const rx = c.x + Math.sin(t * Math.PI) * 14.0;
+    const rz = c.z + 40.0 - t * 220.0;
+    return { rx, rz };
+  }
+  // 3.5-Turn Helical Switchback Roadway spiraling around and up the Mountain Massif to the True Summit!
+  const u = (s - 0.16) / 0.84;
+  const turns = 3.5;
+  const angle = Math.PI * 0.5 + u * Math.PI * 2.0 * turns;
+  const rX = (1.0 - Math.pow(u, 0.88) * 0.94) * 440.0;
+  const rZ = (1.0 - Math.pow(u, 0.88) * 0.94) * 320.0;
+  const rx = px + Math.cos(angle) * rX;
+  const rz = pz + Math.sin(angle) * rZ;
+  return { rx, rz };
+}
+
+// Returns [0..1] road mask (>0 if (x,z) is on the Town Bazaar Avenue, Cross-Bazaar Street, or Spiral Mountain Roadway!)
+function getRoadwayMask(c, x, z) {
+  let mask = 0.0;
+  // 1. North-South Grand Bazaar & Approach Highway
+  if (z > c.z - 220.0 && z < c.z + 240.0) {
+    const dX = Math.abs(x - c.x);
+    if (dX < 9.5) {
+      mask = Math.max(mask, 1.0 - Math.max(0.0, (dX - 5.5) / 4.0));
+    }
+  }
+  // 2. East-West Cross-Bazaar Merchant Boulevard
+  if (x > c.x - 220.0 && x < c.x + 220.0) {
+    const dZ = Math.abs(z - c.z);
+    if (dZ < 8.5) {
+      mask = Math.max(mask, 1.0 - Math.max(0.0, (dZ - 4.8) / 3.7));
+    }
+  }
+  // 3. 3.5-Turn Spiral Mountain Ghat Roadway around and up the Mountain to the Summit!
+  const { px, pz } = getPeakCenter(c);
+  const dxP = x - px;
+  const dzP = z - pz;
+  if (Math.abs(dxP) < 470.0 && Math.abs(dzP) < 350.0) {
+    const rawAngle = Math.atan2(dzP, dxP);
+    let relAngle = rawAngle - Math.PI * 0.5;
+    while (relAngle < 0) relAngle += Math.PI * 2.0;
+    const turns = 3.5;
+    for (let k = 0; k < 4; k++) {
+      const totalAngle = relAngle + k * Math.PI * 2.0;
+      const u = totalAngle / (Math.PI * 2.0 * turns);
+      if (u >= 0.0 && u <= 1.02) {
+        const rX = (1.0 - Math.pow(Math.min(1.0, u), 0.88) * 0.94) * 440.0;
+        const rZ = (1.0 - Math.pow(Math.min(1.0, u), 0.88) * 0.94) * 320.0;
+        const ex = Math.cos(rawAngle) * rX;
+        const ez = Math.sin(rawAngle) * rZ;
+        const distToRoad = Math.hypot(dxP - ex, dzP - ez);
+        if (distToRoad < 12.0) {
+          const rm = 1.0 - Math.max(0.0, (distToRoad - 5.5) / 6.5);
+          mask = Math.max(mask, rm);
+        }
+      }
+    }
+  }
+  return mask;
+}
+
 function getTerrainHeight(x, z) {
   let maxContinentH = -8.5;
 
@@ -920,12 +986,21 @@ function getTerrainHeight(x, z) {
         const toweringSpire = Math.pow(massifChain, 1.35) * (highAltitudeScale * 0.68) * (0.58 + 0.62 * rNoise);
         const serratedCouloirs = (Math.pow(rNoise, 1.8) * 0.7 + rFine * 0.3) * rangeEnvelope * (highAltitudeScale * 0.24);
 
-        h += foothills + toweringSpire + serratedCouloirs;
+        let mountainRise = foothills + toweringSpire + serratedCouloirs;
+
+        // Carve Smooth, Walkable & Rideable Terraced Spiral Roadway Switchbacks into the Mountain Slope!
+        const roadM = getRoadwayMask(c, x, z);
+        if (roadM > 0.01) {
+          const smoothGradeRise = foothills * 0.75 + Math.pow(massifChain, 1.15) * (highAltitudeScale * 0.62);
+          mountainRise = mountainRise * (1.0 - roadM * 0.65) + smoothGradeRise * (roadM * 0.65);
+        }
+
+        h += mountainRise;
       }
 
-      // Perfectly Level Grand Bazaar Street & Town Plaza (Radius 180m)
-      if (distIsland < 180.0) {
-        const flatF = 1.0 - Math.min(1.0, Math.max(0.0, (distIsland - 110.0) / 70.0));
+      // Perfectly Level Grand Bazaar Street & Town Plaza (Radius 195m)
+      if (distIsland < 195.0) {
+        const flatF = 1.0 - Math.min(1.0, Math.max(0.0, (distIsland - 125.0) / 70.0));
         const smoothFlat = flatF * flatF * (3.0 - 2.0 * flatF);
         h = h * (1.0 - smoothFlat * 0.98) + 2.6 * (smoothFlat * 0.98);
       }
@@ -936,12 +1011,11 @@ function getTerrainHeight(x, z) {
   return maxContinentH;
 }
 
-// Winding Expedition Trail from Base Camp up into the Lower & Mid Ridges of the Mountain Range
+// Winding Expedition Roadway Point from Town Plaza spiraling around & up the Mountain Range to the Summit
 function getMountainTrailPoint(c, progress) {
-  const x = c.x + Math.sin(progress * Math.PI * 3.0) * (36.0 + progress * 85.0);
-  const z = c.z - 28.0 - progress * 440.0;
-  const y = getTerrainHeight(x, z);
-  return new THREE.Vector3(x, y, z);
+  const { rx, rz } = getSpiralRoadPoint(c, progress);
+  const y = getTerrainHeight(rx, rz);
+  return new THREE.Vector3(rx, y, rz);
 }
 
 function getNearestContinent(x, z) {
@@ -1066,12 +1140,13 @@ const terrainShaderMat = new THREE.ShaderMaterial({
 
       // Cobblestone Grand Bazaar Street & Expedition Road Shader (x near 0, z from +320 to -120)
       vec3 col = mix(blightSoil, lushTurf, cleanse);
-      float roadDistX = abs(mod(vWorldPos.x + 650.0, 1300.0) - 650.0);
-      if (vWorldPos.y < 8.5 && abs(vWorldPos.x) < 6.5 && vWorldPos.z > -180.0 && vWorldPos.z < 360.0) {
-        float cobble = noise(vWorldPos.xz * 2.4);
-        vec3 roadCol = mix(vec3(0.36, 0.33, 0.29), vec3(0.52, 0.48, 0.42), cobble);
-        float roadEdge = 1.0 - smoothstep(4.2, 6.2, abs(vWorldPos.x));
-        col = mix(col, roadCol, roadEdge * 0.88);
+      float cobble = noise(vWorldPos.xz * 2.2);
+      vec3 roadCol = mix(vec3(0.42, 0.37, 0.31), vec3(0.62, 0.56, 0.46), cobble);
+      if (vWorldPos.y < 14.0) {
+        float ewRoad = 1.0 - smoothstep(4.2, 6.8, abs(vWorldPos.z));
+        float nsRoad = (vWorldPos.z > -220.0 && vWorldPos.z < 240.0) ? (1.0 - smoothstep(4.5, 7.2, abs(vWorldPos.x))) : 0.0;
+        float townRoad = max(ewRoad, nsRoad);
+        col = mix(col, roadCol, townRoad * 0.9);
       }
 
       // Realistic Stratified Basalt / Granite Escarpments, Couloirs & Alpine Rock Faces (No Smooth Green Hills!)
@@ -1081,6 +1156,9 @@ const terrainShaderMat = new THREE.ShaderMaterial({
         vec3 darkBasalt = vec3(0.19, 0.20, 0.22);
         vec3 lightGranite = vec3(0.46, 0.44, 0.42);
         vec3 cliff = mix(darkBasalt, lightGranite, strata * 0.68 + hC * 0.32);
+        // Highlight flatter terraced switchback roadways cut into the mountain slopes with warm cobblestone!
+        float mountainTerraceRoad = (vWorldPos.y > 14.0 && slope < 0.36) ? (1.0 - smoothstep(0.18, 0.36, slope)) : 0.0;
+        cliff = mix(cliff, roadCol * 1.12, mountainTerraceRoad * 0.78);
         col = mix(col, cliff, rk * 0.92);
       }
 
@@ -1290,36 +1368,42 @@ function createTreasureChestMesh() {
   return chestGroup;
 }
 
+const postMatShared = new THREE.MeshStandardMaterial({ color: 0x5c3a21, roughness: 0.85 });
+const goldMatShared = new THREE.MeshStandardMaterial({ color: 0xfde047, emissive: 0xd97706, emissiveIntensity: 1.5 });
+const pillarGeoShared = new THREE.CylinderGeometry(0.14, 0.16, 3.2, 6);
+const counterGeoShared = new THREE.BoxGeometry(3.4, 1.0, 1.1);
+const roofGeoShared = new THREE.ConeGeometry(2.85, 1.5, 4);
+const lanternGeoShared = new THREE.SphereGeometry(0.22, 8, 8);
+const awningMatCache = {};
+
 function createShopPavilionMesh(awningHex = 0xd97706) {
   const stall = new THREE.Group();
-  const postMat = new THREE.MeshStandardMaterial({ color: 0x5c3a21, roughness: 0.85 });
-  const awningMat = new THREE.MeshStandardMaterial({ color: awningHex, roughness: 0.55, side: THREE.DoubleSide });
-  const goldMat = new THREE.MeshStandardMaterial({ color: 0xfde047, emissive: 0xd97706, emissiveIntensity: 1.5 });
+  if (!awningMatCache[awningHex]) {
+    awningMatCache[awningHex] = new THREE.MeshStandardMaterial({ color: awningHex, roughness: 0.55, side: THREE.DoubleSide });
+  }
+  const awningMat = awningMatCache[awningHex];
 
   // 4 Wooden Pillars
   [[-1.8, -1.3], [1.8, -1.3], [-1.8, 1.3], [1.8, 1.3]].forEach(([px, pz]) => {
-    const p = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, 3.2, 6), postMat);
+    const p = new THREE.Mesh(pillarGeoShared, postMatShared);
     p.position.set(px, 1.6, pz);
-    p.castShadow = true;
     stall.add(p);
   });
 
   // Merchant Counter Table
-  const counter = new THREE.Mesh(new THREE.BoxGeometry(3.4, 1.0, 1.1), postMat);
+  const counter = new THREE.Mesh(counterGeoShared, postMatShared);
   counter.position.set(0, 0.5, 0.7);
-  counter.castShadow = true;
   stall.add(counter);
 
   // Peaked Bazaar Canopy Roof
-  const roof = new THREE.Mesh(new THREE.ConeGeometry(2.85, 1.5, 4), awningMat);
+  const roof = new THREE.Mesh(roofGeoShared, awningMat);
   roof.position.y = 3.85;
   roof.rotation.y = Math.PI / 4;
-  roof.castShadow = true;
   stall.add(roof);
 
   // Hanging Golden Street Lanterns
   [[-1.7, 1.3], [1.7, 1.3]].forEach(([lx, lz]) => {
-    const lantern = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 8), goldMat);
+    const lantern = new THREE.Mesh(lanternGeoShared, goldMatShared);
     lantern.position.set(lx, 2.95, lz);
     stall.add(lantern);
   });
@@ -1432,14 +1516,17 @@ CONTINENTS.forEach((cont) => {
     emissive: cont.allowFlying ? 0x0284c7 : 0xf59e0b,
     emissiveIntensity: 2.2,
   });
-  for (let step = 1; step <= 14; step++) {
-    const pt = getMountainTrailPoint(cont, step / 15);
+  const cairnPostGeo = new THREE.CylinderGeometry(0.18, 0.28, 1.6, 6);
+  const cairnFlameGeo = new THREE.SphereGeometry(0.24, 8, 8);
+  // 42 Guiding Roadway Lanterns & Milestones along the 3.5-Turn Spiral Mountain Roadway to the Summit!
+  for (let step = 1; step <= 42; step++) {
+    const pt = getMountainTrailPoint(cont, step / 43);
     const cairn = new THREE.Group();
     cairn.position.copy(pt);
-    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.28, 1.6, 6), stoneMat);
+    const post = new THREE.Mesh(cairnPostGeo, stoneMat);
     post.position.y = 0.8;
     cairn.add(post);
-    const flame = new THREE.Mesh(new THREE.SphereGeometry(0.24, 8, 8), torchMat);
+    const flame = new THREE.Mesh(cairnFlameGeo, torchMat);
     flame.position.y = 1.75;
     cairn.add(flame);
     scene.add(cairn);
@@ -1447,16 +1534,17 @@ CONTINENTS.forEach((cont) => {
 
   for (let t = 0; t < 26; t++) {
     const angle = (t / 26) * Math.PI * 2 + hash2D(cont.id, t) * 0.4;
-    const rad = 20 + hash2D(t, cont.id * 7) * 90;
+    const rad = 24 + hash2D(t, cont.id * 7) * 95;
     const tx = cont.x + Math.cos(angle) * rad;
     const tz = cont.z + Math.sin(angle) * rad;
+    if (getRoadwayMask(cont, tx, tz) > 0.1) continue;
     const isNearStart = cont.id === 0 && Math.hypot(tx, tz) < 48;
     spawnOrganicTree(tx, tz, cont.id, isNearStart);
   }
 
-  const midTrailPt = getMountainTrailPoint(cont, 0.22);
-  const highPassPt = getMountainTrailPoint(cont, 0.44);
-  const alpineRidgePt = getMountainTrailPoint(cont, 0.65);
+  const midTrailPt = getMountainTrailPoint(cont, 0.28);
+  const highPassPt = getMountainTrailPoint(cont, 0.56);
+  const alpineRidgePt = getMountainTrailPoint(cont, 0.88);
 
   const objectives = [
     {
@@ -1571,143 +1659,180 @@ CONTINENTS.forEach((cont) => {
     createNameplateDOM(entity);
     interactables.push(entity);
   });
+});
 
-  // ==========================================================================
-  // GRAND BAZAAR STREET, SHOP PAVILIONS & BUSTLING INTERACTIVE NPCs IN EVERY CONTINENT!
-  // ==========================================================================
-  const shopDefs = [
-    {
-      dx: -16,
-      dz: -12,
-      rotY: Math.PI * 0.35,
-      awning: 0xd97706,
-      badge: '🛠️ FORGE SHOP',
-      icon: '🛠️',
-      name: `Master Vishwakarma (${cont.shortName} Armorer)`,
-      action: 'shop',
-      greeting: 'Welcome to the Karma Forge! Upgrade your Sacred Staff, Saddle & Crampons here.',
-    },
-    {
-      dx: 16,
-      dz: -12,
-      rotY: -Math.PI * 0.35,
-      awning: 0x059669,
-      badge: '🧪 APOTHECARY',
-      icon: '🧪',
-      name: `Vaidya Ashwini (Soma Apothecary & Herbs)`,
-      action: 'apothecary',
-      greeting: 'Drink this Himalayan Soma-Elixir! Your Vigor Orbs and Stamina are 100% restored!',
-    },
-    {
-      dx: -18,
-      dz: 14,
-      rotY: Math.PI * 0.65,
-      awning: 0x0284c7,
-      badge: '🐎 STABLE MASTER',
-      icon: '🐎',
-      name: `Stable Master Revanta (Royal Mounts)`,
-      action: 'mounts',
-      greeting: 'Your Golden Ashva Warsteed is groomed and ready! Press [Z] to Mount or [Space] to Fly.',
-    },
-    {
-      dx: 18,
-      dz: 14,
-      rotY: -Math.PI * 0.65,
-      awning: 0x7c3aed,
-      badge: '🍻 TAVERN INN',
-      icon: '🍻',
-      name: `Innkeeper Annapurna (Bazaar Street Tavern)`,
-      action: 'innkeeper',
-      greeting: 'Welcome to the Sanctuary Inn! Enjoy the Tavern Lute music and +30s Well-Fed Speed Buff!',
-    },
-  ];
+// ============================================================================
+// 6B. 108 SACRED BAZAAR SHOPS, 108 INTERACTIVE NPCs & FLOCKS OF RANDOM FLYING BIRDS!
+// ============================================================================
+const sharedShopRingGeo = new THREE.RingGeometry(1.4, 1.75, 20).rotateX(-Math.PI / 2);
+const sharedShopRingMat = new THREE.MeshBasicMaterial({ color: 0xfde047, side: THREE.DoubleSide, transparent: true, opacity: 0.72 });
+const sharedNpcRingGeo = new THREE.RingGeometry(1.0, 1.25, 18).rotateX(-Math.PI / 2);
+const sharedNpcRingMat = new THREE.MeshBasicMaterial({ color: 0x4ade80, side: THREE.DoubleSide, transparent: true, opacity: 0.65 });
+const sharedRobeGeo = new THREE.CylinderGeometry(0.28, 0.44, 1.35, 8);
+const sharedHeadGeo = new THREE.SphereGeometry(0.25, 8, 8);
+const sharedHatGeo = new THREE.ConeGeometry(0.36, 0.35, 6);
+const sharedSkinMat = new THREE.MeshStandardMaterial({ color: 0xfbd38d, roughness: 0.6 });
 
-  shopDefs.forEach((sd, idx) => {
-    const sx = cont.x + sd.dx;
-    const sz = cont.z + sd.dz;
-    const sy = getTerrainHeight(sx, sz);
+const SHOP_ARCHETYPES = [
+  { awning: 0xd97706, badge: '🛠️ FORGE SHOP', icon: '🛠️', title: 'Vishwakarma Armorer', action: 'shop', greeting: 'Welcome to the Karma Forge! Upgrade your Sacred Staff, Saddle & Crampons here.' },
+  { awning: 0x059669, badge: '🧪 APOTHECARY', icon: '🧪', title: 'Ashwini Soma Apothecary', action: 'apothecary', greeting: 'Drink this Himalayan Soma-Elixir! Your Vigor Orbs and Stamina are 100% restored!' },
+  { awning: 0x0284c7, badge: '🐎 STABLE MASTER', icon: '🐎', title: 'Revanta Royal Stables', action: 'mounts', greeting: 'Your Golden Ashva Warsteed is groomed and ready! Press [Z] to Mount or [Space] to Fly.' },
+  { awning: 0x7c3aed, badge: '🍻 TAVERN INN', icon: '🍻', title: 'Annapurna Bazaar Tavern', action: 'innkeeper', greeting: 'Welcome to the Sanctuary Inn! Enjoy the Tavern Lute music and +60s Well-Fed Speed Buff!' },
+  { awning: 0xe11d48, badge: '💎 RELIC BAZAAR', icon: '💎', title: 'Kubera Relic Jeweler', action: 'bags', greeting: 'Behold your 16-Slot Traveler’s Backpack and ancient mountain relics!' },
+  { awning: 0x0d9488, badge: '📜 EXPEDITION GUILD', icon: '📜', title: 'Agastya Trekking Guild', action: 'quests', greeting: 'Walk, ride, or fly along the 3.5-Turn Spiral Mountain Roadway all the way to the Summit!' },
+];
 
-    const shopGroup = new THREE.Group();
-    shopGroup.position.set(sx, sy, sz);
-    shopGroup.rotation.y = sd.rotY;
+const CITIZEN_ARCHETYPES = [
+  { badge: '🎵 STREET BARD', icon: '🎵', title: 'Gandharva Street Minstrel', role: 'bard', robeColor: 0xf59e0b },
+  { badge: '📜 QUEST ELDER', icon: '📜', title: 'Rishi Expedition Guide', role: 'quests', robeColor: 0x38bdf8 },
+  { badge: '🛡️ ROAD SENTINEL', icon: '🛡️', title: 'Sahyadri Roadway Patrol', role: 'guard', robeColor: 0xef4444 },
+  { badge: '🎒 SILK TRADER', icon: '🎒', title: 'Himalayan Caravan Trader', role: 'bags', robeColor: 0x10b981 },
+  { badge: '🥾 MOUNTAIN TREKKER', icon: '🥾', title: 'Pilgrim Mountain Trekker', role: 'trekker', robeColor: 0xa855f7 },
+  { badge: '🧘 DHARMA MONK', icon: '🧘', title: 'Wandering Dharma Sadhu', role: 'monk', robeColor: 0xf97316 },
+];
 
-    const pavilion = createShopPavilionMesh(sd.awning);
-    shopGroup.add(pavilion);
+function createStylizedRobeNPC(robeHex, hatHex) {
+  const g = new THREE.Group();
+  const robeMat = awningMatCache[robeHex] || (awningMatCache[robeHex] = new THREE.MeshStandardMaterial({ color: robeHex, roughness: 0.7 }));
+  const body = new THREE.Mesh(sharedRobeGeo, robeMat);
+  body.position.y = 0.68;
+  g.add(body);
+  const head = new THREE.Mesh(sharedHeadGeo, sharedSkinMat);
+  head.position.y = 1.52;
+  g.add(head);
+  const hat = new THREE.Mesh(sharedHatGeo, goldMatShared);
+  hat.position.y = 1.82;
+  g.add(hat);
+  return g;
+}
 
-    const shopRing = new THREE.Mesh(
-      new THREE.RingGeometry(1.5, 1.9, 28).rotateX(-Math.PI / 2),
-      new THREE.MeshBasicMaterial({ color: 0xfde047, side: THREE.DoubleSide, transparent: true, opacity: 0.75 })
-    );
-    shopRing.position.set(0, 0.12, 1.4);
-    shopGroup.add(shopRing);
+// Spawn Exactly 108 Interactive 3D Shops Across the 7 Continents (Grand Bazaar Avenues + Mountain Roadway Outposts!)
+for (let sIdx = 0; sIdx < 108; sIdx++) {
+  const cont = CONTINENTS[sIdx % CONTINENTS.length];
+  const localIdx = Math.floor(sIdx / CONTINENTS.length); // 0..15 per continent
+  const arch = SHOP_ARCHETYPES[sIdx % SHOP_ARCHETYPES.length];
 
+  let sx = cont.x;
+  let sz = cont.z;
+  let rotY = 0;
+
+  if (localIdx < 8) {
+    // 8 Shops lining the North-South Grand Bazaar Avenue
+    const side = localIdx % 2 === 0 ? -1 : 1;
+    const row = Math.floor(localIdx / 2);
+    sx = cont.x + side * 15.5;
+    sz = cont.z - 22.0 + row * 18.0;
+    rotY = side < 0 ? Math.PI * 0.5 : -Math.PI * 0.5;
+  } else if (localIdx < 12) {
+    // 4 Shops lining the East-West Cross-Bazaar Boulevard
+    const side = localIdx % 2 === 0 ? -1 : 1;
+    const col = localIdx - 8;
+    sx = cont.x + (col < 2 ? -34.0 - col * 16.0 : 34.0 + (col - 2) * 16.0);
+    sz = cont.z + side * 14.5;
+    rotY = side < 0 ? 0 : Math.PI;
+  } else {
+    // 4 Mountain Roadway Waystation Shops along the Spiral Ghat Roadway to the Summit!
+    const roadFrac = 0.18 + (localIdx - 12) * 0.19;
+    const { rx, rz } = getSpiralRoadPoint(cont, roadFrac);
+    sx = rx + 6.5;
+    sz = rz + 6.5;
+    rotY = Math.PI * 0.25;
+  }
+
+  const sy = getTerrainHeight(sx, sz);
+  const shopGroup = new THREE.Group();
+  shopGroup.position.set(sx, sy, sz);
+  shopGroup.rotation.y = rotY;
+
+  shopGroup.add(createShopPavilionMesh(arch.awning));
+
+  const shopRing = new THREE.Mesh(sharedShopRingGeo, sharedShopRingMat);
+  shopRing.position.set(0, 0.12, 1.4);
+  shopGroup.add(shopRing);
+
+  // Shopkeeper standing behind counter
+  if (localIdx < 4) {
     loadSharedGLTF('https://threejs.org/examples/models/gltf/Soldier.glb', (gltf) => {
       const npcModel = SkeletonUtils.clone(gltf.scene);
-      npcModel.scale.setScalar(1.28);
+      npcModel.scale.setScalar(1.26);
       npcModel.position.set(0, 0, 1.35);
       npcModel.rotation.y = Math.PI;
       shopGroup.add(npcModel);
-      if (gltf.animations && gltf.animations[0]) {
-        const m = new THREE.AnimationMixer(npcModel);
-        m.clipAction(gltf.animations[0]).play();
-        shopEntity.mixer = m;
-      }
     });
+  } else {
+    const keeper = createStylizedRobeNPC(arch.awning, 0xfde047);
+    keeper.position.set(0, 0, 1.35);
+    shopGroup.add(keeper);
+  }
 
-    scene.add(shopGroup);
+  scene.add(shopGroup);
 
-    const shopEntity = {
-      id: `shop-${cont.id}-${idx}`,
-      continent: cont,
-      tier: cont.tier,
-      badge: sd.badge,
-      kind: 'shop_npc',
-      shopAction: sd.action,
-      greeting: sd.greeting,
-      icon: sd.icon,
-      name: sd.name,
-      hp: 100,
-      maxHp: 100,
-      rejuvenated: true,
-      mesh: shopGroup,
-      blightRing: shopRing,
-      homeX: sx,
-      homeZ: sz,
-      wanderAngle: 0,
-      heightOffset: 3.6,
-      mixer: null,
-    };
+  const shopEntity = {
+    id: `shop-108-${sIdx}`,
+    continent: cont,
+    tier: cont.tier,
+    badge: `${arch.badge} #${sIdx + 1}`,
+    kind: 'shop_npc',
+    shopAction: arch.action,
+    greeting: arch.greeting,
+    icon: arch.icon,
+    name: `${arch.title} #${sIdx + 1}`,
+    hp: 100,
+    maxHp: 100,
+    rejuvenated: true,
+    mesh: shopGroup,
+    blightRing: shopRing,
+    homeX: sx,
+    homeZ: sz,
+    wanderAngle: 0,
+    heightOffset: 3.6,
+    mixer: null,
+  };
 
-    createNameplateDOM(shopEntity);
-    interactables.push(shopEntity);
-  });
+  createNameplateDOM(shopEntity);
+  interactables.push(shopEntity);
+}
 
-  // Spawn 4 Active Wandering Town Citizens, Bards & Sherpa Guides patrolling the Bazaar Street & Flatlands!
-  const citizenDefs = [
-    { badge: '🎵 STREET BARD', icon: '🎵', name: `Gandharva Street Minstrel`, dx: -6, dz: 2, radius: 11.0, role: 'bard' },
-    { badge: '📜 QUEST ELDER', icon: '📜', name: `Rishi Agastya (Expedition Guide)`, dx: 6, dz: -2, radius: 7.0, role: 'quests' },
-    { badge: '🛡️ ROYAL GUARD', icon: '🛡️', name: `Sahyadri Sentinel Patrol`, dx: -9, dz: -24, radius: 16.0, role: 'guard' },
-    { badge: '🎒 CARAVAN TRADER', icon: '🎒', name: `Silk-Road Caravan Merchant`, dx: 9, dz: 22, radius: 15.0, role: 'bags' },
-  ];
+// Spawn Exactly 108 Active Patrolling Citizens, Bards, Guards & Mountain Trekkers Across the 7 Continents!
+for (let nIdx = 0; nIdx < 108; nIdx++) {
+  const cont = CONTINENTS[nIdx % CONTINENTS.length];
+  const localIdx = Math.floor(nIdx / CONTINENTS.length); // 0..15 per continent
+  const arch = CITIZEN_ARCHETYPES[nIdx % CITIZEN_ARCHETYPES.length];
 
-  citizenDefs.forEach((cd, cIdx) => {
-    const nx = cont.x + cd.dx;
-    const nz = cont.z + cd.dz;
-    const ny = getTerrainHeight(nx, nz);
+  let nx = cont.x;
+  let nz = cont.z;
+  let patrolRadius = 14.0;
+  let isRoadTrekker = false;
+  let roadProgress = 0;
 
-    const npcGroup = new THREE.Group();
-    npcGroup.position.set(nx, ny, nz);
+  if (localIdx < 9) {
+    // 9 Bustling Town & Flatland Citizens patrolling the Bazaar Streets & Meadows
+    const angle = (localIdx / 9) * Math.PI * 2.0;
+    const dist = 8.0 + (localIdx % 3) * 18.0;
+    nx = cont.x + Math.cos(angle) * dist;
+    nz = cont.z + Math.sin(angle) * dist;
+    patrolRadius = 12.0 + (localIdx % 4) * 6.0;
+  } else {
+    // 7 Mountain Roadway Trekkers & Pilgrims walking right up the Spiral Mountain Roadway to the Summit!
+    isRoadTrekker = true;
+    roadProgress = 0.06 + ((localIdx - 9) / 7.0) * 0.86;
+    const { rx, rz } = getSpiralRoadPoint(cont, roadProgress);
+    nx = rx;
+    nz = rz;
+  }
 
-    const npcRing = new THREE.Mesh(
-      new THREE.RingGeometry(1.1, 1.35, 24).rotateX(-Math.PI / 2),
-      new THREE.MeshBasicMaterial({ color: 0x4ade80, side: THREE.DoubleSide, transparent: true, opacity: 0.65 })
-    );
-    npcRing.position.y = 0.12;
-    npcGroup.add(npcRing);
+  const ny = getTerrainHeight(nx, nz);
+  const npcGroup = new THREE.Group();
+  npcGroup.position.set(nx, ny, nz);
 
+  const npcRing = new THREE.Mesh(sharedNpcRingGeo, sharedNpcRingMat);
+  npcRing.position.y = 0.12;
+  npcGroup.add(npcRing);
+
+  if (localIdx < 4) {
     loadSharedGLTF('https://threejs.org/examples/models/gltf/Soldier.glb', (gltf) => {
       const npcModel = SkeletonUtils.clone(gltf.scene);
-      npcModel.scale.setScalar(1.25);
+      npcModel.scale.setScalar(1.24);
       npcGroup.add(npcModel);
       if (gltf.animations && gltf.animations.length > 0) {
         const m = new THREE.AnimationMixer(npcModel);
@@ -1716,35 +1841,108 @@ CONTINENTS.forEach((cont) => {
         citizenEntity.mixer = m;
       }
     });
+  } else {
+    const walker = createStylizedRobeNPC(arch.robeColor, 0xfde047);
+    npcGroup.add(walker);
+    npcGroup._robeWalker = walker;
+  }
 
-    scene.add(npcGroup);
+  scene.add(npcGroup);
 
-    const citizenEntity = {
-      id: `citizen-${cont.id}-${cIdx}`,
-      continent: cont,
-      tier: cont.tier,
-      badge: cd.badge,
-      kind: 'town_npc',
-      npcRole: cd.role,
-      icon: cd.icon,
-      name: cd.name,
-      hp: 100,
-      maxHp: 100,
-      rejuvenated: true,
-      mesh: npcGroup,
-      blightRing: npcRing,
-      homeX: nx,
-      homeZ: nz,
-      patrolRadius: cd.radius,
-      wanderAngle: cIdx * 1.5,
-      heightOffset: 2.9,
-      mixer: null,
-    };
+  const citizenEntity = {
+    id: `npc-108-${nIdx}`,
+    continent: cont,
+    tier: cont.tier,
+    badge: `${arch.badge} #${nIdx + 1}`,
+    kind: 'town_npc',
+    npcRole: arch.role,
+    icon: arch.icon,
+    name: `${arch.title} #${nIdx + 1}`,
+    hp: 100,
+    maxHp: 100,
+    rejuvenated: true,
+    mesh: npcGroup,
+    blightRing: npcRing,
+    homeX: nx,
+    homeZ: nz,
+    patrolRadius,
+    isRoadTrekker,
+    roadProgress,
+    wanderAngle: nIdx * 1.1,
+    heightOffset: 2.8,
+    mixer: null,
+  };
 
-    createNameplateDOM(citizenEntity);
-    interactables.push(citizenEntity);
+  createNameplateDOM(citizenEntity);
+  interactables.push(citizenEntity);
+}
+
+// ============================================================================
+// 6C. FLOCKS OF RANDOMLY SOARING 3D BIRDS ACROSS THE SKIES & MOUNTAIN PEAKS!
+// ============================================================================
+const ambientBirds = [];
+const birdWingGeo = new THREE.ConeGeometry(0.18, 1.05, 4);
+birdWingGeo.rotateZ(Math.PI / 2);
+const birdBodyGeo = new THREE.ConeGeometry(0.16, 0.75, 5);
+birdBodyGeo.rotateX(Math.PI / 2);
+const birdColors = [0xf8fafc, 0x38bdf8, 0xfbbf24, 0xf472b6, 0x34d399];
+const birdMats = birdColors.map((hex) => new THREE.MeshStandardMaterial({ color: hex, emissive: hex, emissiveIntensity: 0.35, side: THREE.DoubleSide }));
+
+function createSoaringBirdMesh(mat) {
+  const bGroup = new THREE.Group();
+  const body = new THREE.Mesh(birdBodyGeo, mat);
+  bGroup.add(body);
+  const lw = new THREE.Mesh(birdWingGeo, mat);
+  lw.position.set(-0.45, 0, 0);
+  const rw = new THREE.Mesh(birdWingGeo.clone(), mat);
+  rw.scale.x = -1;
+  rw.position.set(0.45, 0, 0);
+  bGroup.add(lw, rw);
+  bGroup._lw = lw;
+  bGroup._rw = rw;
+  return bGroup;
+}
+
+// Spawn 112 Randomly Soaring Birds Across the 7 Continents (16 per Continent + Rigged Stork/Flamingo Leaders!)
+for (let bIdx = 0; bIdx < 112; bIdx++) {
+  const cont = CONTINENTS[bIdx % CONTINENTS.length];
+  const mat = birdMats[bIdx % birdMats.length];
+  const birdMesh = createSoaringBirdMesh(mat);
+
+  const centerAngle = hash2D(bIdx, 19) * Math.PI * 2.0;
+  const centerDist = 15.0 + hash2D(bIdx, 43) * 280.0;
+  const cx = cont.x + Math.cos(centerAngle) * centerDist;
+  const cz = cont.z - 80.0 + Math.sin(centerAngle) * centerDist;
+  const baseAlt = Math.max(12.0, getTerrainHeight(cx, cz) + 14.0 + hash2D(bIdx, 71) * 48.0);
+
+  birdMesh.position.set(cx, baseAlt, cz);
+  birdMesh.scale.setScalar(1.1 + (bIdx % 3) * 0.35);
+  scene.add(birdMesh);
+
+  // Load rigged Stork/Flamingo on flock leaders near Base Camp!
+  if (bIdx < 14) {
+    const birdUrl = bIdx % 2 === 0
+      ? 'https://threejs.org/examples/models/gltf/Stork.glb'
+      : 'https://threejs.org/examples/models/gltf/Flamingo.glb';
+    loadSharedGLTF(birdUrl, (gltf) => {
+      const m = SkeletonUtils.clone(gltf.scene);
+      m.scale.setScalar(0.016);
+      birdMesh.add(m);
+    });
+  }
+
+  ambientBirds.push({
+    mesh: birdMesh,
+    continent: cont,
+    cx,
+    cz,
+    baseAlt,
+    orbitR: 22.0 + hash2D(bIdx, 101) * 65.0,
+    speed: 0.45 + hash2D(bIdx, 137) * 0.65,
+    phase: bIdx * 0.9,
+    flapSpeed: 7.5 + (bIdx % 5) * 1.4,
   });
-});
+}
 
 // ============================================================================
 // 7. SEATED SKELETAL RIDER ON MOUNT (`Soldier.glb` Astride `Horse.glb` + Wings)
@@ -3065,7 +3263,8 @@ function updateWorldNameplates() {
   interactables.forEach((ent) => {
     if (!ent.nameplateEl) return;
     const dist = camera.position.distanceTo(ent.mesh.position);
-    if (dist > 135) {
+    const maxNameDist = ent === STATE.selectedTarget ? 220 : ent.kind === 'shop_npc' || ent.kind === 'town_npc' ? 42 : 125;
+    if (dist > maxNameDist) {
       ent.nameplateEl.style.display = 'none';
       return;
     }
@@ -3310,6 +3509,26 @@ function animate() {
 
   const px = playerGroup.position.x;
   const pz = playerGroup.position.z;
+
+  // Animate 112 Randomly Soaring Birds Across the Skies & Mountain Peaks!
+  for (let b = 0; b < ambientBirds.length; b++) {
+    const bd = ambientBirds[b];
+    if (bd.continent !== STATE.currentContinent) continue;
+    const t = elapsed * bd.speed + bd.phase;
+    const bx = bd.cx + Math.cos(t) * bd.orbitR + Math.sin(t * 2.3) * 14.0;
+    const bz = bd.cz + Math.sin(t * 0.85) * bd.orbitR + Math.cos(t * 1.7) * 14.0;
+    const by = bd.baseAlt + Math.sin(t * 1.6) * 6.5;
+    const dxB = bx - bd.mesh.position.x;
+    const dzB = bz - bd.mesh.position.z;
+    bd.mesh.position.set(bx, by, bz);
+    if (Math.abs(dxB) + Math.abs(dzB) > 0.001) {
+      bd.mesh.rotation.y = Math.atan2(dxB, dzB);
+    }
+    const flap = Math.sin(elapsed * bd.flapSpeed + bd.phase) * 0.55;
+    if (bd.mesh._lw) bd.mesh._lw.rotation.z = flap;
+    if (bd.mesh._rw) bd.mesh._rw.rotation.z = -flap;
+  }
+
   interactables.forEach((ent) => {
     const distSq = (ent.mesh.position.x - px) ** 2 + (ent.mesh.position.z - pz) ** 2;
     // Skip CPU physics & skeletal updates for distant continents (>180m away)
@@ -3327,17 +3546,35 @@ function animate() {
       ent.mesh.position.y = getTerrainHeight(ent.mesh.position.x, ent.mesh.position.z);
       ent.mesh.rotation.y = Math.atan2(dx, dz);
     } else if (ent.kind === 'town_npc') {
-      // Bustling Town Citizens, Bards & Guards patrolling along the Grand Bazaar Street & Flatlands!
-      ent.wanderAngle += dt * 0.45;
-      const r = ent.patrolRadius || 10.0;
-      const tx = ent.homeX + Math.sin(ent.wanderAngle * 0.7) * (r * 0.35);
-      const tz = ent.homeZ + Math.cos(ent.wanderAngle) * r;
-      const dx = tx - ent.mesh.position.x;
-      const dz = tz - ent.mesh.position.z;
-      ent.mesh.position.x += dx * dt * 1.4;
-      ent.mesh.position.z += dz * dt * 1.4;
-      ent.mesh.position.y = getTerrainHeight(ent.mesh.position.x, ent.mesh.position.z);
-      ent.mesh.rotation.y = Math.atan2(dx, dz);
+      if (ent.isRoadTrekker) {
+        // Mountain Roadway Trekkers & Pilgrims walking steadily up the 3.5-Turn Spiral Roadway to the Summit!
+        ent.roadProgress = (ent.roadProgress + dt * 0.0065) % 0.96;
+        if (ent.roadProgress < 0.04) ent.roadProgress = 0.04;
+        const { rx, rz } = getSpiralRoadPoint(ent.continent, ent.roadProgress);
+        const dx = rx - ent.mesh.position.x;
+        const dz = rz - ent.mesh.position.z;
+        ent.mesh.position.x = rx;
+        ent.mesh.position.z = rz;
+        ent.mesh.position.y = getTerrainHeight(rx, rz);
+        if (Math.abs(dx) + Math.abs(dz) > 0.001) {
+          ent.mesh.rotation.y = Math.atan2(dx, dz);
+        }
+      } else {
+        // Bustling Town Citizens, Bards & Guards patrolling along the Grand Bazaar Street & Flatlands!
+        ent.wanderAngle += dt * 0.45;
+        const r = ent.patrolRadius || 10.0;
+        const tx = ent.homeX + Math.sin(ent.wanderAngle * 0.7) * (r * 0.35);
+        const tz = ent.homeZ + Math.cos(ent.wanderAngle) * r;
+        const dx = tx - ent.mesh.position.x;
+        const dz = tz - ent.mesh.position.z;
+        ent.mesh.position.x += dx * dt * 1.4;
+        ent.mesh.position.z += dz * dt * 1.4;
+        ent.mesh.position.y = getTerrainHeight(ent.mesh.position.x, ent.mesh.position.z);
+        ent.mesh.rotation.y = Math.atan2(dx, dz);
+      }
+      if (ent.mesh._robeWalker) {
+        ent.mesh._robeWalker.position.y = Math.abs(Math.sin(elapsed * 7.5 + ent.wanderAngle)) * 0.14;
+      }
     } else if (ent.kind === 'chest' && !ent.rejuvenated) {
       ent.mesh.rotation.y = Math.sin(elapsed * 1.5) * 0.15;
     }
