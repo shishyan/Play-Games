@@ -44,6 +44,7 @@ local GardenService        = require(Services.GardenService)
 local AbilityService       = require(Services.AbilityService)
 local LegendsService       = require(Services.LegendsService)
 local GodsAndEmpireService = require(Services.GodsAndEmpireService)
+local WorldBuilderService  = require(Services.WorldBuilderService)
 
 -- Boot order (PRD §1.3): each service in this table receives init/cleanup calls
 local SERVICE_BOOT_ORDER = {
@@ -67,6 +68,7 @@ local SERVICE_BOOT_ORDER = {
 	AbilityService,
 	LegendsService,
 	GodsAndEmpireService,
+	WorldBuilderService,
 }
 
 -- ─── T-128: RunService policy (server) ───────────────────────────────────────
@@ -115,3 +117,5 @@ AbilityService.start()
 LegendsService.start()
 
 GodsAndEmpireService.start()
+
+WorldBuilderService.start()
