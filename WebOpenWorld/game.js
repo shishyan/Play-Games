@@ -1451,6 +1451,16 @@ const goldenLeafTex = createFoliageTexture(218, 165, 32);
 const snowLeafTex = createFoliageTexture(210, 225, 240);
 const stoneTex = createFoliageTexture(124, 128, 136);
 
+// Forest Imaging & Multi-Layer Canopy Textures: Birch, Blossom, Deep Woodland, Alpine Fern
+const birchBarkTex = createFoliageTexture(228, 226, 220);
+const blossomLeafTex = createFoliageTexture(244, 114, 182);
+const fernLeafTex = createFoliageTexture(22, 163, 74);
+const fallenLeavesTex = createFoliageTexture(180, 83, 9);
+
+const birchBarkMat = new THREE.MeshStandardMaterial({ map: birchBarkTex, bumpMap: birchBarkTex, bumpScale: 0.09, roughness: 0.85 });
+const blossomCrownMat = new THREE.MeshStandardMaterial({ map: blossomLeafTex, bumpMap: blossomLeafTex, bumpScale: 0.08, roughness: 0.65 });
+const fernCrownMat = new THREE.MeshStandardMaterial({ map: fernLeafTex, bumpMap: fernLeafTex, bumpScale: 0.08, roughness: 0.68 });
+
 const barkMat = new THREE.MeshStandardMaterial({ map: barkTex, bumpMap: barkTex, bumpScale: 0.08, roughness: 0.9 });
 const witheredCrownMat = new THREE.MeshStandardMaterial({ map: witheredTex, bumpMap: witheredTex, bumpScale: 0.06, roughness: 0.85 });
 const lushCrownMat = new THREE.MeshStandardMaterial({ map: lushLeafTex, bumpMap: lushLeafTex, bumpScale: 0.08, roughness: 0.72 });
@@ -1464,8 +1474,8 @@ const stoneMat = new THREE.MeshStandardMaterial({ map: stoneTex, bumpMap: stoneT
 function spawnHighDensityBiomeObjects() {
   const dummy = new THREE.Object3D();
 
-  // 1. Instanced Pine & Deciduous Trees (3,500 trees across the 7 Continents)
-  const treeCount = 3500;
+  // 1. Instanced Pine & Deciduous Trees (5,000 trees with Multi-Layered Understory & Foliage across 7 Continents)
+  const treeCount = 5000;
   const instTrunkGeo = new THREE.CylinderGeometry(0.24, 0.48, 4.2, 6);
   instTrunkGeo.translate(0, 2.1, 0);
   const instCanopyGeo = new THREE.ConeGeometry(2.4, 5.2, 6);
@@ -1473,7 +1483,14 @@ function spawnHighDensityBiomeObjects() {
   const instTrunkMesh = new THREE.InstancedMesh(instTrunkGeo, barkMat, treeCount);
   const instCanopyMesh = new THREE.InstancedMesh(instCanopyGeo, lushCrownMat, treeCount);
 
+  // Secondary Understory Layer: Forest Ferns & Blooming Canopy Bushes (4,000 Understory Shrubs)
+  const shrubCount = 4000;
+  const shrubGeo = new THREE.DodecahedronGeometry(1.4, 1);
+  shrubGeo.translate(0, 0.7, 0);
+  const instShrubMesh = new THREE.InstancedMesh(shrubGeo, fernCrownMat, shrubCount);
+
   let tIdx = 0;
+  let shIdx = 0;
   CONTINENTS.forEach((cont) => {
     const treesPerCont = Math.floor(treeCount / CONTINENTS.length);
     for (let i = 0; i < treesPerCont; i++) {
@@ -1494,13 +1511,31 @@ function spawnHighDensityBiomeObjects() {
       instTrunkMesh.setMatrixAt(tIdx, dummy.matrix);
       instCanopyMesh.setMatrixAt(tIdx, dummy.matrix);
       tIdx++;
+
+      // Clustered understory shrubs around forest groves
+      if (shIdx < shrubCount && (i % 3 === 0)) {
+        const offX = (hash2D(i, 89) - 0.5) * 4.5;
+        const offZ = (hash2D(i, 91) - 0.5) * 4.5;
+        const shX = x + offX;
+        const shZ = z + offZ;
+        const shY = getTerrainHeight(shX, shZ);
+        dummy.position.set(shX, shY, shZ);
+        dummy.rotation.set(0, hash2D(i, 93) * Math.PI * 2, 0);
+        const shScale = 0.6 + hash2D(i, 95) * 0.7;
+        dummy.scale.set(shScale, shScale * 0.65, shScale);
+        dummy.updateMatrix();
+        instShrubMesh.setMatrixAt(shIdx, dummy.matrix);
+        shIdx++;
+      }
     }
   });
   instTrunkMesh.count = tIdx;
   instCanopyMesh.count = tIdx;
+  instShrubMesh.count = shIdx;
   instTrunkMesh.instanceMatrix.needsUpdate = true;
   instCanopyMesh.instanceMatrix.needsUpdate = true;
-  scene.add(instTrunkMesh, instCanopyMesh);
+  instShrubMesh.instanceMatrix.needsUpdate = true;
+  scene.add(instTrunkMesh, instCanopyMesh, instShrubMesh);
 
   // 2. Instanced Wildflower & Grass Clumps (14,000 flora tufts)
   const grassCount = 14000;
@@ -2496,6 +2531,153 @@ function spawnContinentKingdomAndVillages(cont) {
   });
 }
 
+// ============================================================================
+// 5C. COLOSSAL DRAGONS ROAMING THE CONTINENTAL HILLSIDES & MOUNTAINS
+// ============================================================================
+const animatedHillsideDragons = [];
+
+function createColossalDragonMesh(dragonHue = 0xd97706, wingHue = 0xf59e0b) {
+  const g = new THREE.Group();
+  const scale = 2.4; // Colossal 25m wingspan dragon!
+
+  const bodyMat = new THREE.MeshStandardMaterial({
+    color: dragonHue,
+    roughness: 0.5,
+    metalness: 0.25,
+  });
+  const wingMatDragon = new THREE.MeshStandardMaterial({
+    color: wingHue,
+    emissive: dragonHue,
+    emissiveIntensity: 0.45,
+    roughness: 0.6,
+    side: THREE.DoubleSide,
+  });
+  const hornMat = new THREE.MeshStandardMaterial({
+    color: 0xfef08a,
+    emissive: 0xf59e0b,
+    emissiveIntensity: 1.2,
+    roughness: 0.3,
+  });
+
+  // Torso / Thorax
+  const torso = new THREE.Mesh(new THREE.ConeGeometry(1.6 * scale, 4.8 * scale, 6).rotateX(Math.PI / 2), bodyMat);
+  torso.position.y = 3.6 * scale;
+  torso.castShadow = true;
+  g.add(torso);
+
+  // Arching Neck & Dragon Head
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.7 * scale, 1.1 * scale, 2.8 * scale, 6), bodyMat);
+  neck.position.set(0, 5.0 * scale, -2.4 * scale);
+  neck.rotation.x = -Math.PI * 0.32;
+  g.add(neck);
+
+  const head = new THREE.Mesh(new THREE.ConeGeometry(0.85 * scale, 2.2 * scale, 5).rotateX(-Math.PI / 2), bodyMat);
+  head.position.set(0, 6.2 * scale, -3.8 * scale);
+  g.add(head);
+
+  // Curved Crown Horns
+  [-0.4 * scale, 0.4 * scale].forEach((hx, idx) => {
+    const horn = new THREE.Mesh(new THREE.ConeGeometry(0.18 * scale, 1.6 * scale, 4), hornMat);
+    horn.position.set(hx, 6.9 * scale, -3.2 * scale);
+    horn.rotation.set(-0.35, 0, (idx === 0 ? -1 : 1) * 0.4);
+    g.add(horn);
+  });
+
+  // Long Serrated Spine Tail
+  const tail = new THREE.Mesh(new THREE.ConeGeometry(0.85 * scale, 6.2 * scale, 5).rotateX(-Math.PI / 2), bodyMat);
+  tail.position.set(0, 3.4 * scale, 4.4 * scale);
+  g.add(tail);
+  g._dragonTail = tail;
+
+  // 4 Muscular Walking Legs
+  const legGeo = new THREE.CylinderGeometry(0.38 * scale, 0.52 * scale, 2.8 * scale, 6);
+  const legFL = new THREE.Mesh(legGeo, bodyMat);
+  legFL.position.set(-1.4 * scale, 1.4 * scale, -1.6 * scale);
+  const legFR = new THREE.Mesh(legGeo, bodyMat);
+  legFR.position.set(1.4 * scale, 1.4 * scale, -1.6 * scale);
+  const legBL = new THREE.Mesh(legGeo, bodyMat);
+  legBL.position.set(-1.5 * scale, 1.4 * scale, 2.2 * scale);
+  const legBR = new THREE.Mesh(legGeo, bodyMat);
+  legBR.position.set(1.5 * scale, 1.4 * scale, 2.2 * scale);
+  g.add(legFL, legFR, legBL, legBR);
+  g._legFL = legFL;
+  g._legFR = legFR;
+  g._legBL = legBL;
+  g._legBR = legBR;
+
+  // Massive Articulated Dragon Wings
+  const wingL = new THREE.Group();
+  const wingR = new THREE.Group();
+  wingL.position.set(-1.2 * scale, 4.4 * scale, 0);
+  wingR.position.set(1.2 * scale, 4.4 * scale, 0);
+
+  const wingBladeGeo = new THREE.BoxGeometry(6.5 * scale, 0.12 * scale, 3.4 * scale);
+  wingBladeGeo.translate(-3.2 * scale, 0, 0);
+  const wMeshL = new THREE.Mesh(wingBladeGeo, wingMatDragon);
+  wingL.add(wMeshL);
+
+  const wMeshR = new THREE.Mesh(wingBladeGeo.clone(), wingMatDragon);
+  wMeshR.scale.x = -1;
+  wingR.add(wMeshR);
+
+  g.add(wingL, wingR);
+  g._wingL = wingL;
+  g._wingR = wingR;
+
+  return g;
+}
+
+const DRAGON_PALETTES = [
+  { body: 0x059669, wing: 0x10b981, title: 'Jade Earth-Drake', icon: '🐉' },
+  { body: 0xb91c1c, wing: 0xf87171, title: 'Crimson Flame-Drake', icon: '🔥' },
+  { body: 0x0284c7, wing: 0x38bdf8, title: 'Azure Storm-Drake', icon: '⚡' },
+  { body: 0x7c3aed, wing: 0xa78bfa, title: 'Void Amethyst Drake', icon: '🔮' },
+  { body: 0xd97706, wing: 0xfbbf24, title: 'Golden Sovereign Drake', icon: '✨' },
+];
+
+function spawnColossalHillsideDragons() {
+  CONTINENTS.forEach((cont, cIdx) => {
+    // 2 Colossal Dragons per continent roaming the foothills and mountain slopes
+    for (let d = 0; d < 2; d++) {
+      const pal = DRAGON_PALETTES[(cIdx * 2 + d) % DRAGON_PALETTES.length];
+      const dMesh = createColossalDragonMesh(pal.body, pal.wing);
+
+      // Position on the scenic mountain hillsides flanking the trail
+      const hillAngle = (d === 0 ? 0.85 : 2.25) * Math.PI + cIdx * 0.4;
+      const hillDist = 280.0 + d * 180.0;
+      const hx = cont.x + Math.cos(hillAngle) * hillDist;
+      const hz = cont.z - 280.0 + Math.sin(hillAngle) * 90.0;
+      const hy = getTerrainHeight(hx, hz);
+
+      dMesh.position.set(hx, hy, hz);
+      scene.add(dMesh);
+
+      const dragonEnt = {
+        id: `dragon-${cont.id}-${d}`,
+        continent: cont,
+        mesh: dMesh,
+        name: `${pal.title} of ${cont.shortName}`,
+        badge: 'COLOSSAL DRAKE',
+        kind: 'town_npc',
+        npcRole: 'dragon_guardian',
+        questMarker: null,
+        hp: 3500,
+        maxHp: 3500,
+        rejuvenated: true,
+        homeX: hx,
+        homeZ: hz,
+        baseAngle: hillAngle,
+        orbitRadius: 110.0 + d * 60.0,
+        speed: 0.14 + d * 0.05,
+        phase: cIdx * 1.5 + d * 3.1,
+      };
+
+      createNameplateDOM(dragonEnt);
+      interactables.push(dragonEnt);
+      animatedHillsideDragons.push(dragonEnt);
+    }
+  });
+}
 const gltfLoader = new GLTFLoader();
 const mixers = [];
 const modelCache = {};
@@ -2719,6 +2901,9 @@ CONTINENTS.forEach((cont) => {
     interactables.push(entity);
   });
 });
+
+// Spawn Colossal Hillside Dragons roaming the continental mountain ridges!
+spawnColossalHillsideDragons();
 
 // ============================================================================
 // 6B. 108 SACRED BAZAAR SHOPS, 108 FORWARD-FACING ANIMAL & TEEN NPCs, & WOW QUESTS!
@@ -3176,13 +3361,14 @@ const saddleMesh = new THREE.Mesh(
 saddleMesh.position.set(0, 1.42, -0.05);
 mountGroup.add(saddleMesh);
 
-// Unfurling Golden Pegasus / Dragon Wings attached to the Mount's Shoulders
+// Unfurling Angelic Feathered Wings attached to the Mount's Shoulders
 const mountWingsGroup = new THREE.Group();
 mountWingsGroup.position.set(0, 1.55, 0.15);
 const wingMat = new THREE.MeshStandardMaterial({
-  color: 0xfde047,
-  emissive: 0xd97706,
-  emissiveIntensity: 1.4,
+  color: 0xffffff,
+  emissive: 0x93c5fd,
+  emissiveIntensity: 0.45,
+  roughness: 0.4,
   side: THREE.DoubleSide,
 });
 const leftWing = new THREE.Group();
@@ -3207,7 +3393,15 @@ mountGroup.add(mountWingsGroup);
 let mountMixer = null;
 let mountAction = null;
 
-// Load Rigged `Horse.glb` Mount via Shared Cache
+// Load Rigged `Horse.glb` Mount via Shared Cache & Reskin to Radiant Angelic White Warsteed!
+const angelicHorseMat = new THREE.MeshStandardMaterial({
+  color: 0xfdfdfd,
+  roughness: 0.35,
+  metalness: 0.12,
+  emissive: 0x93c5fd,
+  emissiveIntensity: 0.22,
+});
+
 loadSharedGLTF('https://threejs.org/examples/models/gltf/Horse.glb', (gltf) => {
   const horse = SkeletonUtils.clone(gltf.scene);
   horse.scale.setScalar(0.0155);
@@ -3216,6 +3410,8 @@ loadSharedGLTF('https://threejs.org/examples/models/gltf/Horse.glb', (gltf) => {
     if (c.isMesh) {
       c.castShadow = true;
       c.receiveShadow = true;
+      // Reskin mount mesh with ethereal angelic pure white coat!
+      c.material = angelicHorseMat;
     }
   });
   mountGroup.add(horse);
@@ -3322,28 +3518,30 @@ function applySeatedRiderPose(elapsed, isMoving) {
   const LFore = playerBones['mixamorigLeftForeArm'];
   const RFore = playerBones['mixamorigRightForeArm'];
 
-  // 1. Thighs pitched forward (-1.28 rad) and splayed outward (±0.52 rad) straddling the mount's saddle!
-  const splay = STATE.isMounted ? 0.52 : 0.35;
-  if (LUpLeg) LUpLeg.rotation.set(-1.28, -0.22, splay, 'XYZ');
-  if (RUpLeg) RUpLeg.rotation.set(-1.28, 0.22, -splay, 'XYZ');
+  // 1. Thighs pitched forward (-1.22 rad) and splayed outward (±0.48 rad) straddling the mount's saddle naturally!
+  const splay = STATE.isMounted ? 0.48 : 0.35;
+  if (LUpLeg) LUpLeg.rotation.set(-1.22, -0.18, splay, 'XYZ');
+  if (RUpLeg) RUpLeg.rotation.set(-1.22, 0.18, -splay, 'XYZ');
 
-  // 2. Knees bent downward gripping the stirrups (+1.38 rad)
-  const kneeBend = STATE.isMounted ? 1.38 + gallopBob * 0.6 : 1.52;
+  // 2. Knees bent naturally downward gripping the stirrups (+1.25 rad) with gallop sway
+  const kneeBend = STATE.isMounted ? 1.25 + gallopBob * 0.45 : 1.52;
   if (LLeg) LLeg.rotation.set(kneeBend, 0, 0, 'XYZ');
   if (RLeg) RLeg.rotation.set(kneeBend, 0, 0, 'XYZ');
 
   // 3. Heels down in stirrups
-  if (LFoot) LFoot.rotation.set(-0.25, 0, 0, 'XYZ');
-  if (RFoot) RFoot.rotation.set(-0.25, 0, 0, 'XYZ');
+  if (LFoot) LFoot.rotation.set(-0.28, 0, 0, 'XYZ');
+  if (RFoot) RFoot.rotation.set(-0.28, 0, 0, 'XYZ');
 
-  // 4. Upright Spine with subtle forward riding lean
-  if (Spine) Spine.rotation.set(STATE.isMounted && isMoving ? 0.15 : 0.05, 0, 0, 'XYZ');
+  // 4. Natural upright rider torso dynamic lean (subtle counter-sway to galloping rhythm)
+  const riderLean = STATE.isMounted ? (isMoving ? 0.18 + Math.sin(elapsed * 11.0) * 0.04 : 0.06) : 0.0;
+  if (Spine) Spine.rotation.set(riderLean, 0, isMoving ? Math.sin(elapsed * 5.5) * 0.025 : 0, 'XYZ');
 
-  // 5. Hands forward holding the reins!
-  if (LArm) LArm.rotation.set(-0.58, 0.25, -0.32, 'XYZ');
-  if (LFore) LFore.rotation.set(-0.45, 0, 0, 'XYZ');
-  if (RArm) RArm.rotation.set(-0.58, -0.25, 0.32, 'XYZ');
-  if (RFore) RFore.rotation.set(-0.45, 0, 0, 'XYZ');
+  // 5. Hands extended naturally holding the reins with subtle responsive wrist motion!
+  const handBob = isMoving ? Math.sin(elapsed * 11.0) * 0.04 : 0;
+  if (LArm) LArm.rotation.set(-0.62 + handBob, 0.22, -0.28, 'XYZ');
+  if (LFore) LFore.rotation.set(-0.48, 0, 0, 'XYZ');
+  if (RArm) RArm.rotation.set(-0.62 + handBob, -0.22, 0.28, 'XYZ');
+  if (RFore) RFore.rotation.set(-0.48, 0, 0, 'XYZ');
 }
 
 // ============================================================================
@@ -5094,6 +5292,38 @@ function animate() {
       }
       if (ent.mesh._questGem) {
         ent.mesh._questGem.rotation.y = elapsed * 2.4;
+      }
+    } else if (ent.npcRole === 'dragon_guardian') {
+      // Colossal Hillside Dragon pacing along the scenic mountain ridge
+      const t = elapsed * ent.speed + ent.phase;
+      const dxHill = Math.cos(t) * ent.orbitRadius;
+      const dzHill = Math.sin(t) * (ent.orbitRadius * 0.45);
+      const targetX = ent.homeX + dxHill;
+      const targetZ = ent.homeZ + dzHill;
+      const prevX = ent.mesh.position.x;
+      const prevZ = ent.mesh.position.z;
+      const stepDx = targetX - prevX;
+      const stepDz = targetZ - prevZ;
+
+      ent.mesh.position.x += stepDx * dt * 2.2;
+      ent.mesh.position.z += stepDz * dt * 2.2;
+      ent.mesh.position.y = getTerrainHeight(ent.mesh.position.x, ent.mesh.position.z);
+      if (Math.abs(stepDx) + Math.abs(stepDz) > 0.001) {
+        ent.mesh.rotation.y = Math.atan2(stepDx, stepDz);
+      }
+
+      // Dragon walking gait: alternating 4 legs + swaying tail + slow majestic wing flap
+      const dGait = Math.sin(elapsed * 2.6 + ent.phase);
+      const dMesh = ent.mesh;
+      if (dMesh._legFL) dMesh._legFL.rotation.x = dGait * 0.35;
+      if (dMesh._legBR) dMesh._legBR.rotation.x = dGait * 0.35;
+      if (dMesh._legFR) dMesh._legFR.rotation.x = -dGait * 0.35;
+      if (dMesh._legBL) dMesh._legBL.rotation.x = -dGait * 0.35;
+      if (dMesh._dragonTail) dMesh._dragonTail.rotation.y = Math.sin(elapsed * 1.8 + ent.phase) * 0.28;
+      if (dMesh._wingL && dMesh._wingR) {
+        const wingFlap = Math.sin(elapsed * 1.2 + ent.phase) * 0.25;
+        dMesh._wingL.rotation.z = wingFlap;
+        dMesh._wingR.rotation.z = -wingFlap;
       }
     } else if (ent.kind === 'chest' && !ent.rejuvenated) {
       ent.mesh.rotation.y = Math.sin(elapsed * 1.5) * 0.15;
