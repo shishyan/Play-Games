@@ -1,8 +1,7 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 // ============================================================================
-// AUDIO SYNTHESIZER (Web Audio API)
+// AUDIO SYNTHESIZER (Hordes.io Style Crisp Sound Cues)
 // ============================================================================
 class SoundEngine {
   constructor() {
@@ -22,454 +21,316 @@ class SoundEngine {
     window.addEventListener('keydown', unlock);
     window.addEventListener('mousedown', unlock);
   }
-  playChime(freq = 528, duration = 0.8) {
+  playChime(freq = 528, duration = 0.5) {
     if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.type = 'sine';
     osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(freq * 1.4, this.ctx.currentTime + duration);
-    gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(freq * 1.3, this.ctx.currentTime + duration);
+    gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
     osc.connect(gain);
     gain.connect(this.ctx.destination);
     osc.start();
     osc.stop(this.ctx.currentTime + duration);
   }
-  playZoneFanfare() {
-    if (!this.ctx) return;
-    [261.63, 329.63, 392.0, 523.25].forEach((f, i) => setTimeout(() => this.playChime(f, 1.2), i * 160));
-  }
   playHeal() {
     if (!this.ctx) return;
-    [432, 540, 648, 864].forEach((f, i) => setTimeout(() => this.playChime(f, 0.6), i * 80));
+    [520, 650, 780].forEach((f, i) => setTimeout(() => this.playChime(f, 0.4), i * 70));
+  }
+  playLevelUp() {
+    if (!this.ctx) return;
+    [440, 554, 659, 880].forEach((f, i) => setTimeout(() => this.playChime(f, 0.8), i * 110));
   }
 }
 const audio = new SoundEngine();
 
 // ============================================================================
-// 1. TEXTURE GENERATORS (Authentic Hand-Painted Stylized MMO Textures)
+// 1. HORDES.IO PROCEDURAL CHUNK TEXTURING (Clean Voxels / Low-Poly Shading)
 // ============================================================================
-function generateGrassTexture() {
-  const c = document.createElement('canvas');
-  c.width = 512; c.height = 512;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = '#2f5726';
-  ctx.fillRect(0, 0, 512, 512);
-
-  // Layered soft painted patches
-  for (let i = 0; i < 3000; i++) {
-    const x = Math.random() * 512;
-    const y = Math.random() * 512;
-    const r = Math.random() * 6 + 2;
-    ctx.fillStyle = Math.random() > 0.5 ? '#3b6e30' : (Math.random() > 0.5 ? '#24451d' : '#4b853d');
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Soft clover / wildflower specks
-  for (let i = 0; i < 200; i++) {
-    const x = Math.random() * 512;
-    const y = Math.random() * 512;
-    ctx.fillStyle = Math.random() > 0.6 ? '#fcd34d' : '#f472b6';
-    ctx.beginPath();
-    ctx.arc(x, y, 2, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  const tex = new THREE.CanvasTexture(c);
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(60, 60);
-  return tex;
-}
-
-function generateBarkTexture() {
+function generateVoxelPaletteTexture() {
   const c = document.createElement('canvas');
   c.width = 256; c.height = 256;
   const ctx = c.getContext('2d');
-  ctx.fillStyle = '#3a271d';
-  ctx.fillRect(0, 0, 256, 256);
-  ctx.strokeStyle = '#221610';
-  ctx.lineWidth = 3;
-  for (let x = 0; x < 256; x += 12) {
-    ctx.beginPath();
-    ctx.moveTo(x + Math.sin(x) * 4, 0);
-    ctx.bezierCurveTo(x + 10, 80, x - 10, 160, x, 256);
-    ctx.stroke();
-  }
-  const tex = new THREE.CanvasTexture(c);
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(2, 6);
-  return tex;
-}
 
-function generateStoneTexture() {
-  const c = document.createElement('canvas');
-  c.width = 256; c.height = 256;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = '#78716c';
+  // Vibrant Hordes.io Grass Green
+  ctx.fillStyle = '#43a047';
   ctx.fillRect(0, 0, 256, 256);
-  for (let i = 0; i < 1500; i++) {
-    ctx.fillStyle = Math.random() > 0.5 ? '#57534e' : '#a8a29e';
-    ctx.fillRect(Math.random() * 256, Math.random() * 256, 4, 4);
+
+  // Subtle clean grid tiling (characteristic of Hordes.io ground)
+  ctx.strokeStyle = '#388e3c';
+  ctx.lineWidth = 2;
+  for (let i = 0; i <= 256; i += 32) {
+    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 256); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(256, i); ctx.stroke();
   }
+
+  // Soft scattered wildflower dots
+  for (let i = 0; i < 40; i++) {
+    ctx.fillStyle = Math.random() > 0.5 ? '#fdd835' : '#f06292';
+    ctx.fillRect(Math.floor(Math.random() * 8) * 32 + 14, Math.floor(Math.random() * 8) * 32 + 14, 4, 4);
+  }
+
   const tex = new THREE.CanvasTexture(c);
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(8, 8);
+  tex.repeat.set(40, 40);
   return tex;
 }
 
 // ============================================================================
-// 2. SCENE, ATMOSPHERIC LIGHTING, SKYBOX & FOG
+// 2. THREE.JS ENGINE SETUP (Hordes.io Isometric / Close Follow Perspective)
 // ============================================================================
 const container = document.getElementById('canvas-container');
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xb6d5ec); // WoW Elwynn / Nagrand sky blue
-scene.fog = new THREE.FogExp2(0xb6d5ec, 0.0018);
+scene.background = new THREE.Color(0x87ceeb); // Bright clean Hordes.io sky
+scene.fog = new THREE.FogExp2(0x87ceeb, 0.0022);
 
-const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.5, 3000);
+const camera = new THREE.PerspectiveCamera(52, window.innerWidth / window.innerHeight, 0.5, 2000);
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+renderer.toneMappingExposure = 1.1;
 container.appendChild(renderer.domElement);
 
-// Warm Sunlight & Atmospheric Ambient
-const sunLight = new THREE.DirectionalLight(0xfff3d6, 2.4);
-sunLight.position.set(180, 260, 140);
+// Hordes.io Bright Directional Sunlight + Crisp Ambient
+const sunLight = new THREE.DirectionalLight(0xfffaed, 2.5);
+sunLight.position.set(120, 220, 90);
 sunLight.castShadow = true;
 sunLight.shadow.mapSize.set(2048, 2048);
 sunLight.shadow.camera.near = 10;
-sunLight.shadow.camera.far = 800;
-const d = 220;
+sunLight.shadow.camera.far = 600;
+const d = 160;
 sunLight.shadow.camera.left = -d; sunLight.shadow.camera.right = d;
 sunLight.shadow.camera.top = d; sunLight.shadow.camera.bottom = -d;
-sunLight.shadow.bias = -0.0003;
 scene.add(sunLight);
 
-const ambientLight = new THREE.HemisphereLight(0xdbeafe, 0x4d7c0f, 1.1);
+const ambientLight = new THREE.HemisphereLight(0xffffff, 0x334155, 1.2);
 scene.add(ambientLight);
 
 // ============================================================================
-// 3. CONTINUOUS TERRAIN & ROLLING HILLS (No Flat Green Sheet)
+// 3. HORDES.IO MODULAR TERRAIN (Terraced Clean Steppes & River)
 // ============================================================================
-const terrainGeo = new THREE.PlaneGeometry(1600, 1600, 128, 128);
-terrainGeo.rotateX(-Math.PI / 2);
-
-const posAttr = terrainGeo.attributes.position;
-function getTerrainHeight(x, z) {
-  // Flat sanctuary area in center (0, 0)
-  const distFromCenter = Math.sqrt(x * x + z * z);
-  if (distFromCenter < 50) return 0;
-
-  // Gentle rolling hills
-  let h = Math.sin(x * 0.012) * Math.cos(z * 0.012) * 8;
-  h += Math.sin(x * 0.025 + 1.2) * Math.sin(z * 0.025) * 4;
-
-  // Mountain ridges on north (Mount Kailash foothills)
-  if (z < -160) {
-    const northFactor = Math.min(1, (-z - 160) / 250);
-    h += (Math.sin(x * 0.02) * 20 + Math.cos(z * 0.02) * 25 + 40) * northFactor;
-  }
-  return h;
-}
-
-for (let i = 0; i < posAttr.count; i++) {
-  const vx = posAttr.getX(i);
-  const vz = posAttr.getZ(i);
-  posAttr.setY(i, getTerrainHeight(vx, vz));
-}
-terrainGeo.computeVertexNormals();
-
-const grassTex = generateGrassTexture();
-const barkTex = generateBarkTexture();
-const stoneTex = generateStoneTexture();
-
-const matTerrain = new THREE.MeshStandardMaterial({
-  map: grassTex,
-  roughness: 0.85,
+const matGround = new THREE.MeshStandardMaterial({
+  map: generateVoxelPaletteTexture(),
+  roughness: 0.7,
   metalness: 0.05
 });
-const terrainMesh = new THREE.Mesh(terrainGeo, matTerrain);
+
+const groundGeo = new THREE.PlaneGeometry(1200, 1200, 64, 64);
+groundGeo.rotateX(-Math.PI / 2);
+
+function getTerrainHeight(x, z) {
+  // Stepped terraces (Hordes.io stepped plateau look)
+  let h = Math.sin(x * 0.015) * Math.cos(z * 0.015) * 6;
+  return Math.round(h * 2) / 2; // Quantize to crisp steps
+}
+
+const gPos = groundGeo.attributes.position;
+for (let i = 0; i < gPos.count; i++) {
+  const vx = gPos.getX(i);
+  const vz = gPos.getZ(i);
+  gPos.setY(i, getTerrainHeight(vx, vz));
+}
+groundGeo.computeVertexNormals();
+
+const terrainMesh = new THREE.Mesh(groundGeo, matGround);
 terrainMesh.receiveShadow = true;
 scene.add(terrainMesh);
 
-// Sacred River Ganga on the West (Cuts naturally through terrain)
-const riverMesh = new THREE.Mesh(
-  new THREE.PlaneGeometry(140, 1200),
-  new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.1, transparent: true, opacity: 0.85 })
+// Clean Blue Waterway (River Ganga)
+const river = new THREE.Mesh(
+  new THREE.PlaneGeometry(100, 1000),
+  new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.1, transparent: true, opacity: 0.85 })
 );
-riverMesh.rotation.x = -Math.PI / 2;
-riverMesh.position.set(-240, 0.4, 0);
-scene.add(riverMesh);
+river.rotation.x = -Math.PI / 2;
+river.position.set(-180, 0.35, 0);
+scene.add(river);
 
 // ============================================================================
-// 4. STYLIZED HAND-CRAFTED FLORA (Complex Tree Foliage & Shrubbery)
+// 4. HORDES.IO CLEAN MODULAR TREES & PROPS
 // ============================================================================
-const matFoliageDark = new THREE.MeshStandardMaterial({ color: 0x1e5a22, roughness: 0.8 });
-const matFoliageMid = new THREE.MeshStandardMaterial({ color: 0x2f7d34, roughness: 0.8 });
-const matFoliageLight = new THREE.MeshStandardMaterial({ color: 0x4ade80, roughness: 0.75 });
-const matBark = new THREE.MeshStandardMaterial({ map: barkTex, roughness: 0.9 });
-const matStone = new THREE.MeshStandardMaterial({ map: stoneTex, roughness: 0.85 });
+const matWood = new THREE.MeshStandardMaterial({ color: 0x5d4037, roughness: 0.8 });
+const matLeaf = new THREE.MeshStandardMaterial({ color: 0x2e7d32, roughness: 0.7 });
+const matLeafLight = new THREE.MeshStandardMaterial({ color: 0x4caf50, roughness: 0.7 });
+const matStone = new THREE.MeshStandardMaterial({ color: 0x78909c, roughness: 0.85 });
 
-function createOrganicTree(x, z, scale = 1) {
-  const treeGroup = new THREE.Group();
+function createHordesTree(x, z, scale = 1) {
+  const tree = new THREE.Group();
   const y = getTerrainHeight(x, z);
-  treeGroup.position.set(x, y, z);
+  tree.position.set(x, y, z);
 
-  // Twisted Trunk (Compound cylinders for natural taper)
-  const trunk1 = new THREE.Mesh(new THREE.CylinderGeometry(0.8 * scale, 1.4 * scale, 6 * scale, 10), matBark);
-  trunk1.position.y = 3 * scale;
-  trunk1.castShadow = true;
-  treeGroup.add(trunk1);
+  // Polygonal trunk
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.5 * scale, 0.7 * scale, 4 * scale, 6), matWood);
+  trunk.position.y = 2 * scale;
+  trunk.castShadow = true;
+  tree.add(trunk);
 
-  const trunk2 = new THREE.Mesh(new THREE.CylinderGeometry(0.5 * scale, 0.8 * scale, 5 * scale, 8), matBark);
-  trunk2.position.set(0.2 * scale, 7 * scale, 0.1 * scale);
-  trunk2.rotation.z = 0.08;
-  trunk2.castShadow = true;
-  treeGroup.add(trunk2);
+  // Stepped hexagonal foliage cones (Distinct Hordes.io tree silhouette)
+  for (let i = 0; i < 3; i++) {
+    const r1 = (3.2 - i * 0.7) * scale;
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(r1, 3.2 * scale, 6), i === 2 ? matLeafLight : matLeaf);
+    cone.position.y = (3.6 + i * 2.2) * scale;
+    cone.castShadow = true;
+    tree.add(cone);
+  }
 
-  // Multi-cluster WoW-style foliage puffs (Layered spheres)
-  const puffGeo = new THREE.DodecahedronGeometry(2.8 * scale, 1);
-  const puffOffsets = [
-    { x: 0, y: 9.5 * scale, z: 0, s: 1.3, mat: matFoliageDark },
-    { x: -1.6 * scale, y: 8.5 * scale, z: 0.8 * scale, s: 1.0, mat: matFoliageMid },
-    { x: 1.6 * scale, y: 8.8 * scale, z: -0.6 * scale, s: 1.1, mat: matFoliageMid },
-    { x: 0.8 * scale, y: 11.2 * scale, z: 0.8 * scale, s: 0.9, mat: matFoliageLight },
-    { x: -0.8 * scale, y: 11.5 * scale, z: -0.8 * scale, s: 0.85, mat: matFoliageLight }
-  ];
-
-  puffOffsets.forEach((p) => {
-    const puff = new THREE.Mesh(puffGeo, p.mat);
-    puff.position.set(p.x, p.y, p.z);
-    puff.scale.setScalar(p.s);
-    puff.castShadow = true;
-    treeGroup.add(puff);
-  });
-
-  scene.add(treeGroup);
+  scene.add(tree);
 }
 
-// Populate Grove with 45 Organic Trees
-for (let i = 0; i < 45; i++) {
-  const angle = Math.random() * Math.PI * 2;
-  const dist = 35 + Math.random() * 120;
-  const tx = Math.cos(angle) * dist;
-  const tz = Math.sin(angle) * dist;
-  if (tx > -220 && tx < -260) continue; // Keep river clear
-  createOrganicTree(tx, tz, 0.85 + Math.random() * 0.5);
+for (let i = 0; i < 50; i++) {
+  const ang = Math.random() * Math.PI * 2;
+  const d = 30 + Math.random() * 110;
+  const tx = Math.cos(ang) * d;
+  const tz = Math.sin(ang) * d;
+  if (tx > -220 && tx < -140) continue;
+  createHordesTree(tx, tz, 0.85 + Math.random() * 0.4);
 }
-
-// Giant Ancient Banyan Tree at Sanctuary Center (0, 0)
-const grandBanyan = new THREE.Group();
-grandBanyan.position.set(0, 0, 0);
-
-const banyanTrunk = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 4.2, 14, 16), matBark);
-banyanTrunk.position.y = 7;
-banyanTrunk.castShadow = true;
-grandBanyan.add(banyanTrunk);
-
-// Giant foliage canopy (4 massive intersecting volumes)
-const banyanCanopyGeo = new THREE.DodecahedronGeometry(8.5, 2);
-[
-  { x: 0, y: 16, z: 0, s: 1.3, m: matFoliageDark },
-  { x: -4, y: 14.5, z: 3, s: 1.1, m: matFoliageMid },
-  { x: 4, y: 15, z: -2.5, s: 1.15, m: matFoliageMid },
-  { x: 0, y: 19.5, z: 0, s: 0.95, m: matFoliageLight }
-].forEach(c => {
-  const canopy = new THREE.Mesh(banyanCanopyGeo, c.m);
-  canopy.position.set(c.x, c.y, c.z);
-  canopy.scale.setScalar(c.s);
-  canopy.castShadow = true;
-  grandBanyan.add(canopy);
-});
-
-// Stone circular meditation plinth under the Banyan
-const stonePlinth = new THREE.Mesh(new THREE.CylinderGeometry(14, 15, 0.8, 32), matStone);
-stonePlinth.position.y = 0.4;
-stonePlinth.receiveShadow = true;
-grandBanyan.add(stonePlinth);
-
-scene.add(grandBanyan);
 
 // ============================================================================
-// 5. INTERACTIVE SACRED FLORA & LIVING FOREST CREATURES
+// 5. INTERACTABLES (Living Wildlife, Garden Beds, Healing Springs)
 // ============================================================================
 const interactables = [];
 
 // Selection Reticle on Active Target
 const targetRing = new THREE.Mesh(
-  new THREE.RingGeometry(2.2, 2.7, 32),
+  new THREE.RingGeometry(1.8, 2.2, 24),
   new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide })
 );
 targetRing.rotation.x = -Math.PI / 2;
 targetRing.visible = false;
 scene.add(targetRing);
 
-// 6 Sacred Soil Beds (Tilled mandala plots around central grove)
+// A. Living Forest Animals (Hordes.io Character Proportions)
+function spawnHordesAnimal(x, z, name, icon) {
+  const animalGroup = new THREE.Group();
+  const y = getTerrainHeight(x, z);
+  animalGroup.position.set(x, y, z);
+
+  // Blocky modular stylized creature
+  const body = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.2, 2.4), new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.6 }));
+  body.position.y = 1.0;
+  body.castShadow = true;
+  animalGroup.add(body);
+
+  const head = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.0, 1.2), new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.6 }));
+  head.position.set(0, 1.8, 1.2);
+  head.castShadow = true;
+  animalGroup.add(head);
+
+  // 4 Legs
+  const legMat = new THREE.MeshStandardMaterial({ color: 0x92400e });
+  [[-0.6, -0.8], [0.6, -0.8], [-0.6, 0.8], [0.6, 0.8]].forEach(([lx, lz]) => {
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.9, 0.3), legMat);
+    leg.position.set(lx, 0.45, lz);
+    animalGroup.add(leg);
+  });
+
+  scene.add(animalGroup);
+
+  const animalObj = {
+    id: `animal_${x}_${z}`,
+    type: 'creature',
+    name,
+    subtitle: 'Wounded Wildlife • Needs Sanjeevani [1]',
+    icon,
+    pos: new THREE.Vector3(x, y, z),
+    group: animalGroup,
+    health: 35,
+    maxHealth: 100,
+    healed: false
+  };
+  interactables.push(animalObj);
+}
+
+spawnHordesAnimal(16, -12, 'Wounded Vrindavan Fawn', '🦌');
+spawnHordesAnimal(-20, 16, 'Injured Golden Fox', '🦊');
+spawnHordesAnimal(24, 24, 'Gentle Grove Gazelle', '🦌');
+
+// B. Sacred Soil Beds (Garden Nurturing)
 for (let r = 0; r < 2; r++) {
   for (let c = 0; c < 3; c++) {
     const px = (c - 1) * 11;
-    const pz = 24 + r * 11;
+    const pz = 22 + r * 11;
 
-    const stoneFrame = new THREE.Mesh(new THREE.BoxGeometry(7.5, 0.5, 7.5), matStone);
-    stoneFrame.position.set(px, 0.25, pz);
-    stoneFrame.castShadow = true;
-    scene.add(stoneFrame);
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(6.5, 0.4, 6.5), matStone);
+    frame.position.set(px, 0.2, pz);
+    scene.add(frame);
 
-    const soilMat = new THREE.MeshStandardMaterial({ color: 0x3d2516, roughness: 0.95 });
-    const soil = new THREE.Mesh(new THREE.BoxGeometry(6.6, 0.6, 6.6), soilMat);
-    soil.position.set(px, 0.32, pz);
-    soil.receiveShadow = true;
+    const soilMat = new THREE.MeshStandardMaterial({ color: 0x3e2723, roughness: 0.9 });
+    const soil = new THREE.Mesh(new THREE.BoxGeometry(5.8, 0.5, 5.8), soilMat);
+    soil.position.set(px, 0.25, pz);
     scene.add(soil);
 
     const plantGroup = new THREE.Group();
-    plantGroup.position.set(px, 0.6, pz);
+    plantGroup.position.set(px, 0.5, pz);
     scene.add(plantGroup);
 
-    const plot = {
-      id: `tulsi_bed_${r}_${c}`,
+    interactables.push({
+      id: `bed_${r}_${c}`,
       type: 'garden_plot',
-      name: `Sacred Tulsi Soil Bed #${r * 3 + c + 1}`,
-      subtitle: '[Needs Tilling & Ganga Water]',
+      name: `Sacred Soil Bed #${r * 3 + c + 1}`,
+      subtitle: 'Untilled • Press [E] or [2] to Nurture',
       icon: '🌿',
       pos: new THREE.Vector3(px, 0.5, pz),
       stage: 'untilled',
       health: 20,
       soilMat,
       plantGroup
-    };
-    interactables.push(plot);
+    });
   }
 }
 
-// Animated 3D Living Forest Creatures (Fox/Fawn Model via GLTF)
-const gltfLoader = new GLTFLoader();
-const livingCreatures = [];
-
-function spawnAnimatedCreature(x, z, name) {
-  const y = getTerrainHeight(x, z);
-  const creatureObj = {
-    id: `creature_${x}_${z}`,
-    type: 'creature',
-    name,
-    subtitle: '[Wounded • Needs Sanjeevani Herbs (1)]',
-    icon: '🦊',
-    pos: new THREE.Vector3(x, y, z),
-    health: 35,
-    maxHealth: 100,
-    healed: false,
-    group: new THREE.Group(),
-    mixer: null
-  };
-  creatureObj.group.position.set(x, y, z);
-  scene.add(creatureObj.group);
-  interactables.push(creatureObj);
-
-  gltfLoader.load(
-    'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Fox/glTF-Binary/Fox.glb',
-    (gltf) => {
-      const model = gltf.scene;
-      model.scale.set(0.024, 0.024, 0.024);
-      model.traverse(node => {
-        if (node.isMesh) {
-          node.castShadow = true;
-          node.receiveShadow = true;
-        }
-      });
-      creatureObj.group.add(model);
-
-      if (gltf.animations && gltf.animations.length > 0) {
-        creatureObj.mixer = new THREE.AnimationMixer(model);
-        const action = creatureObj.mixer.clipAction(gltf.animations[0]); // Idle / Survey
-        action.play();
-      }
-      livingCreatures.push(creatureObj);
-    },
-    undefined,
-    () => {
-      // Fallback stylized procedural mesh if offline
-      const body = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.2, 2.4), new THREE.MeshStandardMaterial({ color: 0xc27136 }));
-      body.position.y = 1.0;
-      creatureObj.group.add(body);
-    }
-  );
-}
-
-spawnAnimatedCreature(18, -14, 'Injured Vrindavan Fox');
-spawnAnimatedCreature(-22, 18, 'Wounded Forest Fawn');
-spawnAnimatedCreature(26, 26, 'Gentle Grove Deer');
-
 // ============================================================================
-// 6. WOW PLAYER AVATAR & 3D ANIMATION RIG (Soldier / Seeker Rig)
+// 6. PLAYER CONTROLLER (Hordes.io Character Rig with Saffron Cowl & Weapon)
 // ============================================================================
 const playerGroup = new THREE.Group();
-playerGroup.position.set(0, 0, 14);
+playerGroup.position.set(0, 0, 10);
 scene.add(playerGroup);
 
-let playerMixer = null;
-const playerActions = {};
-let currentAction = null;
+// Stylized Vaidya (Healer) Avatar
+const playerMesh = new THREE.Group();
+const tunic = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.8, 0.8), new THREE.MeshStandardMaterial({ color: 0xe65100, roughness: 0.5 }));
+tunic.position.y = 1.4;
+tunic.castShadow = true;
+playerMesh.add(tunic);
 
-// Saffron Halo behind avatar
-const charHalo = new THREE.Mesh(
-  new THREE.RingGeometry(0.7, 0.95, 32),
-  new THREE.MeshBasicMaterial({ color: 0xffe066, side: THREE.DoubleSide })
-);
-charHalo.position.set(0, 3.2, -0.4);
-playerGroup.add(charHalo);
+const head = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), new THREE.MeshStandardMaterial({ color: 0xffcc80, roughness: 0.5 }));
+head.position.y = 2.6;
+head.castShadow = true;
+playerMesh.add(head);
 
-gltfLoader.load(
-  'https://threejs.org/examples/models/gltf/Soldier.glb',
-  (gltf) => {
-    const model = gltf.scene;
-    model.scale.set(1.3, 1.3, 1.3);
-    model.traverse(node => {
-      if (node.isMesh) {
-        node.castShadow = true;
-        node.receiveShadow = true;
-      }
-    });
-    playerGroup.add(model);
+// Healer's Lotus Staff
+const staff = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 3.2, 8), matWood);
+staff.position.set(0.9, 1.8, 0.2);
+const staffGem = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 12), new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x10b981, emissiveIntensity: 0.6 }));
+staffGem.position.set(0.9, 3.4, 0.2);
+playerMesh.add(staff, staffGem);
 
-    playerMixer = new THREE.AnimationMixer(model);
-    gltf.animations.forEach(clip => {
-      playerActions[clip.name] = playerMixer.clipAction(clip);
-    });
-    if (playerActions['Idle']) {
-      currentAction = playerActions['Idle'];
-      currentAction.play();
-    }
-  },
-  undefined,
-  () => {
-    // Fallback mesh
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.85, 2.2, 16), new THREE.MeshStandardMaterial({ color: 0xff7700 }));
-    body.position.y = 1.6;
-    playerGroup.add(body);
-  }
-);
+playerGroup.add(playerMesh);
 
-function fadePlayerAction(name) {
-  if (!playerMixer || !playerActions[name] || currentAction === playerActions[name]) return;
-  const prev = currentAction;
-  currentAction = playerActions[name];
-  if (prev) prev.fadeOut(0.2);
-  currentAction.reset().fadeIn(0.2).play();
-}
+// Player State
+const state = {
+  punya: 380,
+  gold: 2450,
+  fame: 120,
+  prana: 100,
+  level: 1,
+  selectedTarget: null,
+  isFlying: false,
+  isCasting: false,
+  boons: { sprint: false, jump: false, fly: false, teleport: false }
+};
 
-// Controls & Camera Orbit
+// Controls & Camera Orbit (Hordes.io Right-Click Orbit / WASD)
 const keys = {};
 let camYaw = 0;
-let camPitch = 0.32;
-let camDist = 16;
+let camPitch = 0.42;
+let camDist = 18;
 let isDragging = false;
 let velY = 0;
 
@@ -482,7 +343,6 @@ window.addEventListener('keydown', (e) => {
   if (e.code === 'Digit5') castSpell(5);
   if (e.code === 'KeyF') castSpell('F');
   if (e.code === 'KeyT') castSpell('T');
-  if (e.code === 'KeyM') toggleDeitiesModal();
   if (e.code === 'KeyE') interactWithTargetOrNearest();
   if (e.code === 'Tab') {
     e.preventDefault();
@@ -496,6 +356,7 @@ window.addEventListener('keyup', (e) => {
 
 renderer.domElement.addEventListener('mousedown', (e) => {
   if (e.button === 0) {
+    // Left click target raycasting
     const mouse = new THREE.Vector2(
       (e.clientX / window.innerWidth) * 2 - 1,
       -(e.clientY / window.innerHeight) * 2 + 1
@@ -519,41 +380,29 @@ window.addEventListener('mouseup', () => { isDragging = false; });
 window.addEventListener('mousemove', (e) => {
   if (!isDragging) return;
   camYaw -= e.movementX * 0.0055;
-  camPitch = Math.max(0.04, Math.min(1.2, camPitch + e.movementY * 0.005));
+  camPitch = Math.max(0.06, Math.min(1.2, camPitch + e.movementY * 0.005));
 });
 window.addEventListener('wheel', (e) => {
-  camDist = Math.max(6, Math.min(48, camDist + e.deltaY * 0.02));
+  camDist = Math.max(8, Math.min(42, camDist + e.deltaY * 0.02));
 });
 
 // ============================================================================
-// 7. TARGETING, ZONE DETECTION & VIRTUOUS PROGRESSION
+// 7. TARGETING, CASTING & VIRTUOUS PROGRESSION
 // ============================================================================
-const state = {
-  punya: 0,
-  gold: 2400,
-  fame: 150,
-  annadanaCount: 0,
-  prana: 100,
-  level: 1,
-  selectedTarget: null,
-  isFlying: false,
-  boons: { sprint: false, jump: false, fly: false, teleport: false }
-};
-
 function selectTarget(item) {
   state.selectedTarget = item;
   targetRing.visible = true;
-  targetRing.position.set(item.pos.x, 0.45, item.pos.z);
+  targetRing.position.set(item.pos.x, 0.35, item.pos.z);
 
-  const frame = document.getElementById('wow-target-frame');
+  const frame = document.getElementById('hordes-target-frame');
   frame.classList.remove('target-hidden');
-  document.getElementById('target-name').textContent = item.name;
-  document.getElementById('target-subtitle').textContent = item.subtitle;
-  document.getElementById('target-icon').textContent = item.icon;
-  document.getElementById('target-health-val').textContent = Math.round(item.health);
-  document.getElementById('target-health-fill').style.width = `${item.health}%`;
+  document.getElementById('tgt-name').textContent = item.name;
+  document.getElementById('tgt-sub').textContent = item.subtitle;
+  document.getElementById('tgt-icon').textContent = item.icon;
+  document.getElementById('tgt-hp-val').textContent = Math.round(item.health);
+  document.getElementById('tgt-hp-fill').style.width = `${item.health}%`;
 
-  audio.playChime(440, 0.3);
+  audio.playChime(440, 0.25);
 }
 
 function cycleNearestTarget() {
@@ -581,54 +430,69 @@ function interactWithTargetOrNearest() {
       }
     });
   }
-  if (!tgt) {
-    showFloatingText(playerGroup.position, 'No target nearby! Left-click or press [Tab] to select', 'float-healing');
-    return;
-  }
-
+  if (!tgt) return;
   selectTarget(tgt);
 
   if (tgt.type === 'garden_plot') handleGardenPlot(tgt);
   else if (tgt.type === 'creature') castSpell(1);
 }
 
+function startCast(castTimeSec, spellName, onComplete) {
+  if (state.isCasting) return;
+  state.isCasting = true;
+  const castContainer = document.getElementById('cast-bar-container');
+  const castFill = document.getElementById('cast-bar-fill');
+  document.getElementById('cast-bar-label').textContent = `Channelling ${spellName}...`;
+  castContainer.classList.remove('cast-hidden');
+
+  let start = Date.now();
+  const iv = setInterval(() => {
+    let elapsed = (Date.now() - start) / 1000;
+    let pct = Math.min(1, elapsed / castTimeSec);
+    castFill.style.width = `${pct * 100}%`;
+    if (pct >= 1) {
+      clearInterval(iv);
+      castContainer.classList.add('cast-hidden');
+      state.isCasting = false;
+      onComplete();
+    }
+  }, 40);
+}
+
 function castSpell(key) {
   const tgt = state.selectedTarget;
   const dist = tgt ? playerGroup.position.distanceTo(tgt.pos) : 999;
 
-  // Spell 1: Sanjeevani Herbs (Heal Creature)
+  // Spell 1: Sanjeevani Herbs (0.8s Cast)
   if (key === 1 || key === '1') {
     triggerCooldown('1', 1.2);
-    if (tgt && tgt.type === 'creature' && dist < 18) {
-      tgt.health = Math.min(100, tgt.health + 35);
-      document.getElementById('target-health-val').textContent = Math.round(tgt.health);
-      document.getElementById('target-health-fill').style.width = `${tgt.health}%`;
+    startCast(0.8, 'Sanjeevani Herbs', () => {
+      if (tgt && tgt.type === 'creature' && dist < 20) {
+        tgt.health = Math.min(100, tgt.health + 40);
+        document.getElementById('tgt-hp-val').textContent = Math.round(tgt.health);
+        document.getElementById('tgt-hp-fill').style.width = `${tgt.health}%`;
 
-      audio.playHeal();
-      showFloatingText(tgt.pos, '+35 Vitality', 'float-healing');
-      awardPunya(45, 'Healed Wounded Wildlife');
+        audio.playHeal();
+        showFloatingText(tgt.pos, '+40 Vitality', 'float-healing');
+        awardPunya(50);
+        addChatMessage('deed', `[Heal] You channeled Sanjeevani Herbs on ${tgt.name}! (+50 Punya)`);
 
-      if (tgt.health >= 100 && !tgt.healed) {
-        tgt.healed = true;
-        tgt.subtitle = '[Fully Healed & Joyful]';
-        document.getElementById('target-subtitle').textContent = tgt.subtitle;
-        showSurpriseGift({
-          name: 'Surya Tejas (Solar Sprint)',
-          tier: 'EPIC BOON',
-          icon: '☀️',
-          desc: 'Blessed by the grateful forest spirits! Hold [Shift] or press [4] to sprint at 3x speed.',
-          unlockedKey: 'sprint'
-        });
+        if (tgt.health >= 100 && !tgt.healed) {
+          tgt.healed = true;
+          tgt.subtitle = 'Fully Restored & Grateful';
+          document.getElementById('tgt-sub').textContent = tgt.subtitle;
+          showSurpriseGift('Surya Tejas (Solar Sprint)', '☀️', 'sprint', 'Awakened from wildlife rescue! Press [4] to sprint at 3x speed.');
+        }
+      } else {
+        audio.playChime(380, 0.4);
+        showFloatingText(playerGroup.position, '+20 Prana', 'float-healing');
+        state.prana = Math.min(100, state.prana + 20);
+        updateHUD();
       }
-    } else {
-      audio.playChime(380, 0.4);
-      showFloatingText(playerGroup.position, '+15 Prana Balance', 'float-healing');
-      state.prana = Math.min(100, state.prana + 15);
-      updateHUD();
-    }
+    });
   }
 
-  // Spell 2: Ganga Jal (Purify / Water)
+  // Spell 2: Ganga Jal (Water / Sanctify)
   if (key === 2 || key === '2') {
     triggerCooldown('2', 1.5);
     audio.playChime(640, 0.5);
@@ -636,34 +500,34 @@ function castSpell(key) {
       handleGardenPlot(tgt);
     } else {
       showFloatingText(playerGroup.position, 'Sanctified Sacred Ground', 'float-healing');
-      awardPunya(15, 'Purification');
+      awardPunya(20);
     }
   }
 
   // Spell 3: Annadana (Feed Pilgrims)
   if (key === 3 || key === '3') {
     triggerCooldown('3', 2.0);
-    state.annadanaCount += 5;
-    audio.playChime(720, 0.7);
+    audio.playChime(720, 0.6);
     showFloatingText(playerGroup.position, 'Served 5 Annadana Meals (+65 Punya)', 'float-punya');
-    awardPunya(65, 'Annadana Distribution');
+    awardPunya(65);
+    addChatMessage('world', '[Annadana] Shared sacred meals with visiting seekers! (+65 Punya)');
   }
 
-  // Spell 4: Solar Sprint
+  // Spell 4: Surya Tejas Sprint
   if (key === 4 || key === '4') {
     if (!state.boons.sprint) {
-      showFloatingText(playerGroup.position, 'Locked! Heal forest creatures to awaken Surya Tejas.', 'float-punya');
+      showFloatingText(playerGroup.position, 'Locked! Heal wildlife to unlock.', 'float-punya');
       return;
     }
     triggerCooldown('4', 8.0);
     audio.playChime(880, 0.5);
-    showFloatingText(playerGroup.position, '☀️ Surya Tejas Sprint Active!', 'float-punya');
+    showFloatingText(playerGroup.position, '☀️ Surya Tejas Active (3x Speed)!', 'float-punya');
   }
 
   // Spell 5: Lotus Leap
   if (key === 5 || key === '5') {
     if (!state.boons.jump) {
-      showFloatingText(playerGroup.position, 'Locked! Harvest sacred blooms to unlock Lotus Leap.', 'float-punya');
+      showFloatingText(playerGroup.position, 'Locked! Harvest mature blooms to unlock.', 'float-punya');
       return;
     }
     velY = 28;
@@ -674,59 +538,53 @@ function castSpell(key) {
   // Spell F: Garuda Flight
   if (key === 'F' || key === 'f') {
     if (!state.boons.fly) {
-      showFloatingText(playerGroup.position, 'Locked! Reach Level 10 or Shiva shrine to unlock flight.', 'float-punya');
+      showFloatingText(playerGroup.position, 'Locked! Attain Level 5 to take flight.', 'float-punya');
       return;
     }
     state.isFlying = !state.isFlying;
     audio.playChime(950, 0.8);
-    showFloatingText(playerGroup.position, state.isFlying ? '🦅 Garuda Flight Ascended!' : 'Landed Safely', 'float-punya');
+    showFloatingText(playerGroup.position, state.isFlying ? '🦅 Garuda Flight Ascended!' : 'Landed', 'float-punya');
   }
 
   // Spell T: Akash Blink
   if (key === 'T' || key === 't') {
     if (!state.boons.teleport) {
-      showFloatingText(playerGroup.position, 'Locked! Attain Level 5 to blink across space.', 'float-punya');
+      showFloatingText(playerGroup.position, 'Locked! Attain Level 3 to blink.', 'float-punya');
       return;
     }
     const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), playerGroup.rotation.y);
     playerGroup.position.addScaledVector(forward, 36);
     audio.playChime(1100, 0.8);
-    showFloatingText(playerGroup.position, '✨ Akash Blink Teleport (36m)!', 'float-punya');
+    showFloatingText(playerGroup.position, '✨ Akash Blink (36m Forward)!', 'float-punya');
   }
 }
 
 function handleGardenPlot(plot) {
   if (plot.stage === 'untilled') {
     plot.stage = 'tilled';
-    plot.soilMat.color.setHex(0x24150c);
-    plot.subtitle = '[Tilled • Sowing Celestial Seeds]';
+    plot.soilMat.color.setHex(0x2d1a0d);
+    plot.subtitle = 'Tilled • Sowing Tulsi Seeds';
     audio.playChime(520, 0.5);
-    showFloatingText(plot.pos, 'Tilled Sacred Soil Bed', 'float-punya');
-    awardPunya(25, 'Soil Preparation');
+    showFloatingText(plot.pos, 'Tilled Soil Bed', 'float-punya');
+    awardPunya(30);
   } else if (plot.stage === 'tilled') {
     plot.stage = 'mature';
-    plot.subtitle = '[Mature Bloom • Press E to Harvest]';
+    plot.subtitle = 'Mature Bloom • Press [E] to Harvest';
     rebuildPlant(plot);
     audio.playChime(640, 0.5);
-    showFloatingText(plot.pos, 'Sacred Sapling Bloomed Radiantly!', 'float-healing');
-    awardPunya(50, 'Nurtured Sacred Life');
+    showFloatingText(plot.pos, 'Sapling Bloomed Radiantly!', 'float-healing');
+    awardPunya(50);
   } else if (plot.stage === 'mature') {
     plot.stage = 'untilled';
-    plot.subtitle = '[Harvested • Needs Tilling]';
+    plot.subtitle = 'Harvested • Needs Tilling';
     while (plot.plantGroup.children.length) plot.plantGroup.remove(plot.plantGroup.children[0]);
-    audio.playChime(880, 0.9);
-    showFloatingText(plot.pos, '✨ Harvested Sacred Bloom! (+100 Punya, +150 Gold)', 'float-punya');
-    awardPunya(100, 'Sacred Blossom Harvest');
+    audio.playChime(880, 0.8);
+    showFloatingText(plot.pos, '✨ Harvested Sacred Bloom! (+100 Punya)', 'float-punya');
+    awardPunya(100);
     state.gold += 150;
 
     if (!state.boons.jump) {
-      showSurpriseGift({
-        name: 'Padma Siddhi (Lotus Leap)',
-        tier: 'MYTHIC BOON',
-        icon: '🪷',
-        desc: 'Unlocked from nurturing sacred blooms! Press [Space] to leap sky-high over cliffs and trees.',
-        unlockedKey: 'jump'
-      });
+      showSurpriseGift('Padma Siddhi (Lotus Leap)', '🪷', 'jump', 'Unlocked from nurturing sacred blooms! Press [Space] to soar over terrain.');
     }
   }
   updateHUD();
@@ -734,76 +592,40 @@ function handleGardenPlot(plot) {
 
 function rebuildPlant(plot) {
   while (plot.plantGroup.children.length) plot.plantGroup.remove(plot.plantGroup.children[0]);
-  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, 2.8, 8), new THREE.MeshStandardMaterial({ color: 0x22c55e }));
-  stem.position.y = 1.4;
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.18, 2.6, 6), new THREE.MeshStandardMaterial({ color: 0x4caf50 }));
+  stem.position.y = 1.3;
   plot.plantGroup.add(stem);
-  const flower = new THREE.Mesh(new THREE.DodecahedronGeometry(1.3), new THREE.MeshStandardMaterial({ color: 0xff69b4, emissive: 0xaa2266, emissiveIntensity: 0.5 }));
-  flower.position.y = 3.0;
-  plot.plantGroup.add(flower);
+  const blossom = new THREE.Mesh(new THREE.DodecahedronGeometry(1.2), new THREE.MeshStandardMaterial({ color: 0xf472b6, emissive: 0xdb2777, emissiveIntensity: 0.5 }));
+  blossom.position.y = 2.8;
+  plot.plantGroup.add(blossom);
 }
 
-function awardPunya(amount, reason) {
+function awardPunya(amount) {
   state.punya += amount;
-  if (state.punya >= state.level * 120) {
+  const req = state.level * 140;
+  if (state.punya >= req) {
     state.level++;
-    triggerLevelUp();
-  }
-  if (state.level >= 5 && !state.boons.teleport) {
-    showSurpriseGift({
-      name: 'Akash Gamana (Astral Teleport)',
-      tier: 'TRANSCENDENT SIDDHI',
-      icon: '✨',
-      desc: 'Mastery of Karma folds space! Press [T] to instantly blink 36m forward.',
-      unlockedKey: 'teleport'
-    });
-  }
-  if (state.level >= 10 && !state.boons.fly) {
-    showSurpriseGift({
-      name: 'Garuda Paksha (Divine Flight)',
-      tier: 'DIVINE LEGENDARY BOON',
-      icon: '🦅',
-      desc: 'Ascended to the heavens! Toggle free flight anytime with [F].',
-      unlockedKey: 'fly'
-    });
+    audio.playLevelUp();
+    showFloatingText(playerGroup.position, `✨ LEVEL UP! [Level ${state.level}] ✨`, 'float-punya');
+    addChatMessage('world', `🌟 Congratulations! You ascended to Level ${state.level}!`);
+    if (state.level >= 3 && !state.boons.teleport) {
+      showSurpriseGift('Akash Gamana (Astral Teleport)', '✨', 'teleport', 'Mastery of Karma folds space! Press [T] to blink 36m forward.');
+    }
+    if (state.level >= 5 && !state.boons.fly) {
+      showSurpriseGift('Garuda Paksha (Divine Flight)', '🦅', 'fly', 'Ascended to the skies! Toggle free flight anytime with [F].');
+    }
   }
   updateHUD();
 }
 
-function triggerLevelUp() {
-  audio.playZoneFanfare();
-  const banner = document.getElementById('levelup-banner');
-  document.getElementById('levelup-title').textContent = `LEVEL ${state.level}: GUARDIAN OF BHARAT`;
-  banner.classList.remove('levelup-hidden');
+function showSurpriseGift(name, icon, unlockedKey, desc) {
+  audio.playLevelUp();
+  state.boons[unlockedKey] = true;
+  unlockActionSlot(unlockedKey);
 
-  const pillar = new THREE.Mesh(
-    new THREE.CylinderGeometry(3.5, 3.5, 120, 24),
-    new THREE.MeshBasicMaterial({ color: 0xffe066, transparent: true, opacity: 0.85 })
-  );
-  pillar.position.set(playerGroup.position.x, 60, playerGroup.position.z);
-  scene.add(pillar);
-
-  let op = 0.85;
-  const fade = setInterval(() => {
-    op -= 0.05;
-    pillar.material.opacity = op;
-    if (op <= 0) {
-      clearInterval(fade);
-      scene.remove(pillar);
-    }
-  }, 60);
-
-  setTimeout(() => banner.classList.add('levelup-hidden'), 4500);
-}
-
-function showSurpriseGift(gift) {
-  audio.playZoneFanfare();
-  state.boons[gift.unlockedKey] = true;
-  unlockActionSlot(gift.unlockedKey);
-
-  document.getElementById('gift-rarity-text').textContent = `⭐ ${gift.tier} ⭐`;
-  document.getElementById('gift-icon-big').textContent = gift.icon;
-  document.getElementById('gift-name-text').textContent = gift.name;
-  document.getElementById('gift-desc-text').textContent = gift.desc;
+  document.getElementById('gift-name-text').textContent = name;
+  document.getElementById('gift-icon-big').textContent = icon;
+  document.getElementById('gift-desc-text').textContent = desc;
   document.getElementById('gift-modal').classList.remove('gift-modal-hidden');
 }
 
@@ -812,11 +634,11 @@ document.getElementById('gift-claim-btn').addEventListener('click', () => {
 });
 
 function unlockActionSlot(key) {
-  const map = { sprint: 'slot-4', jump: 'slot-5', fly: 'slot-6', teleport: 'slot-7' };
+  const map = { sprint: 'slot-4', jump: 'slot-5', teleport: 'slot-6', fly: 'slot-7' };
   const el = document.getElementById(map[key]);
   if (el) {
     el.classList.remove('locked');
-    const lock = el.querySelector('.lock-indicator');
+    const lock = el.querySelector('.lock-glyph');
     if (lock) lock.remove();
   }
 }
@@ -834,7 +656,7 @@ function triggerCooldown(slotNum, seconds) {
       clearInterval(iv);
       cd.style.height = '0%';
     }
-  }, 50);
+  }, 40);
 }
 
 function showFloatingText(pos3D, text, cssClass = 'float-punya') {
@@ -851,29 +673,68 @@ function showFloatingText(pos3D, text, cssClass = 'float-punya') {
   span.style.top = `${y}px`;
   container.appendChild(span);
 
-  setTimeout(() => span.remove(), 1600);
+  setTimeout(() => span.remove(), 1400);
 }
 
-function toggleDeitiesModal() {
-  const modal = document.getElementById('deities-modal');
-  modal.classList.toggle('modal-backdrop-hidden');
+function addChatMessage(type, text) {
+  const msgBox = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = `msg ${type}`;
+  div.innerHTML = text;
+  msgBox.appendChild(div);
+  msgBox.scrollTop = msgBox.scrollHeight;
 }
-document.getElementById('close-modal-btn').addEventListener('click', toggleDeitiesModal);
+
+// Minimap Render Loop
+const minimapCanvas = document.getElementById('minimap-canvas');
+const mmCtx = minimapCanvas.getContext('2d');
+
+function updateMinimap() {
+  mmCtx.fillStyle = '#0d1117';
+  mmCtx.fillRect(0, 0, 160, 160);
+
+  // River on map
+  mmCtx.fillStyle = '#0284c7';
+  mmCtx.fillRect(10, 0, 25, 160);
+
+  // Center sanctuary
+  mmCtx.fillStyle = '#10b981';
+  mmCtx.beginPath();
+  mmCtx.arc(80, 80, 20, 0, Math.PI * 2);
+  mmCtx.fill();
+
+  // Targets
+  interactables.forEach((item) => {
+    const mx = 80 + (item.pos.x / 1200) * 160;
+    const my = 80 + (item.pos.z / 1200) * 160;
+    mmCtx.fillStyle = item.type === 'creature' ? '#fbbf24' : '#34d399';
+    mmCtx.fillRect(mx - 2, my - 2, 4, 4);
+  });
+
+  // Player position dot & heading
+  const px = 80 + (playerGroup.position.x / 1200) * 160;
+  const py = 80 + (playerGroup.position.z / 1200) * 160;
+  mmCtx.fillStyle = '#38bdf8';
+  mmCtx.beginPath();
+  mmCtx.arc(px, py, 4, 0, Math.PI * 2);
+  mmCtx.fill();
+
+  document.getElementById('minimap-coords').textContent = `X: ${Math.round(playerGroup.position.x)}, Z: ${Math.round(playerGroup.position.z)}`;
+}
 
 function updateHUD() {
-  document.getElementById('player-level-badge').textContent = state.level;
-  document.getElementById('prana-val').textContent = Math.round(state.prana);
-  document.getElementById('prana-fill').style.width = `${state.prana}%`;
+  document.getElementById('player-lvl').textContent = `Lv. ${state.level}`;
+  document.getElementById('player-prana-val').textContent = Math.round(state.prana);
+  document.getElementById('player-prana-fill').style.width = `${state.prana}%`;
 
-  document.getElementById('punya-val').textContent = state.punya.toLocaleString();
-  const maxPunya = state.level * 120;
-  document.getElementById('punya-max').textContent = maxPunya.toLocaleString();
+  document.getElementById('player-punya-val').textContent = state.punya;
+  const maxPunya = state.level * 140;
+  document.getElementById('player-punya-max').textContent = maxPunya;
   const pct = Math.min(100, Math.round((state.punya / maxPunya) * 100));
-  document.getElementById('punya-fill').style.width = `${Math.max(4, pct)}%`;
+  document.getElementById('player-punya-fill').style.width = `${Math.max(4, pct)}%`;
 
-  document.getElementById('cur-gold').textContent = state.gold.toLocaleString();
-  document.getElementById('cur-annadana').textContent = state.annadanaCount;
-  document.getElementById('cur-fame').textContent = state.fame;
+  document.getElementById('val-gold').textContent = state.gold.toLocaleString();
+  document.getElementById('val-punya').textContent = state.punya;
 }
 
 // ============================================================================
@@ -884,16 +745,8 @@ const clock = new THREE.Clock();
 function animate() {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.1);
-  const elapsed = clock.getElapsedTime();
 
-  charHalo.rotation.z = elapsed * 1.5;
-
-  if (playerMixer) playerMixer.update(dt);
-  livingCreatures.forEach(c => {
-    if (c.mixer) c.mixer.update(dt);
-  });
-
-  // Movement
+  // WASD Locomotion
   let moveX = 0;
   let moveZ = 0;
   if (keys['KeyW'] || keys['ArrowUp']) moveZ -= 1;
@@ -911,12 +764,14 @@ function animate() {
     playerGroup.rotation.y = moveAngle + Math.PI;
     playerGroup.position.x += Math.sin(moveAngle) * speed * dt;
     playerGroup.position.z += Math.cos(moveAngle) * speed * dt;
-    fadePlayerAction(speed > 20 ? 'Run' : 'Walk');
+
+    // Gentle run bobbing
+    playerMesh.position.y = Math.sin(clock.getElapsedTime() * 14) * 0.15;
   } else {
-    fadePlayerAction('Idle');
+    playerMesh.position.y = 0;
   }
 
-  // Terrain clamping & Jump
+  // Terrain Clamping & Jump
   const groundY = getTerrainHeight(playerGroup.position.x, playerGroup.position.z);
   if (state.isFlying) {
     if (keys['Space']) playerGroup.position.y += 24 * dt;
@@ -932,28 +787,20 @@ function animate() {
   }
 
   // Camera Orbit
-  const targetPos = playerGroup.position.clone().add(new THREE.Vector3(0, 2.4, 0));
+  const targetPos = playerGroup.position.clone().add(new THREE.Vector3(0, 2.2, 0));
   camera.position.x = targetPos.x + Math.sin(camYaw) * Math.cos(camPitch) * camDist;
   camera.position.z = targetPos.z + Math.cos(camYaw) * Math.cos(camPitch) * camDist;
   camera.position.y = Math.max(groundY + 1.8, targetPos.y + Math.sin(camPitch) * camDist);
   camera.lookAt(targetPos);
 
-  // Compass Objective Guidance
-  let nearest = interactables[0];
-  let minDist = Infinity;
-  interactables.forEach((item) => {
-    const d = playerGroup.position.distanceTo(item.pos);
-    if (d < minDist) {
-      minDist = d;
-      nearest = item;
-    }
-  });
-  if (nearest) {
-    const d = Math.round(minDist);
-    document.getElementById('compass-zone-text').textContent =
-      d < 6 ? `REACHED: ${nearest.name}` : `GUIDE: ${nearest.name} (${d}m)`;
+  // Update target distance if targeted
+  if (state.selectedTarget) {
+    const d = Math.round(playerGroup.position.distanceTo(state.selectedTarget.pos));
+    const distEl = document.getElementById('tgt-dist');
+    if (distEl) distEl.textContent = `Range: ${d}m (${d <= 20 ? 'In Spell Range' : 'Too Far'})`;
   }
 
+  updateMinimap();
   renderer.render(scene, camera);
 }
 

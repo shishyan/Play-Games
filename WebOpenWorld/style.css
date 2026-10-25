@@ -1,6 +1,7 @@
 /* ==========================================================================
-   WORLD OF DHARMA: CHRONICLES OF BHARAT
-   High-Fidelity WoW Classic MMORPG Interface & Atmospheric Aesthetic
+   DHARMA.IO - HORDES.IO MINIMALIST CLEAN WEBGL MMORPG THEME
+   Dark semi-transparent glass cards, neon health/mana bars, crisp minimap,
+   in-game real-time chat, cast-bar channel, and tactile action hotbar.
    ========================================================================== */
 
 * {
@@ -15,9 +16,9 @@ body {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background-color: #0c0a14;
+  background-color: #0d1117;
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-  color: #f8fafc;
+  color: #f1f5f9;
 }
 
 #canvas-container {
@@ -30,409 +31,473 @@ body {
 }
 
 /* ==========================================================================
-   1. WOW CLASSIC UNIT FRAME (TOP LEFT)
+   1. HORDES.IO TOP NAVIGATION BAR
    ========================================================================== */
-#wow-player-frame {
+#hordes-topbar {
   position: absolute;
-  top: 20px;
-  left: 24px;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 48px;
+  background: rgba(13, 17, 23, 0.88);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
-  gap: 12px;
-  z-index: 10;
-  pointer-events: auto;
+  justify-content: space-between;
+  padding: 0 20px;
+  z-index: 20;
 }
 
-.unit-portrait-wrapper {
-  position: relative;
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  background: radial-gradient(circle, #2a223e 0%, #110e1e 100%);
-  border: 3px solid #d4af37;
-  box-shadow: 0 0 16px rgba(212, 175, 55, 0.45), inset 0 0 10px rgba(0, 0, 0, 0.8);
+.hordes-logo {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 8px;
 }
 
-.portrait-icon {
-  font-size: 34px;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));
+.logo-gem {
+  font-size: 22px;
 }
 
-.portrait-level {
-  position: absolute;
-  bottom: -4px;
-  right: -4px;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: #110e1e;
-  border: 2px solid #ffd700;
-  color: #ffd700;
+.logo-title {
   font-family: 'Cinzel', serif;
-  font-weight: 800;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.8);
+  font-weight: 900;
+  font-size: 18px;
+  letter-spacing: 1px;
+  color: #ffffff;
 }
 
-.unit-bars {
+.logo-io {
+  color: #10b981;
+}
+
+.topbar-pill {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  padding: 4px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pill-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.pill-dot.green {
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+}
+
+.topbar-stats {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stat-badge {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.gold-badge { color: #fbbf24; }
+.punya-badge { color: #34d399; }
+.fame-badge { color: #38bdf8; }
+.players-badge { color: #a78bfa; }
+.stat-badge small {
+  font-size: 9px;
+  opacity: 0.7;
+}
+
+/* ==========================================================================
+   2. HORDES.IO MINIMAP (TOP RIGHT)
+   ========================================================================== */
+#hordes-minimap-container {
+  position: absolute;
+  top: 60px;
+  right: 20px;
+  width: 160px;
+  height: 160px;
+  background: rgba(13, 17, 23, 0.88);
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  z-index: 20;
+}
+
+#minimap-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.minimap-coords {
+  position: absolute;
+  bottom: 4px;
+  right: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: #94a3b8;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+/* ==========================================================================
+   3. HORDES.IO CHAT BOX (BOTTOM LEFT)
+   ========================================================================== */
+#hordes-chat-box {
+  position: absolute;
+  bottom: 24px;
+  left: 20px;
+  width: 320px;
+  height: 190px;
+  background: rgba(13, 17, 23, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+  display: flex;
+  flex-direction: column;
+  z-index: 20;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+
+.chat-tabs {
+  display: flex;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.chat-tab {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.chat-tab.active {
+  color: #10b981;
+  border-bottom: 2px solid #10b981;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 10px;
+  font-size: 11px;
+  line-height: 1.45;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  background: rgba(14, 11, 24, 0.88);
-  border: 2px solid #5a4625;
-  border-radius: 8px;
-  padding: 8px 14px;
-  min-width: 270px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.6), inset 0 0 12px rgba(212, 175, 55, 0.15);
-  backdrop-filter: blur(8px);
 }
 
-.unit-header-row {
+.msg.system { color: #94a3b8; }
+.msg.world { color: #facc15; }
+.msg.deed { color: #34d399; }
+.msg .tag { font-weight: 700; margin-right: 4px; }
+
+#chat-input {
+  background: rgba(0, 0, 0, 0.4);
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 6px 10px;
+  font-size: 11px;
+  color: #f1f5f9;
+  outline: none;
+}
+
+/* ==========================================================================
+   4. HORDES.IO TARGET UNIT FRAME (TOP CENTER)
+   ========================================================================== */
+#hordes-target-frame {
+  position: absolute;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.target-hidden {
+  opacity: 0;
+  transform: translate(-50%, -10px);
+  pointer-events: none;
+}
+
+.target-card {
+  width: 310px;
+  background: rgba(13, 17, 23, 0.9);
+  border: 1.5px solid rgba(56, 189, 248, 0.4);
+  border-radius: 8px;
+  padding: 10px 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  backdrop-filter: blur(10px);
+}
+
+.target-header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.tgt-icon {
+  font-size: 26px;
+}
+
+.tgt-info {
+  flex: 1;
+}
+
+.tgt-title-row {
+  display: flex;
   justify-content: space-between;
+  align-items: center;
+}
+
+.tgt-name {
+  font-weight: 800;
+  font-size: 13px;
+  color: #f8fafc;
+}
+
+.tgt-lvl {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.15);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.tgt-sub {
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+.tgt-distance {
+  font-size: 9px;
+  color: #38bdf8;
+  text-align: right;
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   5. BARS & BOTTOM HUD (HORDES.IO COMPACT LAYOUT)
+   ========================================================================== */
+#hordes-bottom-hud {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 8px;
-  border-bottom: 1px solid rgba(212, 175, 55, 0.25);
-  padding-bottom: 3px;
+  z-index: 20;
+}
+
+.player-bars-stack {
+  width: 440px;
+  background: rgba(13, 17, 23, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px 12px;
+  backdrop-filter: blur(10px);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.player-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
   margin-bottom: 2px;
 }
 
-.unit-name {
-  font-family: 'Cinzel', serif;
-  font-weight: 700;
-  font-size: 14px;
-  color: #fef08a;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
-}
-
-.unit-class {
-  font-size: 11px;
-  color: #94a3b8;
-  font-style: italic;
-}
-
-.bar-container {
-  position: relative;
-  height: 18px;
+.class-tag.vaidya {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  padding: 1px 6px;
   border-radius: 4px;
-  background: #090611;
-  border: 1px solid #332617;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.player-name {
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.player-level {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  color: #ffd700;
+}
+
+.hordes-bar {
+  position: relative;
+  height: 16px;
+  background: #090c10;
+  border-radius: 4px;
   overflow: hidden;
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.bar-fill {
+.hordes-bar-fill {
   height: 100%;
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.prana-fill {
-  background: linear-gradient(90deg, #10b981 0%, #34d399 70%, #6ee7b7 100%);
-  box-shadow: 0 0 10px rgba(52, 211, 153, 0.5);
+.green-fill {
+  background: linear-gradient(90deg, #059669 0%, #10b981 100%);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
 }
 
-.punya-fill {
-  background: linear-gradient(90deg, #b45309 0%, #f59e0b 50%, #fbbf24 100%);
-  box-shadow: 0 0 12px rgba(251, 191, 36, 0.6);
+.gold-fill {
+  background: linear-gradient(90deg, #d97706 0%, #f59e0b 100%);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
 }
 
-.bar-text {
+.bar-label {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  font-size: 10px;
+  font-size: 9px;
+  font-family: 'JetBrains Mono', monospace;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #ffffff;
-  text-shadow: 0 1px 2px #000, 0 0 3px #000;
-  letter-spacing: 0.5px;
+  text-shadow: 0 1px 2px #000;
 }
 
-/* ==========================================================================
-   2. WOW TARGET UNIT FRAME
-   ========================================================================== */
-#wow-target-frame {
-  position: absolute;
-  top: 20px;
-  left: 390px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  z-index: 10;
-  transition: opacity 0.25s ease, transform 0.25s ease;
-}
-
-.target-hidden {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(-8px);
-}
-
-.target-portrait {
-  border-color: #38bdf8;
-  box-shadow: 0 0 16px rgba(56, 189, 248, 0.45);
-}
-
-.target-fill {
-  background: linear-gradient(90deg, #38bdf8 0%, #60a5fa 100%);
-}
-
-.target-action-hint {
-  font-size: 10px;
-  color: #38bdf8;
-  text-align: center;
-  font-weight: 600;
+/* Cast Bar */
+#cast-bar-container {
+  position: relative;
+  height: 14px;
+  background: #111827;
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid #38bdf8;
   margin-top: 2px;
 }
 
-/* ==========================================================================
-   3. TOP COMPASS & OBJECTIVE BANNER
-   ========================================================================== */
-#top-compass-frame {
+.cast-hidden {
+  display: none !important;
+}
+
+.cast-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #0284c7, #38bdf8);
+}
+
+#cast-bar-label {
   position: absolute;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 10;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  font-size: 9px;
+  font-weight: 700;
   display: flex;
-  flex-direction: column;
   align-items: center;
+  justify-content: center;
+  color: #fff;
+  text-shadow: 0 1px 2px #000;
+}
+
+/* ==========================================================================
+   6. HORDES.IO CRISP HOTBAR
+   ========================================================================== */
+.hordes-hotbar {
+  display: flex;
   gap: 6px;
-  pointer-events: none;
-}
-
-.compass-ring {
-  background: rgba(14, 11, 24, 0.85);
-  border: 2px solid #d4af37;
-  border-radius: 20px;
-  padding: 6px 20px;
-  font-family: 'Cinzel', serif;
-  font-weight: 700;
-  font-size: 13px;
-  color: #fef08a;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.6), inset 0 0 12px rgba(212, 175, 55, 0.2);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.interaction-callout {
-  background: rgba(0, 0, 0, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 12px;
-  padding: 4px 14px;
-  font-size: 11px;
-  color: #cbd5e1;
-}
-
-kbd {
-  background: #332617;
-  border: 1px solid #d4af37;
-  border-radius: 3px;
-  padding: 1px 5px;
-  color: #ffd700;
-  font-family: monospace;
-  font-weight: 700;
-}
-
-/* ==========================================================================
-   4. CURRENCY DISPLAY (TOP RIGHT)
-   ========================================================================== */
-#top-currency-frame {
-  position: absolute;
-  top: 20px;
-  right: 24px;
-  display: flex;
-  gap: 10px;
-  z-index: 10;
-}
-
-.cur-chip {
-  background: rgba(14, 11, 24, 0.88);
-  border: 1.5px solid #d4af37;
-  border-radius: 20px;
-  padding: 6px 14px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #f8fafc;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.5);
-}
-
-.cur-chip small {
-  color: #94a3b8;
-  font-size: 10px;
-}
-
-/* ==========================================================================
-   5. WOW CLASSIC QUEST TRACKER (RIGHT SIDE)
-   ========================================================================== */
-#wow-quest-tracker {
-  position: absolute;
-  top: 80px;
-  right: 24px;
-  width: 300px;
-  background: rgba(14, 11, 24, 0.85);
-  border: 2px solid #5a4625;
+  background: rgba(13, 17, 23, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
-  backdrop-filter: blur(8px);
-  z-index: 10;
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  padding: 6px 10px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.6);
 }
 
-.quest-log-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-family: 'Cinzel', serif;
-  font-size: 13px;
-  font-weight: 700;
-  color: #ffd700;
-  border-bottom: 1px solid rgba(212, 175, 55, 0.25);
-  padding-bottom: 6px;
-}
-
-.quest-entry {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 6px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.quest-entry:last-child {
-  border-bottom: none;
-}
-
-.q-name {
-  font-family: 'Cinzel', serif;
-  font-size: 12px;
-  font-weight: 700;
-  color: #fef08a;
-}
-
-.q-desc {
-  font-size: 11px;
-  color: #94a3b8;
-  font-style: italic;
-  margin-bottom: 2px;
-}
-
-.q-task {
-  font-size: 11px;
-  color: #cbd5e1;
-  margin-left: 6px;
-}
-
-.q-task.done {
-  color: #34d399;
-  text-decoration: line-through;
-}
-
-/* ==========================================================================
-   6. WOW ACTION BAR (BOTTOM CENTER)
-   ========================================================================== */
-#wow-action-bar-container {
-  position: absolute;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 15;
-  pointer-events: auto;
-}
-
-.action-bar-frame {
-  display: flex;
-  gap: 8px;
-  background: rgba(14, 11, 24, 0.92);
-  border: 2px solid #5a4625;
-  border-radius: 10px;
-  padding: 8px 12px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.8), inset 0 0 16px rgba(212, 175, 55, 0.15);
-  backdrop-filter: blur(10px);
-}
-
-.action-slot {
+.h-slot {
   position: relative;
-  width: 56px;
-  height: 56px;
-  background: radial-gradient(circle, #2d2442 0%, #151124 100%);
-  border: 2px solid #d4af37;
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
   border-radius: 6px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform 0.1s ease, border-color 0.2s ease;
+  transition: transform 0.1s ease, border-color 0.15s ease;
 }
 
-.action-slot:hover {
-  transform: translateY(-3px);
-  border-color: #ffd700;
-  box-shadow: 0 0 14px rgba(255, 215, 0, 0.6);
+.h-slot:hover {
+  transform: translateY(-2px);
+  border-color: #38bdf8;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
 }
 
-.action-slot:active {
-  transform: translateY(1px);
+.h-slot.locked {
+  opacity: 0.4;
+  filter: grayscale(0.8);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
-.action-slot.locked {
-  filter: grayscale(0.9);
-  opacity: 0.6;
-  border-color: #4b5563;
-}
-
-.keybind {
+.h-key {
   position: absolute;
   top: 2px;
   left: 4px;
-  font-size: 10px;
-  font-family: monospace;
-  font-weight: 800;
-  color: #ffd700;
-  text-shadow: 0 1px 2px #000;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  color: #94a3b8;
 }
 
-.slot-icon {
-  font-size: 26px;
+.h-icon {
+  font-size: 22px;
   line-height: 1;
 }
 
-.slot-name {
-  font-size: 8px;
+.h-name {
+  font-size: 7.5px;
   font-weight: 700;
-  color: #e2e8f0;
-  margin-top: 2px;
-  text-align: center;
-  max-width: 52px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: #cbd5e1;
+  margin-top: 1px;
 }
 
-.lock-indicator {
+.lock-glyph {
   position: absolute;
-  font-size: 14px;
+  font-size: 13px;
 }
 
-.cooldown-overlay {
+.h-cd {
   position: absolute;
   bottom: 0;
   left: 0;
@@ -444,7 +509,7 @@ kbd {
 }
 
 /* ==========================================================================
-   7. FLOATING COMBAT/HEALING NUMBERS & CELESTIAL GIFT MODAL
+   7. FLOATING TEXT & CELESTIAL GIFT MODAL
    ========================================================================== */
 #floating-text-container {
   position: absolute;
@@ -453,122 +518,43 @@ kbd {
   width: 100%;
   height: 100%;
   pointer-events: none;
-  z-index: 20;
+  z-index: 25;
 }
 
 .floating-num {
   position: absolute;
-  font-family: 'Cinzel', serif;
+  font-family: 'JetBrains Mono', monospace;
   font-weight: 800;
-  font-size: 22px;
+  font-size: 18px;
   pointer-events: none;
-  animation: floatUp 1.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  animation: floatUp 1.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
 .float-punya {
-  color: #ffd700;
-  text-shadow: 0 0 8px rgba(255, 215, 0, 0.9), 0 2px 4px #000;
+  color: #fbbf24;
+  text-shadow: 0 0 8px rgba(251, 191, 36, 0.8), 0 2px 4px #000;
 }
 
 .float-healing {
   color: #34d399;
-  text-shadow: 0 0 8px rgba(52, 211, 153, 0.9), 0 2px 4px #000;
+  text-shadow: 0 0 8px rgba(52, 211, 153, 0.8), 0 2px 4px #000;
 }
 
 @keyframes floatUp {
-  0% { opacity: 0; transform: translateY(0) scale(0.7); }
-  20% { opacity: 1; transform: translateY(-20px) scale(1.15); }
-  80% { opacity: 1; transform: translateY(-60px) scale(1); }
-  100% { opacity: 0; transform: translateY(-90px) scale(0.85); }
+  0% { opacity: 0; transform: translateY(0) scale(0.8); }
+  20% { opacity: 1; transform: translateY(-16px) scale(1.1); }
+  80% { opacity: 1; transform: translateY(-45px) scale(1); }
+  100% { opacity: 0; transform: translateY(-70px) scale(0.85); }
 }
 
-/* Level Up Ceremony Banner */
-#levelup-banner {
-  position: absolute;
-  top: 25%;
-  left: 50%;
-  transform: translateX(-50%);
-  text-align: center;
-  z-index: 30;
-  pointer-events: none;
-  transition: opacity 0.5s ease, transform 0.5s ease;
-}
-
-.levelup-hidden {
-  opacity: 0;
-  transform: translateX(-50%) scale(0.8);
-  pointer-events: none;
-}
-
-.levelup-text {
-  font-family: 'Cinzel', serif;
-  font-weight: 900;
-  font-size: 42px;
-  color: #ffd700;
-  text-shadow: 0 0 24px rgba(255, 215, 0, 0.8), 0 4px 12px #000;
-  letter-spacing: 2px;
-}
-
-.levelup-grade {
-  font-family: 'Cinzel', serif;
-  font-size: 20px;
-  font-weight: 700;
-  color: #ffffff;
-  margin-top: 6px;
-  text-shadow: 0 2px 6px #000;
-}
-
-.levelup-quote {
-  font-size: 14px;
-  font-style: italic;
-  color: #fef08a;
-  margin-top: 8px;
-}
-
-/* Zone Banner */
-#zone-banner {
-  position: absolute;
-  top: 14%;
-  left: 50%;
-  transform: translateX(-50%);
-  text-align: center;
-  z-index: 25;
-  pointer-events: none;
-  transition: opacity 0.6s ease;
-}
-
-.zone-text-hidden {
-  opacity: 0;
-}
-
-.zone-pre {
-  font-size: 11px;
-  letter-spacing: 3px;
-  color: #94a3b8;
-}
-
-.zone-main {
-  font-family: 'Cinzel', serif;
-  font-size: 32px;
-  font-weight: 900;
-  color: #fef08a;
-  text-shadow: 0 0 16px rgba(212, 175, 55, 0.7), 0 3px 6px #000;
-}
-
-.zone-sub {
-  font-size: 13px;
-  color: #cbd5e1;
-  margin-top: 4px;
-}
-
-/* Blox Fruits Surprise Gift Modal */
+/* Gift Modal */
 #gift-modal {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.82);
+  background: rgba(0, 0, 0, 0.8);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -581,29 +567,26 @@ kbd {
 }
 
 .gift-card {
-  position: relative;
-  width: 480px;
+  width: 440px;
   max-width: 90vw;
-  background: radial-gradient(circle, #251d38 0%, #110d1e 100%);
-  border: 3px solid #ffd700;
-  border-radius: 16px;
-  padding: 36px 28px;
+  background: #111827;
+  border: 2px solid #fbbf24;
+  border-radius: 12px;
+  padding: 30px 24px;
   text-align: center;
-  box-shadow: 0 0 40px rgba(255, 215, 0, 0.45);
+  box-shadow: 0 0 40px rgba(251, 191, 36, 0.35);
 }
 
 .gift-rarity {
-  font-family: 'Cinzel', serif;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
-  color: #ffd700;
+  color: #fbbf24;
   letter-spacing: 2px;
 }
 
 .gift-icon-big {
-  font-size: 72px;
-  margin: 16px 0;
-  filter: drop-shadow(0 0 18px rgba(255, 215, 0, 0.7));
+  font-size: 64px;
+  margin: 14px 0;
   animation: pulseIcon 1.5s infinite alternate ease-in-out;
 }
 
@@ -614,129 +597,29 @@ kbd {
 
 .gift-card h2 {
   font-family: 'Cinzel', serif;
-  font-size: 26px;
-  font-weight: 800;
-  color: #ffffff;
-  margin-bottom: 10px;
+  font-size: 22px;
+  color: #f8fafc;
+  margin-bottom: 8px;
 }
 
 .gift-card p {
-  font-size: 14px;
-  color: #cbd5e1;
-  line-height: 1.5;
-  margin-bottom: 24px;
-}
-
-.wow-btn {
-  background: linear-gradient(180deg, #d4af37 0%, #996515 100%);
-  border: 1px solid #ffe066;
-  border-radius: 8px;
-  padding: 12px 30px;
-  font-family: 'Cinzel', serif;
-  font-size: 15px;
-  font-weight: 800;
-  color: #ffffff;
-  cursor: pointer;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.6);
-  transition: transform 0.1s ease, filter 0.2s ease;
-}
-
-.wow-btn:hover {
-  filter: brightness(1.15);
-  transform: translateY(-2px);
-}
-
-/* Deities Modal */
-#deities-modal {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.85);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-  backdrop-filter: blur(8px);
-}
-
-.modal-backdrop-hidden {
-  display: none !important;
-}
-
-.modal-card {
-  width: 900px;
-  max-width: 92vw;
-  max-height: 88vh;
-  overflow-y: auto;
-  background: #130f24;
-  border: 2px solid #d4af37;
-  border-radius: 14px;
-  padding: 28px 32px;
-  box-shadow: 0 16px 48px rgba(0,0,0,0.8);
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid rgba(212, 175, 55, 0.3);
-  padding-bottom: 12px;
-  margin-bottom: 14px;
-}
-
-.modal-header h2 {
-  font-family: 'Cinzel', serif;
-  font-size: 22px;
-  color: #ffd700;
-}
-
-.close-x {
-  background: none;
-  border: none;
-  color: #94a3b8;
-  font-size: 22px;
-  cursor: pointer;
-}
-
-.modal-intro {
   font-size: 13px;
-  color: #cbd5e1;
-  line-height: 1.5;
-  margin-bottom: 16px;
-}
-
-.deities-grid, .lands-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 14px;
-}
-
-.deity-card, .land-card {
-  background: #1c1633;
-  border: 1.5px solid #4a3820;
-  border-radius: 8px;
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.deity-name {
-  font-family: 'Cinzel', serif;
-  font-size: 14px;
-  font-weight: 700;
-  color: #fef08a;
-}
-
-.deity-domain {
-  font-size: 11px;
-  color: #38bdf8;
-}
-
-.deity-boon {
-  font-size: 11px;
   color: #94a3b8;
-  margin: 4px 0;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.hordes-btn {
+  background: #10b981;
+  color: #042f2e;
+  border: none;
+  font-weight: 800;
+  font-size: 13px;
+  padding: 10px 24px;
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+}
+.hordes-btn:hover {
+  background: #34d399;
 }
