@@ -336,6 +336,28 @@ class WoWSoundEngine {
     this.playTone(1318.5, 'sine', 0.18, 0.14, 0.005, 1975.5);
     setTimeout(() => this.playTone(1760.0, 'sine', 0.28, 0.15, 0.005, 2637.0), 70);
   }
+
+  playQuestAccept() {
+    // Iconic WoW Parchment unfurl + warm heroic horn fifth (D4 -> A4 -> D5)
+    const notes = [293.66, 440.0, 587.33];
+    notes.forEach((f, idx) => {
+      setTimeout(() => {
+        this.playTone(f, 'triangle', 0.42, 0.14, 0.02);
+        this.playTone(f * 1.5, 'sine', 0.35, 0.08, 0.02);
+      }, idx * 85);
+    });
+  }
+
+  playQuestComplete() {
+    // Classic WoW Quest Complete brass & chime fanfare
+    const chord = [587.33, 739.99, 880.0, 1174.66, 1479.98];
+    chord.forEach((f, idx) => {
+      setTimeout(() => {
+        this.playTone(f, 'sawtooth', 0.65, 0.1, 0.03);
+        this.playTone(f * 0.5, 'triangle', 0.7, 0.13, 0.03);
+      }, idx * 65);
+    });
+  }
 }
 
 const SFX = new WoWSoundEngine();
@@ -1415,9 +1437,12 @@ function createNameplateDOM(entity) {
   const el = document.createElement('div');
   el.className = 'nameplate';
   const isFriendlyNPC = entity.kind === 'shop_npc' || entity.kind === 'town_npc';
+  const qBadge = entity.questMarker
+    ? `<span class="np-quest-marker" style="color:${entity.questMarker === '❓' ? '#38bdf8' : '#fde047'};font-size:15px;font-weight:900;text-shadow:0 0 8px #f59e0b;margin-right:3px;">${entity.questMarker}</span>`
+    : '';
   el.innerHTML = `
     <div class="np-title">
-      <span class="np-lvl" style="color:${isFriendlyNPC ? '#fde047' : '#38bdf8'}">[${entity.badge}]</span>
+      ${qBadge}<span class="np-lvl" style="color:${isFriendlyNPC ? '#fde047' : '#38bdf8'}">[${entity.badge}]</span>
       <span class="np-name" style="color:${isFriendlyNPC ? '#4ade80' : '#f8fafc'}">${entity.name}</span>
     </div>
     <div class="np-bar-bg">
@@ -1439,6 +1464,255 @@ function createNameplateDOM(entity) {
   nameplatesContainer.appendChild(el);
   entity.nameplateEl = el;
   entity.npFillEl = el.querySelector('.np-bar-fill');
+  entity.npQuestEl = el.querySelector('.np-quest-marker');
+}
+
+// ============================================================================
+// 6A. 3D KINGDOM ARCHITECTURE PER CONTINENT:
+//     Royal Palace Citadel, City Gates, Watchtowers, 126 Village Houses & 42 Campgrounds!
+// ============================================================================
+const kWallMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.72 });
+const kStoneTrimMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.8 });
+const kWindowGlowMat = new THREE.MeshStandardMaterial({ color: 0xfef08a, emissive: 0xf59e0b, emissiveIntensity: 2.4 });
+const kFireGlowMat = new THREE.MeshStandardMaterial({ color: 0xfde047, emissive: 0xf97316, emissiveIntensity: 3.2 });
+const kRoofMats = [
+  new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.6 }),
+  new THREE.MeshStandardMaterial({ color: 0x0369a1, roughness: 0.6 }),
+  new THREE.MeshStandardMaterial({ color: 0xbe123c, roughness: 0.6 }),
+  new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.6 }),
+  new THREE.MeshStandardMaterial({ color: 0x6d28d9, roughness: 0.6 }),
+];
+
+// Shared Geometries for 126 Village Houses, 7 Kingdom Citadels, 14 Gates, 28 Watchtowers & 42 Campgrounds
+const houseBodyGeo = new THREE.BoxGeometry(5.6, 3.4, 4.8);
+const houseRoofGeo = new THREE.ConeGeometry(4.6, 2.5, 4);
+const houseDoorGeo = new THREE.BoxGeometry(1.1, 2.0, 0.25);
+const houseWinGeo = new THREE.BoxGeometry(0.95, 0.95, 0.22);
+const houseChimneyGeo = new THREE.BoxGeometry(0.75, 2.6, 0.75);
+
+function createVillageHouseMesh(roofVariant = 0) {
+  const h = new THREE.Group();
+  const rMat = kRoofMats[roofVariant % kRoofMats.length];
+
+  const walls = new THREE.Mesh(houseBodyGeo, kWallMat);
+  walls.position.y = 1.7;
+  walls.castShadow = true;
+  walls.receiveShadow = true;
+  h.add(walls);
+
+  const roof = new THREE.Mesh(houseRoofGeo, rMat);
+  roof.position.y = 4.55;
+  roof.rotation.y = Math.PI / 4;
+  roof.castShadow = true;
+  h.add(roof);
+
+  const door = new THREE.Mesh(houseDoorGeo, postMatShared);
+  door.position.set(0, 1.0, 2.42);
+  h.add(door);
+
+  // Warm Glowing Cottage Windows (Front & Sides)
+  const w1 = new THREE.Mesh(houseWinGeo, kWindowGlowMat);
+  w1.position.set(-1.55, 1.85, 2.42);
+  const w2 = new THREE.Mesh(houseWinGeo, kWindowGlowMat);
+  w2.position.set(1.55, 1.85, 2.42);
+  h.add(w1, w2);
+
+  const chimney = new THREE.Mesh(houseChimneyGeo, kStoneTrimMat);
+  chimney.position.set(1.6, 4.6, -1.1);
+  h.add(chimney);
+
+  return h;
+}
+
+const towerShaftGeo = new THREE.CylinderGeometry(2.1, 2.6, 11.5, 8);
+const towerTopGeo = new THREE.CylinderGeometry(2.8, 2.5, 1.8, 8);
+const towerRoofGeo = new THREE.ConeGeometry(3.4, 3.8, 8);
+
+function createKingdomWatchtowerMesh(roofVariant = 0) {
+  const t = new THREE.Group();
+  const rMat = kRoofMats[roofVariant % kRoofMats.length];
+  const shaft = new THREE.Mesh(towerShaftGeo, stoneMat);
+  shaft.position.y = 5.75;
+  shaft.castShadow = true;
+  t.add(shaft);
+
+  const battlement = new THREE.Mesh(towerTopGeo, kWallMat);
+  battlement.position.y = 11.8;
+  t.add(battlement);
+
+  const spire = new THREE.Mesh(towerRoofGeo, rMat);
+  spire.position.y = 14.4;
+  t.add(spire);
+
+  const beacon = new THREE.Mesh(lanternGeoShared, kWindowGlowMat);
+  beacon.scale.setScalar(2.1);
+  beacon.position.set(0, 12.2, 2.6);
+  t.add(beacon);
+  return t;
+}
+
+const citadelBaseGeo = new THREE.BoxGeometry(26.0, 9.0, 20.0);
+const citadelTier2Geo = new THREE.BoxGeometry(16.0, 7.5, 13.0);
+const citadelDomeGeo = new THREE.SphereGeometry(5.6, 14, 12);
+const citadelSpireGeo = new THREE.ConeGeometry(1.4, 6.5, 8);
+const gatePillarGeo = new THREE.BoxGeometry(3.2, 10.5, 3.2);
+const gateBeamGeo = new THREE.BoxGeometry(16.5, 2.4, 3.6);
+
+function createKingdomCastleMesh(contId = 0) {
+  const castle = new THREE.Group();
+  const rMat = kRoofMats[contId % kRoofMats.length];
+
+  // Tier 1 Grand Palace Hall
+  const base = new THREE.Mesh(citadelBaseGeo, kWallMat);
+  base.position.y = 4.5;
+  base.castShadow = true;
+  base.receiveShadow = true;
+  castle.add(base);
+
+  // Tier 2 Royal Upper Keep
+  const upper = new THREE.Mesh(citadelTier2Geo, kWallMat);
+  upper.position.y = 12.2;
+  upper.castShadow = true;
+  castle.add(upper);
+
+  // Golden Sovereign Dome & Finial Spire
+  const dome = new THREE.Mesh(citadelDomeGeo, goldMatShared);
+  dome.position.y = 16.5;
+  castle.add(dome);
+
+  const finial = new THREE.Mesh(citadelSpireGeo, goldMatShared);
+  finial.position.y = 22.8;
+  castle.add(finial);
+
+  // 4 Corner Turret Towers on the Royal Citadel
+  [[-12.5, -9.5], [12.5, -9.5], [-12.5, 9.5], [12.5, 9.5]].forEach(([tx, tz]) => {
+    const turret = createKingdomWatchtowerMesh(contId);
+    turret.position.set(tx, 0, tz);
+    castle.add(turret);
+  });
+
+  // Grand Golden Archway Windows across the Palace Facade
+  for (let wx = -8; wx <= 8; wx += 4) {
+    const win = new THREE.Mesh(houseWinGeo, kWindowGlowMat);
+    win.scale.set(1.6, 2.4, 1.2);
+    win.position.set(wx, 5.2, 10.05);
+    castle.add(win);
+  }
+
+  // Royal Courtyard Gate Archway in front of the Castle
+  const gateL = new THREE.Mesh(gatePillarGeo, stoneMat);
+  gateL.position.set(-5.8, 5.25, 15.5);
+  const gateR = new THREE.Mesh(gatePillarGeo, stoneMat);
+  gateR.position.set(5.8, 5.25, 15.5);
+  const gateTop = new THREE.Mesh(gateBeamGeo, rMat);
+  gateTop.position.set(0, 10.8, 15.5);
+  castle.add(gateL, gateR, gateTop);
+
+  return castle;
+}
+
+const campTentGeo = new THREE.ConeGeometry(2.3, 2.7, 4);
+const campLogGeo = new THREE.CylinderGeometry(0.24, 0.24, 2.4, 6);
+campLogGeo.rotateZ(Math.PI / 2);
+const campFireConeGeo = new THREE.ConeGeometry(0.65, 1.45, 7);
+
+function createExpeditionCampgroundMesh(variant = 0) {
+  const camp = new THREE.Group();
+  const tentMat1 = kRoofMats[variant % kRoofMats.length];
+  const tentMat2 = kRoofMats[(variant + 2) % kRoofMats.length];
+
+  // 3 Pitched Expedition Tents in a semi-circle
+  [
+    { x: -3.4, z: -2.0, rot: 0.5, m: tentMat1 },
+    { x: 3.4, z: -2.0, rot: -0.5, m: tentMat2 },
+    { x: 0, z: -4.2, rot: 0, m: tentMat1 },
+  ].forEach((td) => {
+    const tent = new THREE.Mesh(campTentGeo, td.m);
+    tent.position.set(td.x, 1.35, td.z);
+    tent.rotation.y = Math.PI / 4 + td.rot;
+    tent.castShadow = true;
+    camp.add(tent);
+  });
+
+  // Central Roaring Campfire + Sitting Logs
+  const fire = new THREE.Mesh(campFireConeGeo, kFireGlowMat);
+  fire.position.set(0, 0.72, 0.6);
+  camp.add(fire);
+
+  const log1 = new THREE.Mesh(campLogGeo, postMatShared);
+  log1.position.set(0, 0.24, 2.4);
+  const log2 = new THREE.Mesh(campLogGeo, postMatShared);
+  log2.position.set(-2.1, 0.24, 0.9);
+  log2.rotation.y = Math.PI / 3;
+  const log3 = new THREE.Mesh(campLogGeo, postMatShared);
+  log3.position.set(2.1, 0.24, 0.9);
+  log3.rotation.y = -Math.PI / 3;
+  camp.add(log1, log2, log3);
+
+  return camp;
+}
+
+function spawnContinentKingdomAndVillages(cont) {
+  // 1. Grand Royal Kingdom Citadel / Palace overlooking the Capital Plaza (at cont.z - 62)
+  const castle = createKingdomCastleMesh(cont.id);
+  const castleZ = cont.z - 62.0;
+  castle.position.set(cont.x, getTerrainHeight(cont.x, castleZ), castleZ);
+  scene.add(castle);
+
+  // 2. Southern Kingdom City Gate & Twin Watchtowers welcoming travelers at (cont.z + 52)
+  const southGateZ = cont.z + 52.0;
+  const wtL = createKingdomWatchtowerMesh(cont.id);
+  wtL.position.set(cont.x - 13.5, getTerrainHeight(cont.x - 13.5, southGateZ), southGateZ);
+  const wtR = createKingdomWatchtowerMesh(cont.id);
+  wtR.position.set(cont.x + 13.5, getTerrainHeight(cont.x + 13.5, southGateZ), southGateZ);
+  scene.add(wtL, wtR);
+
+  // 3. 18 Cozy 3D Village Houses & Cottages per Kingdom (126 Houses total across the 7 Continents!)
+  for (let hIdx = 0; hIdx < 18; hIdx++) {
+    let hx = cont.x;
+    let hz = cont.z;
+    let hRot = 0;
+    if (hIdx < 12) {
+      // 12 Kingdom Residential Neighborhood Houses flanking the Outer Bazaar Avenues
+      const side = hIdx % 2 === 0 ? -1 : 1;
+      const row = Math.floor(hIdx / 2);
+      hx = cont.x + side * (29.0 + (row % 2) * 10.0);
+      hz = cont.z - 34.0 + row * 15.0;
+      hRot = side < 0 ? Math.PI * 0.5 : -Math.PI * 0.5;
+    } else {
+      // 6 Scenic Mountain Hamlet Cottages nestled along the lower Spiral Mountain Ghat Roadway!
+      const roadS = 0.08 + (hIdx - 12) * 0.11;
+      const { rx, rz } = getSpiralRoadPoint(cont, roadS);
+      hx = rx - 11.5;
+      hz = rz + 8.5;
+      hRot = (hIdx * 1.1) % (Math.PI * 2);
+    }
+    const house = createVillageHouseMesh(cont.id + hIdx);
+    house.position.set(hx, getTerrainHeight(hx, hz), hz);
+    house.rotation.y = hRot;
+    scene.add(house);
+  }
+
+  // 4. 6 Permanent Multi-Tent Expedition Campgrounds per Continent (42 Campgrounds total across the World!)
+  for (let cIdx = 0; cIdx < 6; cIdx++) {
+    let cx = cont.x;
+    let cz = cont.z;
+    if (cIdx < 2) {
+      // 2 Flatland Meadow Campgrounds near the Kingdom Outskirts
+      cx = cont.x + (cIdx === 0 ? -24.0 : 24.0);
+      cz = cont.z + 28.0;
+    } else {
+      // 4 High-Altitude Trekking Base-Camps along the 3.5-Turn Spiral Mountain Roadway!
+      const roadS = 0.14 + (cIdx - 2) * 0.21;
+      const { rx, rz } = getSpiralRoadPoint(cont, roadS);
+      cx = rx + 9.5;
+      cz = rz - 7.5;
+    }
+    const campY = getTerrainHeight(cx, cz);
+    const campMesh = createExpeditionCampgroundMesh(cont.id + cIdx);
+    campMesh.position.set(cx, campY, cz);
+    scene.add(campMesh);
+  }
 }
 
 const gltfLoader = new GLTFLoader();
@@ -1494,6 +1768,9 @@ const WILDLIFE_MODELS = [
 
 CONTINENTS.forEach((cont) => {
   const cy = getTerrainHeight(cont.x, cont.z);
+
+  // Build this Continent's 3D Kingdom Citadel, City Gate, Watchtowers, 18 Village Houses & 6 Campgrounds!
+  spawnContinentKingdomAndVillages(cont);
 
   const altar = new THREE.Group();
   altar.position.set(cont.x, cy, cont.z);
@@ -1662,47 +1939,113 @@ CONTINENTS.forEach((cont) => {
 });
 
 // ============================================================================
-// 6B. 108 SACRED BAZAAR SHOPS, 108 INTERACTIVE NPCs & FLOCKS OF RANDOM FLYING BIRDS!
+// 6B. 108 SACRED BAZAAR SHOPS, 108 FORWARD-FACING ANIMAL & TEEN NPCs, & WOW QUESTS!
 // ============================================================================
 const sharedShopRingGeo = new THREE.RingGeometry(1.4, 1.75, 20).rotateX(-Math.PI / 2);
 const sharedShopRingMat = new THREE.MeshBasicMaterial({ color: 0xfde047, side: THREE.DoubleSide, transparent: true, opacity: 0.72 });
 const sharedNpcRingGeo = new THREE.RingGeometry(1.0, 1.25, 18).rotateX(-Math.PI / 2);
 const sharedNpcRingMat = new THREE.MeshBasicMaterial({ color: 0x4ade80, side: THREE.DoubleSide, transparent: true, opacity: 0.65 });
-const sharedRobeGeo = new THREE.CylinderGeometry(0.28, 0.44, 1.35, 8);
-const sharedHeadGeo = new THREE.SphereGeometry(0.25, 8, 8);
-const sharedHatGeo = new THREE.ConeGeometry(0.36, 0.35, 6);
+const sharedRobeGeo = new THREE.CylinderGeometry(0.22, 0.34, 0.88, 8);
+const sharedHeadGeo = new THREE.SphereGeometry(0.24, 8, 8);
+const sharedHatGeo = new THREE.ConeGeometry(0.32, 0.34, 6);
+const sharedLimbGeo = new THREE.CylinderGeometry(0.08, 0.07, 0.56, 6);
+const sharedBackpackGeo = new THREE.BoxGeometry(0.36, 0.44, 0.22);
+const sharedEarGeo = new THREE.ConeGeometry(0.11, 0.28, 4);
+const sharedTailGeo = new THREE.ConeGeometry(0.14, 0.58, 6);
+sharedTailGeo.rotateX(Math.PI * 0.35);
+const sharedQuestExclamGeo = new THREE.OctahedronGeometry(0.26, 0);
+const sharedQuestGlowMat = new THREE.MeshStandardMaterial({ color: 0xfde047, emissive: 0xf59e0b, emissiveIntensity: 3.0 });
 const sharedSkinMat = new THREE.MeshStandardMaterial({ color: 0xfbd38d, roughness: 0.6 });
+const sharedDarkHairMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 });
 
 const SHOP_ARCHETYPES = [
-  { awning: 0xd97706, badge: '🛠️ FORGE SHOP', icon: '🛠️', title: 'Vishwakarma Armorer', action: 'shop', greeting: 'Welcome to the Karma Forge! Upgrade your Sacred Staff, Saddle & Crampons here.' },
-  { awning: 0x059669, badge: '🧪 APOTHECARY', icon: '🧪', title: 'Ashwini Soma Apothecary', action: 'apothecary', greeting: 'Drink this Himalayan Soma-Elixir! Your Vigor Orbs and Stamina are 100% restored!' },
-  { awning: 0x0284c7, badge: '🐎 STABLE MASTER', icon: '🐎', title: 'Revanta Royal Stables', action: 'mounts', greeting: 'Your Golden Ashva Warsteed is groomed and ready! Press [Z] to Mount or [Space] to Fly.' },
-  { awning: 0x7c3aed, badge: '🍻 TAVERN INN', icon: '🍻', title: 'Annapurna Bazaar Tavern', action: 'innkeeper', greeting: 'Welcome to the Sanctuary Inn! Enjoy the Tavern Lute music and +60s Well-Fed Speed Buff!' },
-  { awning: 0xe11d48, badge: '💎 RELIC BAZAAR', icon: '💎', title: 'Kubera Relic Jeweler', action: 'bags', greeting: 'Behold your 16-Slot Traveler’s Backpack and ancient mountain relics!' },
-  { awning: 0x0d9488, badge: '📜 EXPEDITION GUILD', icon: '📜', title: 'Agastya Trekking Guild', action: 'quests', greeting: 'Walk, ride, or fly along the 3.5-Turn Spiral Mountain Roadway all the way to the Summit!' },
+  { awning: 0xd97706, badge: '🛠️ FORGE SHOP', icon: '🦊', title: 'Kitsune Armorer Apprent.', action: 'shop', greeting: 'Welcome to the Royal Kingdom Forge! Upgrade your Sacred Staff, Saddle & Crampons here.' },
+  { awning: 0x059669, badge: '🧪 APOTHECARY', icon: '🦌', title: 'Young Fawn Herbalist', action: 'apothecary', greeting: 'Drink this Himalayan Soma-Elixir! Your Vigor Orbs and Stamina are 100% restored!' },
+  { awning: 0x0284c7, badge: '🐎 STABLE MASTER', icon: '🐎', title: 'Teen Ashva Colt-Keeper', action: 'mounts', greeting: 'Your Golden Ashva Warsteed is groomed and ready! Press [Z] to Mount or [Space] to Fly.' },
+  { awning: 0x7c3aed, badge: '🍻 TAVERN INN', icon: '🐼', title: 'Red-Panda Innkeeper Youth', action: 'innkeeper', greeting: 'Welcome to the Kingdom Sanctuary Inn! Enjoy the Tavern Lute music and +60s Well-Fed Speed Buff!' },
+  { awning: 0xe11d48, badge: '💎 RELIC BAZAAR', icon: '🦢', title: 'Crane-kin Relic Apprentice', action: 'bags', greeting: 'Behold your 16-Slot Traveler’s Backpack and ancient Kingdom mountain relics!' },
+  { awning: 0x0d9488, badge: '📜 EXPEDITION GUILD', icon: '🧒', title: 'Gurukul Teen Quest Scout', action: 'quests', greeting: 'Walk, camp, or ride along the 3.5-Turn Spiral Mountain Roadway from our Kingdom to the Summit!' },
 ];
 
 const CITIZEN_ARCHETYPES = [
-  { badge: '🎵 STREET BARD', icon: '🎵', title: 'Gandharva Street Minstrel', role: 'bard', robeColor: 0xf59e0b },
-  { badge: '📜 QUEST ELDER', icon: '📜', title: 'Rishi Expedition Guide', role: 'quests', robeColor: 0x38bdf8 },
-  { badge: '🛡️ ROAD SENTINEL', icon: '🛡️', title: 'Sahyadri Roadway Patrol', role: 'guard', robeColor: 0xef4444 },
-  { badge: '🎒 SILK TRADER', icon: '🎒', title: 'Himalayan Caravan Trader', role: 'bags', robeColor: 0x10b981 },
-  { badge: '🥾 MOUNTAIN TREKKER', icon: '🥾', title: 'Pilgrim Mountain Trekker', role: 'trekker', robeColor: 0xa855f7 },
-  { badge: '🧘 DHARMA MONK', icon: '🧘', title: 'Wandering Dharma Sadhu', role: 'monk', robeColor: 0xf97316 },
+  { badge: '🦊 ANIMAL SCOUT', icon: '🦊', title: 'Golden Fox Kingdom Scout', role: 'quests', robeColor: 0xf59e0b, isAnimal: true, questMarker: '❗' },
+  { badge: '🧒 TEEN BARD', icon: '🎵', title: 'Gurukul Teen Lute Bard', role: 'bard', robeColor: 0x38bdf8, isAnimal: false, questMarker: null },
+  { badge: '🦌 FAWN RANGER', icon: '🦌', title: 'Royal Stag & Fawn Guide', role: 'quests', robeColor: 0x10b981, isAnimal: true, questMarker: '❗' },
+  { badge: '👧 YOUTH CADET', icon: '🛡️', title: 'Kingdom Teen Cadet', role: 'guard', robeColor: 0xef4444, isAnimal: false, questMarker: null },
+  { badge: '🦢 CRANE ENVOY', icon: '🦢', title: 'Himalayan Crane Messenger', role: 'bags', robeColor: 0xa855f7, isAnimal: true, questMarker: '❓' },
+  { badge: '🧒 YOUNG TREKKER', icon: '🥾', title: 'Young Pilgrim Camper', role: 'quests', robeColor: 0xf97316, isAnimal: false, questMarker: '❗' },
 ];
 
-function createStylizedRobeNPC(robeHex, hatHex) {
+// Creates an articulated Youth/Teen Adventurer OR Kemono Animal-Folk Character facing +Z with swinging arms & legs!
+function createArticulatedTeenOrAnimalNPC(tunicHex, isAnimalFolk = false, hasQuestGem = false) {
   const g = new THREE.Group();
-  const robeMat = awningMatCache[robeHex] || (awningMatCache[robeHex] = new THREE.MeshStandardMaterial({ color: robeHex, roughness: 0.7 }));
-  const body = new THREE.Mesh(sharedRobeGeo, robeMat);
-  body.position.y = 0.68;
+  const tunicMat = awningMatCache[tunicHex] || (awningMatCache[tunicHex] = new THREE.MeshStandardMaterial({ color: tunicHex, roughness: 0.65 }));
+
+  // Youth Torso
+  const body = new THREE.Mesh(sharedRobeGeo, tunicMat);
+  body.position.y = 0.72;
+  body.castShadow = true;
   g.add(body);
-  const head = new THREE.Mesh(sharedHeadGeo, sharedSkinMat);
-  head.position.y = 1.52;
+
+  // Adventurer Backpack on back (-Z is back when facing +Z!)
+  const pack = new THREE.Mesh(sharedBackpackGeo, postMatShared);
+  pack.position.set(0, 0.78, -0.22);
+  g.add(pack);
+
+  // Youthful Head + Eyes facing +Z (Forward!)
+  const head = new THREE.Mesh(sharedHeadGeo, isAnimalFolk ? tunicMat : sharedSkinMat);
+  head.position.y = 1.34;
   g.add(head);
-  const hat = new THREE.Mesh(sharedHatGeo, goldMatShared);
-  hat.position.y = 1.82;
-  g.add(hat);
+
+  // Forward Snout / Nose Bridge on +Z so facing direction is 100% unmistakable!
+  const snout = new THREE.Mesh(
+    new THREE.ConeGeometry(isAnimalFolk ? 0.13 : 0.06, isAnimalFolk ? 0.28 : 0.14, 5).rotateX(Math.PI / 2),
+    isAnimalFolk ? sharedSkinMat : sharedSkinMat
+  );
+  snout.position.set(0, 1.32, 0.24);
+  g.add(snout);
+
+  if (isAnimalFolk) {
+    // Perky Fox / Wolf / Stag Ears & Fluffy Tail!
+    const earL = new THREE.Mesh(sharedEarGeo, tunicMat);
+    earL.position.set(-0.14, 1.62, 0.02);
+    earL.rotation.z = 0.2;
+    const earR = new THREE.Mesh(sharedEarGeo, tunicMat);
+    earR.position.set(0.14, 1.62, 0.02);
+    earR.rotation.z = -0.2;
+    const tail = new THREE.Mesh(sharedTailGeo, tunicMat);
+    tail.position.set(0, 0.52, -0.32);
+    g.add(earL, earR, tail);
+  } else {
+    // Gurukul Teen Adventurer Cap / Bandana
+    const cap = new THREE.Mesh(sharedHatGeo, goldMatShared);
+    cap.position.y = 1.58;
+    g.add(cap);
+  }
+
+  // Articulated Arms & Legs for natural forward walking swing!
+  const armL = new THREE.Mesh(sharedLimbGeo, tunicMat);
+  armL.position.set(-0.32, 0.75, 0);
+  const armR = new THREE.Mesh(sharedLimbGeo, tunicMat);
+  armR.position.set(0.32, 0.75, 0);
+  const legL = new THREE.Mesh(sharedLimbGeo, sharedDarkHairMat);
+  legL.position.set(-0.13, 0.28, 0);
+  const legR = new THREE.Mesh(sharedLimbGeo, sharedDarkHairMat);
+  legR.position.set(0.13, 0.28, 0);
+  g.add(armL, armR, legL, legR);
+
+  // Floating Golden WoW Quest Diamond above Quest Givers!
+  if (hasQuestGem) {
+    const qGem = new THREE.Mesh(sharedQuestExclamGeo, sharedQuestGlowMat);
+    qGem.position.set(0, 2.25, 0);
+    g.add(qGem);
+    g._questGem = qGem;
+  }
+
+  g._armL = armL;
+  g._armR = armR;
+  g._legL = legL;
+  g._legR = legR;
   return g;
 }
 
@@ -1750,17 +2093,17 @@ for (let sIdx = 0; sIdx < 108; sIdx++) {
   shopRing.position.set(0, 0.12, 1.4);
   shopGroup.add(shopRing);
 
-  // Shopkeeper standing behind counter
-  if (localIdx < 4) {
-    loadSharedGLTF('https://threejs.org/examples/models/gltf/Soldier.glb', (gltf) => {
-      const npcModel = SkeletonUtils.clone(gltf.scene);
-      npcModel.scale.setScalar(1.26);
-      npcModel.position.set(0, 0, 1.35);
-      npcModel.rotation.y = Math.PI;
-      shopGroup.add(npcModel);
+  // Mix of Animal & Teen Shopkeepers standing behind counter facing customers (+Z)!
+  if (localIdx % 3 === 0) {
+    loadSharedGLTF('https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Fox/glTF-Binary/Fox.glb', (gltf) => {
+      const foxKeeper = SkeletonUtils.clone(gltf.scene);
+      foxKeeper.scale.setScalar(0.022);
+      foxKeeper.position.set(0, 0, 1.35);
+      foxKeeper.rotation.y = 0; // Fox.glb faces +Z natively!
+      shopGroup.add(foxKeeper);
     });
   } else {
-    const keeper = createStylizedRobeNPC(arch.awning, 0xfde047);
+    const keeper = createArticulatedTeenOrAnimalNPC(arch.awning, localIdx % 2 === 1, arch.action === 'quests');
     keeper.position.set(0, 0, 1.35);
     shopGroup.add(keeper);
   }
@@ -1774,6 +2117,7 @@ for (let sIdx = 0; sIdx < 108; sIdx++) {
     badge: `${arch.badge} #${sIdx + 1}`,
     kind: 'shop_npc',
     shopAction: arch.action,
+    questMarker: arch.action === 'quests' ? '❗' : null,
     greeting: arch.greeting,
     icon: arch.icon,
     name: `${arch.title} #${sIdx + 1}`,
@@ -1793,7 +2137,7 @@ for (let sIdx = 0; sIdx < 108; sIdx++) {
   interactables.push(shopEntity);
 }
 
-// Spawn Exactly 108 Active Patrolling Citizens, Bards, Guards & Mountain Trekkers Across the 7 Continents!
+// Spawn Exactly 108 Active Forward-Facing Animal & Teen Adventurer NPCs Across the 7 Kingdoms & Mountain Roadways!
 for (let nIdx = 0; nIdx < 108; nIdx++) {
   const cont = CONTINENTS[nIdx % CONTINENTS.length];
   const localIdx = Math.floor(nIdx / CONTINENTS.length); // 0..15 per continent
@@ -1806,14 +2150,14 @@ for (let nIdx = 0; nIdx < 108; nIdx++) {
   let roadProgress = 0;
 
   if (localIdx < 9) {
-    // 9 Bustling Town & Flatland Citizens patrolling the Bazaar Streets & Meadows
+    // 9 Bustling Kingdom Citizens (Animal Scouts & Gurukul Teens) patrolling the Bazaar Streets, Houses & Castle Plaza
     const angle = (localIdx / 9) * Math.PI * 2.0;
     const dist = 8.0 + (localIdx % 3) * 18.0;
     nx = cont.x + Math.cos(angle) * dist;
     nz = cont.z + Math.sin(angle) * dist;
     patrolRadius = 12.0 + (localIdx % 4) * 6.0;
   } else {
-    // 7 Mountain Roadway Trekkers & Pilgrims walking right up the Spiral Mountain Roadway to the Summit!
+    // 7 Mountain Roadway Teen & Animal Trekkers walking steadily FORWARD up the Spiral Mountain Roadway to the Summit!
     isRoadTrekker = true;
     roadProgress = 0.06 + ((localIdx - 9) / 7.0) * 0.86;
     const { rx, rz } = getSpiralRoadPoint(cont, roadProgress);
@@ -1829,20 +2173,43 @@ for (let nIdx = 0; nIdx < 108; nIdx++) {
   npcRing.position.y = 0.12;
   npcGroup.add(npcRing);
 
-  if (localIdx < 4) {
-    loadSharedGLTF('https://threejs.org/examples/models/gltf/Soldier.glb', (gltf) => {
-      const npcModel = SkeletonUtils.clone(gltf.scene);
-      npcModel.scale.setScalar(1.24);
-      npcGroup.add(npcModel);
+  // Mix of Rigged 3D Animal Characters (Foxes & Foals/Stags) + Articulated Teen/Youth Adventurers & Kemono Animal-Folk!
+  if (localIdx % 4 === 0) {
+    // Rigged Golden Fox Scout (Fox.glb faces +Z natively, matching Math.atan2(dx, dz) 100% forward!)
+    loadSharedGLTF('https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Fox/glTF-Binary/Fox.glb', (gltf) => {
+      const foxModel = SkeletonUtils.clone(gltf.scene);
+      foxModel.scale.setScalar(0.024);
+      foxModel.rotation.y = 0; // +Z is forward for Fox.glb
+      npcGroup.add(foxModel);
       if (gltf.animations && gltf.animations.length > 0) {
-        const m = new THREE.AnimationMixer(npcModel);
-        const runClip = gltf.animations.find((a) => a.name === 'Walk' || a.name === 'Run') || gltf.animations[0];
+        const m = new THREE.AnimationMixer(foxModel);
+        const runClip = gltf.animations[1] || gltf.animations[0];
         m.clipAction(runClip).play();
         citizenEntity.mixer = m;
       }
     });
+    if (arch.questMarker) {
+      const qGem = new THREE.Mesh(sharedQuestExclamGeo, sharedQuestGlowMat);
+      qGem.position.set(0, 2.1, 0);
+      npcGroup.add(qGem);
+      npcGroup._questGem = qGem;
+    }
+  } else if (localIdx % 4 === 2) {
+    // Rigged Young Fawn / Foal Companion (Horse.glb faces +Z natively, matching Math.atan2(dx, dz) 100% forward!)
+    loadSharedGLTF('https://threejs.org/examples/models/gltf/Horse.glb', (gltf) => {
+      const foalModel = SkeletonUtils.clone(gltf.scene);
+      foalModel.scale.setScalar(0.0115);
+      foalModel.rotation.y = 0; // +Z is forward for Horse.glb
+      npcGroup.add(foalModel);
+      if (gltf.animations && gltf.animations[0]) {
+        const m = new THREE.AnimationMixer(foalModel);
+        m.clipAction(gltf.animations[0]).play();
+        citizenEntity.mixer = m;
+      }
+    });
   } else {
-    const walker = createStylizedRobeNPC(arch.robeColor, 0xfde047);
+    // Articulated Youth / Teen Adventurer or Kemono Animal-Folk with swinging limbs facing +Z!
+    const walker = createArticulatedTeenOrAnimalNPC(arch.robeColor, arch.isAnimal, Boolean(arch.questMarker));
     npcGroup.add(walker);
     npcGroup._robeWalker = walker;
   }
@@ -1856,6 +2223,8 @@ for (let nIdx = 0; nIdx < 108; nIdx++) {
     badge: `${arch.badge} #${nIdx + 1}`,
     kind: 'town_npc',
     npcRole: arch.role,
+    questMarker: arch.questMarker,
+    questCompleted: false,
     icon: arch.icon,
     name: `${arch.title} #${nIdx + 1}`,
     hp: 100,
@@ -2296,12 +2665,12 @@ function updateTargetFrameUI() {
 function openNPCInteraction(entity) {
   if (!entity) return;
   SFX.init();
-  SFX.playLootCoinBag();
   if (entity.greeting) {
     showToast(`💬 ${entity.name}: "${entity.greeting}"`);
     spawnFloatingText(entity.mesh.position, `💬 ${entity.badge}`, '#fde047');
   }
   if (entity.kind === 'shop_npc') {
+    SFX.playLootCoinBag();
     if (entity.shopAction === 'shop') {
       toggleModal('shop-modal');
     } else if (entity.shopAction === 'apothecary') {
@@ -2320,17 +2689,56 @@ function openNPCInteraction(entity) {
       updateVigorOrbsUI();
       spawnShockwave(playerGroup.position, 0xfde047, 14.0, 0.7);
       spawnFloatingText(playerGroup.position, '🍻 +60s Tavern Well-Fed Speed & Lute Music!', '#fde047');
+    } else if (entity.shopAction === 'quests') {
+      SFX.playQuestAccept();
+      openInspectorModal('quests');
+    } else if (entity.shopAction === 'bags') {
+      openInspectorModal('bags');
     }
   } else if (entity.kind === 'town_npc') {
-    if (entity.npcRole === 'quests') openInspectorModal('quests');
-    else if (entity.npcRole === 'bags') openInspectorModal('bags');
-    else if (entity.npcRole === 'bard') {
+    if (entity.questMarker && !entity.questCompleted) {
+      if (entity.questMarker === '❗') {
+        entity.questMarker = '❓';
+        if (entity.npQuestEl) {
+          entity.npQuestEl.textContent = '❓';
+          entity.npQuestEl.style.color = '#38bdf8';
+        }
+        SFX.playQuestAccept();
+        const qGain = earnKarma(65 * entity.continent.diffMult);
+        spawnShockwave(entity.mesh.position, 0xfde047, 8.5, 0.6);
+        spawnFloatingText(entity.mesh.position, `📜 QUEST ACCEPTED! (+${qGain} ☸️ Karma)`, '#fde047');
+        showToast(`📜 Quest Accepted from ${entity.name}! Click again or heal nearby wildlife to Complete [❓]!`);
+      } else {
+        entity.questCompleted = true;
+        entity.questMarker = '🌟';
+        if (entity.npQuestEl) {
+          entity.npQuestEl.textContent = '🌟';
+          entity.npQuestEl.style.color = '#4ade80';
+        }
+        SFX.playQuestComplete();
+        const qReward = earnKarma(145 * entity.continent.diffMult);
+        STATE.vigor = STATE.maxVigor;
+        updateVigorOrbsUI();
+        rejuvenateEnvironmentAround(entity.mesh.position.x, entity.mesh.position.z, 55.0);
+        spawnShockwave(playerGroup.position, 0x34d399, 16.0, 0.85);
+        spawnFloatingText(playerGroup.position, `🏆 QUEST COMPLETE! +${qReward} ☸️ Karma!`, '#4ade80');
+        showToast(`🏆 Quest Completed for ${entity.name}! Earned +${qReward} ☸️ Karma & 6/6 Mount Vigor!`);
+      }
+      return;
+    }
+    SFX.playLootCoinBag();
+    if (entity.npcRole === 'quests') {
+      SFX.playQuestAccept();
+      openInspectorModal('quests');
+    } else if (entity.npcRole === 'bags') {
+      openInspectorModal('bags');
+    } else if (entity.npcRole === 'bard') {
       SFX.setZoneMusic(STATE.currentContinent.id, true);
-      showToast(`🎵 ${entity.name} plays the lively Bazaar Street Lute & Flute Melody!`);
+      showToast(`🎵 ${entity.name} plays the lively Kingdom Bazaar Street Lute & Flute Melody!`);
       spawnFloatingText(entity.mesh.position, '🎵 Playing Street Lute Jig!', '#fde047');
     } else {
-      showToast(`🛡️ ${entity.name}: "The vast flatlands stretch 2,600m in every direction—ride safely, Sadhak!"`);
-      spawnFloatingText(entity.mesh.position, '🛡️ Safe Travels!', '#38bdf8');
+      showToast(`🦊 ${entity.name}: "Welcome to our Kingdom! Explore the Royal Citadel, Village Houses, and Mountain Roadway!"`);
+      spawnFloatingText(entity.mesh.position, '🏰 Safe Travels in the Kingdom!', '#38bdf8');
     }
   }
 }
@@ -3573,7 +3981,17 @@ function animate() {
         ent.mesh.rotation.y = Math.atan2(dx, dz);
       }
       if (ent.mesh._robeWalker) {
-        ent.mesh._robeWalker.position.y = Math.abs(Math.sin(elapsed * 7.5 + ent.wanderAngle)) * 0.14;
+        const w = ent.mesh._robeWalker;
+        const stride = Math.sin(elapsed * 8.5 + ent.wanderAngle) * 0.45;
+        w.position.y = Math.abs(Math.sin(elapsed * 8.5 + ent.wanderAngle)) * 0.11;
+        if (w._armL) w._armL.rotation.x = stride;
+        if (w._armR) w._armR.rotation.x = -stride;
+        if (w._legL) w._legL.rotation.x = -stride;
+        if (w._legR) w._legR.rotation.x = stride;
+        if (w._questGem) w._questGem.rotation.y = elapsed * 2.4;
+      }
+      if (ent.mesh._questGem) {
+        ent.mesh._questGem.rotation.y = elapsed * 2.4;
       }
     } else if (ent.kind === 'chest' && !ent.rejuvenated) {
       ent.mesh.rotation.y = Math.sin(elapsed * 1.5) * 0.15;
