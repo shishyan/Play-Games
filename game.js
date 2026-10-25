@@ -3,90 +3,311 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 
 // ============================================================================
-// DHARMA.IO — HORDES.IO ENGINE CLONE (VIRTUOUS OPEN-WORLD MMORPG)
-// Custom Splatmap Terrain • Rigged GLTF Wildlife & Heroes • 3D Nameplates
+// WORLD OF DHARMA — 7 CONTINENTS, KARMA CURRENCY & SACRED FORGE MMORPG
+// Classic WoW UI • Live GPU Blight-to-Lush Terrain Shader • Boundless Flight
 // ============================================================================
+
+const CONTINENTS = [
+  {
+    id: 0,
+    roman: 'I',
+    name: 'Jambudvipa — The Ashen Groves',
+    shortName: 'I. Jambudvipa',
+    x: 0,
+    z: 0,
+    radius: 175,
+    tier: 1,
+    diffMult: 1.0,
+    maxHpBase: 120,
+    karmaReward: 95,
+    boonIcon: '☀️',
+    boonName: 'Boon of Surya (Solar Renewal)',
+    boonDesc: '+35% Sanjeevani Healing Power & +20% Karma Generation from all deeds.',
+    lushColor: new THREE.Color(0x2e7d32), // Deep Emerald Forest
+    rejuvenatedCount: 0,
+    goalCount: 4,
+    completed: false,
+  },
+  {
+    id: 1,
+    roman: 'II',
+    name: 'Plakshadvipa — Weeping Fig Basin',
+    shortName: 'II. Plakshadvipa',
+    x: 0,
+    z: -420,
+    radius: 175,
+    tier: 2,
+    diffMult: 1.8,
+    maxHpBase: 220,
+    karmaReward: 165,
+    boonIcon: '💧',
+    boonName: 'Boon of Saraswati (Living Waters)',
+    boonDesc: 'Ganga Jal Nova [2] radius expands by +50% and restores +60 bonus Vitality.',
+    lushColor: new THREE.Color(0x1b8a6b), // Turquoise-Jade Sanctuary
+    rejuvenatedCount: 0,
+    goalCount: 4,
+    completed: false,
+  },
+  {
+    id: 2,
+    roman: 'III',
+    name: 'Salmalidvipa — Silk-Cotton Crags',
+    shortName: 'III. Salmalidvipa',
+    x: 380,
+    z: -240,
+    radius: 175,
+    tier: 3,
+    diffMult: 2.8,
+    maxHpBase: 360,
+    karmaReward: 260,
+    boonIcon: '⚡',
+    boonName: 'Boon of Hanuman (Supersonic Wind)',
+    boonDesc: 'Doubles Vayu Speed-Run [4] & Garuda Flight [F] velocity and cuts spell cast time by 35%.',
+    lushColor: new THREE.Color(0x558b2f), // Golden-Olive Blossom Highland
+    rejuvenatedCount: 0,
+    goalCount: 4,
+    completed: false,
+  },
+  {
+    id: 3,
+    roman: 'IV',
+    name: 'Kushadvipa — Scorched Grasslands',
+    shortName: 'IV. Kushadvipa',
+    x: 380,
+    z: 240,
+    radius: 175,
+    tier: 4,
+    diffMult: 4.2,
+    maxHpBase: 540,
+    karmaReward: 390,
+    boonIcon: '🌸',
+    boonName: 'Boon of Lakshmi (Abundant Grace)',
+    boonDesc: 'Doubles all Karma Points (☸️) earned across the universe and empowers Sunbeam [3].',
+    lushColor: new THREE.Color(0x689f38), // Golden Meadow Steppe
+    rejuvenatedCount: 0,
+    goalCount: 4,
+    completed: false,
+  },
+  {
+    id: 4,
+    roman: 'V',
+    name: 'Kraunchadvipa — Heron Peaks',
+    shortName: 'V. Kraunchadvipa',
+    x: 0,
+    z: 420,
+    radius: 175,
+    tier: 5,
+    diffMult: 6.0,
+    maxHpBase: 780,
+    karmaReward: 560,
+    boonIcon: '🐘',
+    boonName: 'Boon of Ganesha (Obstacle Breaker)',
+    boonDesc: 'All spells automatically chain-heal 2 additional suffering targets within 25m.',
+    lushColor: new THREE.Color(0x26a69a), // Alpine Teal Sanctuary
+    rejuvenatedCount: 0,
+    goalCount: 4,
+    completed: false,
+  },
+  {
+    id: 5,
+    roman: 'VI',
+    name: 'Shakadvipa — Petrified Teak Highlands',
+    shortName: 'VI. Shakadvipa',
+    x: -380,
+    z: 240,
+    radius: 175,
+    tier: 6,
+    diffMult: 8.5,
+    maxHpBase: 1100,
+    karmaReward: 820,
+    boonIcon: '🔱',
+    boonName: 'Boon of Shiva (Kailash Omnipresence)',
+    boonDesc: 'Amrita World-Pulse [R] cooldown reduced by 50% and cleanses entire regions at once.',
+    lushColor: new THREE.Color(0x43a047), // Sacred Cedar Emerald
+    rejuvenatedCount: 0,
+    goalCount: 4,
+    completed: false,
+  },
+  {
+    id: 6,
+    roman: 'VII',
+    name: 'Pushkaradvipa — Eternal Lotus Citadel',
+    shortName: 'VII. Pushkaradvipa',
+    x: -380,
+    z: -240,
+    radius: 175,
+    tier: 7,
+    diffMult: 12.0,
+    maxHpBase: 1600,
+    karmaReward: 1500,
+    boonIcon: '🦅',
+    boonName: 'Boon of Vishnu (Vaikuntha Avatar)',
+    boonDesc: 'Ultimate Cosmic Ascension: Passive Aura of Renewal heals all suffering beings around you as you fly!',
+    lushColor: new THREE.Color(0x38b2ac), // Celestial Lotus Gold-Emerald
+    rejuvenatedCount: 0,
+    goalCount: 4,
+    completed: false,
+  },
+];
+
+// ============================================================================
+// KARMA EMPORIUM: SACRED TOOLS, ITEMS & ABILITY UPGRADES (UNIVERSAL CURRENCY)
+// ============================================================================
+const SHOP_TOOLS = [
+  {
+    id: 'danda_staff',
+    icon: '🦯',
+    name: 'Brahmadanda Lotus Staff',
+    category: 'Sacred Tool • Upgrades [1] & [3]',
+    rank: 1,
+    maxRank: 10,
+    baseCost: 80,
+    costMult: 1.55,
+    desc: 'Channeling staff carved from celestial sandalwood. Amplifies the rejuvenation power of Sanjeevani Bolt [1] and Sunbeam [3].',
+    bonusText: (r) => `Current: +${(r - 1) * 45} Healing Power (Next: +${r * 45})`,
+  },
+  {
+    id: 'kamandalu_vessel',
+    icon: '🏺',
+    name: 'Amrita Kamandalu Vessel',
+    category: 'Sacred Tool • Upgrades [2] & [R]',
+    rank: 1,
+    maxRank: 10,
+    baseCost: 95,
+    costMult: 1.55,
+    desc: 'Eternally flowing vessel of Himalayan Ganga Jal. Expands AoE radius and potency of Ganga Nova [2] and World Pulse [R].',
+    bonusText: (r) => `Current: ${22 + (r - 1) * 5}m AoE Radius & +${(r - 1) * 35} AoE Heal`,
+  },
+  {
+    id: 'garuda_plume',
+    icon: '🦅',
+    name: 'Suvarna Garuda Plume',
+    category: 'Sky Relic • Upgrades [4] & [F]',
+    rank: 1,
+    maxRank: 7,
+    baseCost: 110,
+    costMult: 1.6,
+    desc: 'Golden wing-feather of Garuda. Boosts your Speed-Running [4] velocity and Sky-Flight [F] cruise speed across continents.',
+    bonusText: (r) => `Current: +${(r - 1) * 25}% Flight & Sprint Speed`,
+  },
+  {
+    id: 'rudraksha_mala',
+    icon: '📿',
+    name: '108-Bead Siddha Mala',
+    category: 'Karma Amplifier • Passive Relic',
+    rank: 1,
+    maxRank: 8,
+    baseCost: 120,
+    costMult: 1.65,
+    desc: 'Sacred prayer beads that resonate with universal Dharma, multiplying the Karma Points (☸️) earned from every healing act.',
+    bonusText: (r) => `Current: +${(r - 1) * 30}% Karma Points Earned`,
+  },
+  {
+    id: 'sanjeevani_elixir',
+    icon: '🧪',
+    name: 'Soma-Sanjeevani Elixir',
+    category: 'Consumable Item • Instant Burst',
+    rank: 0,
+    maxRank: 99,
+    baseCost: 140,
+    costMult: 1.15,
+    desc: 'Instantly releases a 65-meter Golden Supernova around you, restoring +320 Rejuvenation to all suffering beings in range!',
+    bonusText: () => `Instant Use on Purchase: 65m +320 Rejuvenation Wave!`,
+    isConsumable: true,
+  },
+  {
+    id: 'chakra_resonator',
+    icon: '☸️',
+    name: 'Sudarshana Dharma Chakra',
+    category: 'Mythic Artifact • Auto-Renewal Halo',
+    rank: 0,
+    maxRank: 5,
+    baseCost: 240,
+    costMult: 1.75,
+    desc: 'Summons an orbiting golden Chakra above your head that automatically fires healing bolts at nearby suffering creatures every 1.5s!',
+    bonusText: (r) => (r === 0 ? 'Not Yet Forged (Buy Rank 1 to Summon!)' : `Active: Auto-heals nearby suffering for ${r * 45}/pulse`),
+  },
+];
 
 const STATE = {
-  gold: 3450,
-  punya: 480,
-  punyaMax: 600,
-  fame: 210,
-  level: 1,
-  prana: 100,
-  pranaMax: 100,
-  wildlifeHealed: 0,
-  wildlifeGoal: 4,
-  grovesBloomed: 0,
-  grovesGoal: 3,
-  obelisksLit: 0,
-  obelisksGoal: 3,
-  boons: {
-    suryaDash: false,
-    padmaLeap: false,
-    akashBlink: false,
-    garudaFly: false,
-  },
-  activeBuffs: {
-    dashTimer: 0,
-    flying: false,
-  },
-  cooldowns: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0 },
-  cdMax:     { 1: 1.4, 2: 3.5, 3: 4.0, 4: 6.0, 5: 2.5, 6: 5.0, 7: 1.0 },
-  casting: null, // { slot, name, duration, elapsed, target }
+  karma: 350,          // Current spendable Karma Points (Universal Currency)
+  lifetimeKarma: 350,  // Total Karma generated
+  ascensionStage: 1,   // 1 to 7 (unlocked by rejuvenating continents)
+  totalRejuvenated: 0,
+  totalSites: 28,      // 7 continents * 4 major suffering clusters
+  currentContinent: CONTINENTS[0],
+  speedRunActive: true, // Speed-running enabled right from the start!
+  flyingActive: false,  // Toggle anytime with [F]
   selectedTarget: null,
+  casting: null,
+  cooldowns: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0 },
+  cdMax:     { 1: 0.9, 2: 2.2, 3: 3.0, 4: 0.5, 5: 1.8, 6: 3.5, 7: 0.4, 8: 6.0 },
 };
 
-const DEITIES_DATA = [
-  { id: 'surya', icon: '☀️', name: 'Lord Surya', title: 'Solar Sovereign of Prana', desc: 'Blesses the Sanctuary with radiant golden light, +35% Prana regeneration, and the blazing Surya Dash.', unlocked: true },
-  { id: 'lakshmi', icon: '🪷', name: 'Goddess Lakshmi', title: 'Bestower of Swarna & Grace', desc: 'Doubles Swarna (Gold) and Punya rewards from every virtuous deed and awakens Padma Lotus Leap.', unlocked: true },
-  { id: 'saraswati', icon: '🦢', name: 'Goddess Saraswati', title: 'Wisdom of the Sacred River', desc: 'Empowers Ganga Jal Nova [2] to bloom Sacred Lotus Groves and heal all nearby creatures.', unlocked: true },
-  { id: 'hanuman', icon: '🏔️', name: 'Lord Hanuman', title: 'Unbounded Wind & Devotion', desc: 'Grants Sanjeevani mountain herbs (+50% healing power) and heroic wind-leaps across valleys.', unlocked: true },
-  { id: 'ganesha', icon: '🐘', name: 'Lord Ganesha', title: 'Remover of All Obstacles', desc: 'Sanctifies the ancient Guardstone Obelisks and opens hidden mountain passes.', unlocked: true },
-  { id: 'shiva', icon: '🔱', name: 'Lord Shiva', title: 'Lord of Kailash & Akash', desc: 'Awakens Akashic Spatial Blink [T] to teleport across rivers and cliffs instantaneously.', unlocked: false },
-  { id: 'vishnu', icon: '🦅', name: 'Lord Vishnu', title: 'Preserver of Cosmic Dharma', desc: 'Summons the mythic wings of Garuda [F] for boundless flight across the entire realm.', unlocked: false },
-];
+// ============================================================================
+// HELPER STATS CALCULATED FROM SHOP TOOLS & CONTINENT BOONS
+// ============================================================================
+function getHealPower() {
+  const staffRank = SHOP_TOOLS[0].rank;
+  const boonMult = CONTINENTS[0].completed ? 1.35 : 1.0;
+  return Math.round((85 + (staffRank - 1) * 45) * boonMult);
+}
 
-const INVENTORY_ITEMS = [
-  { icon: '🌿', name: 'Sanjeevani Root', qty: '∞', desc: 'Sacred Himalayan herb that restores distressed wildlife.' },
-  { icon: '🏺', name: 'Ganga Jal Kalash', qty: '∞', desc: 'Pure Himalayan river water that blooms withered lotus groves.' },
-  { icon: '🍲', name: 'Annadana Vessel', qty: '∞', desc: 'Endless vessel of sanctified nourishment for pilgrims & shrines.' },
-  { icon: '🦯', name: 'Lotus Vaidya Staff', qty: 'Equipped', desc: '+45 Healing Power • Channels emerald Sanjeevani bolts.' },
-  { icon: '📿', name: 'Rudraksha Mala', qty: 'Equipped', desc: '+25% Punya Karma gained from all compassionate deeds.' },
-  { icon: '🪙', name: 'Swarna Mudra Pouch', qty: '3,450', desc: 'Sacred golden coins gifted by sanctuaries.' },
-  { icon: '🪷', name: 'Padma Crystal', qty: '3', desc: 'Crystallized lotus dew harvested from bloomed groves.' },
-  { icon: '🔥', name: 'Agni Jyoti Spark', qty: '2', desc: 'Eternal flame used to awaken ancient Guardstone Obelisks.' },
-];
+function getAoERadius() {
+  const vesselRank = SHOP_TOOLS[1].rank;
+  const boonMult = CONTINENTS[1].completed ? 1.5 : 1.0;
+  return Math.round((22 + (vesselRank - 1) * 5) * boonMult);
+}
+
+function getAoEBonus() {
+  const vesselRank = SHOP_TOOLS[1].rank;
+  return (vesselRank - 1) * 35 + (CONTINENTS[1].completed ? 60 : 0);
+}
+
+function getKarmaMultiplier() {
+  const malaRank = SHOP_TOOLS[3].rank;
+  let mult = 1.0 + (malaRank - 1) * 0.3;
+  if (CONTINENTS[0].completed) mult += 0.2;
+  if (CONTINENTS[3].completed) mult *= 2.0;
+  return mult;
+}
+
+function getMobilityMultiplier() {
+  const plumeRank = SHOP_TOOLS[2].rank;
+  let mult = 1.0 + (plumeRank - 1) * 0.25;
+  if (CONTINENTS[2].completed) mult *= 1.65;
+  return mult;
+}
 
 // ============================================================================
-// 1. SCENE, CAMERA, RENDERER & ATMOSPHERE
+// 1. SCENE, CAMERA, RENDERER & CELESTIAL SKY DOME
 // ============================================================================
 const container = document.getElementById('canvas-container');
 const nameplatesContainer = document.getElementById('nameplates-container');
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x689bc8);
-scene.fog = new THREE.FogExp2(0x7aa8cf, 0.0042);
+scene.background = new THREE.Color(0x5282ad);
+scene.fog = new THREE.FogExp2(0x6492ba, 0.00085); // Long view distance so players can see distant continents while flying!
 
-const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.5, 650);
+const camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.5, 2200);
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.12;
+renderer.toneMappingExposure = 1.15;
 container.appendChild(renderer.domElement);
 
-// Sky Dome Shader (Crisp Hordes.io Alpine Sky + Sun Halo)
-const skyGeo = new THREE.SphereGeometry(520, 32, 24);
+// Expansive Sky Dome covering all 7 Continents
+const skyGeo = new THREE.SphereGeometry(1850, 32, 24);
 const skyMat = new THREE.ShaderMaterial({
   side: THREE.BackSide,
   depthWrite: false,
   uniforms: {
-    topColor: { value: new THREE.Color(0x255894) },
-    horizonColor: { value: new THREE.Color(0x94c2e5) },
-    sunDir: { value: new THREE.Vector3(0.55, 0.48, -0.68).normalize() },
+    topColor: { value: new THREE.Color(0x163c6e) },
+    horizonColor: { value: new THREE.Color(0x88b8de) },
+    sunDir: { value: new THREE.Vector3(0.52, 0.46, -0.71).normalize() },
   },
   vertexShader: `
     varying vec3 vWorldPos;
@@ -103,30 +324,29 @@ const skyMat = new THREE.ShaderMaterial({
     uniform vec3 sunDir;
     void main() {
       vec3 dir = normalize(vWorldPos);
-      float h = clamp(dir.y * 1.35 + 0.1, 0.0, 1.0);
+      float h = clamp(dir.y * 1.4 + 0.12, 0.0, 1.0);
       vec3 col = mix(horizonColor, topColor, pow(h, 0.65));
       float sunAmt = max(dot(dir, sunDir), 0.0);
-      col += vec3(1.0, 0.9, 0.65) * pow(sunAmt, 14.0) * 0.42;
-      col += vec3(1.0, 0.97, 0.85) * smoothstep(0.996, 0.9995, sunAmt);
+      col += vec3(1.0, 0.88, 0.6) * pow(sunAmt, 16.0) * 0.48;
+      col += vec3(1.0, 0.97, 0.88) * smoothstep(0.996, 0.9996, sunAmt);
       gl_FragColor = vec4(col, 1.0);
     }
   `,
 });
 scene.add(new THREE.Mesh(skyGeo, skyMat));
 
-// Lighting (Warm Golden Sun + Sky Hemisphere + Sanctuary Point Lights)
-const hemiLight = new THREE.HemisphereLight(0xd9f0ff, 0x3b5932, 0.85);
-hemiLight.position.set(0, 120, 0);
+const hemiLight = new THREE.HemisphereLight(0xdff2ff, 0x3b4d34, 0.9);
+hemiLight.position.set(0, 300, 0);
 scene.add(hemiLight);
 
-const sunLight = new THREE.DirectionalLight(0xfff1d0, 2.2);
-sunLight.position.set(95, 115, -90);
+const sunLight = new THREE.DirectionalLight(0xfff2d6, 2.25);
+sunLight.position.set(160, 240, -140);
 sunLight.castShadow = true;
 sunLight.shadow.mapSize.width = 2048;
 sunLight.shadow.mapSize.height = 2048;
 sunLight.shadow.camera.near = 10;
-sunLight.shadow.camera.far = 340;
-const d = 115;
+sunLight.shadow.camera.far = 650;
+const d = 140;
 sunLight.shadow.camera.left = -d;
 sunLight.shadow.camera.right = d;
 sunLight.shadow.camera.top = d;
@@ -135,7 +355,7 @@ sunLight.shadow.bias = -0.0005;
 scene.add(sunLight);
 
 // ============================================================================
-// 2. HORDES.IO TERRAIN HEIGHT & SPLATMAP SHADER (ROADS, PLAZA, RIVER, CLIFFS)
+// 2. MULTI-CONTINENT ARCHIPELAGO TERRAIN & LIVE GPU REJUVENATION SHADER
 // ============================================================================
 function hash2D(x, z) {
   const s = Math.sin(x * 127.1 + z * 311.7) * 43758.5453123;
@@ -162,183 +382,84 @@ function fbm(x, z) {
   let freq = 1.0;
   for (let i = 0; i < 4; i++) {
     v += amp * valueNoise(x * freq, z * freq);
-    freq *= 2.05;
+    freq *= 2.02;
     amp *= 0.5;
   }
   return v;
 }
 
-// River Ganga center X curve as a function of Z
-function getRiverCenterX(z) {
-  return -48 + Math.sin(z * 0.032) * 16 + Math.cos(z * 0.015) * 8;
-}
-
-// Distance to winding dirt roads radiating from Sanctuary Plaza (0,0)
-function getRoadFactor(x, z) {
-  // Central Sanctuary Cobblestone Plaza around (0, 0)
-  const distCenter = Math.hypot(x, z);
-  const plaza = Math.max(0, 1.0 - Math.max(0, distCenter - 9.5) / 4.5);
-
-  // 4 Winding Roads: North (0, -z), East (+x, 0), South-East, West Bridge
-  // Road 1: Main North-South Road (Z from -130 to +130)
-  const r1CurveX = Math.sin(z * 0.045) * 6.5;
-  const d1 = Math.abs(x - r1CurveX);
-  const road1 = Math.max(0, 1.0 - Math.max(0, d1 - 2.4) / 2.2);
-
-  // Road 2: East-West Road (X from -35 to +130)
-  const r2CurveZ = Math.sin(x * 0.04) * 5.5;
-  const d2 = Math.abs(z - r2CurveZ);
-  const road2 = x > -38 ? Math.max(0, 1.0 - Math.max(0, d2 - 2.2) / 2.0) : 0;
-
-  return { plaza, road: Math.max(road1, road2) };
-}
-
+// Compute height across the 7 Continents Archipelago (1500 x 1500m World)
 function getTerrainHeight(x, z) {
-  const distCenter = Math.hypot(x, z);
-  // Keep central Sanctuary Plaza and immediate play area gently rolling
-  const centerFlat = Math.min(1.0, Math.max(0.0, (distCenter - 14.0) / 36.0));
+  let maxContinentH = -8.5; // Deep Cosmic Ocean bed between continents
 
-  // Base rolling hills
-  const n1 = fbm(x * 0.014 + 10.3, z * 0.014 + 22.1);
-  const n2 = fbm(x * 0.042 + 4.7, z * 0.042 + 9.2);
-  let h = (n1 - 0.42) * 18.0 * centerFlat + (n2 - 0.5) * 2.8 * centerFlat;
+  for (let i = 0; i < CONTINENTS.length; i++) {
+    const c = CONTINENTS[i];
+    const dx = x - c.x;
+    const dz = z - c.z;
+    const dist = Math.hypot(dx, dz);
 
-  // Outer perimeter mountain ring (like Hordes.io Guardstone valley walls)
-  if (distCenter > 88) {
-    const rim = (distCenter - 88) / 55;
-    const ridgeNoise = fbm(x * 0.03, z * 0.03);
-    h += Math.pow(rim, 1.75) * (28.0 + ridgeNoise * 24.0);
-  }
+    if (dist < c.radius * 1.25) {
+      const normD = dist / c.radius;
+      // Smooth island dome profile with flat sanctuary plaza at center of each continent
+      const mask = Math.max(0.0, 1.0 - normD * normD);
+      const smoothMask = mask * mask * (3.0 - 2.0 * mask);
 
-  // Flatten terrain slightly along roads
-  const { plaza, road } = getRoadFactor(x, z);
-  h *= (1.0 - plaza * 0.92 - road * 0.55);
+      const centerPlazaFlat = Math.min(1.0, Math.max(0.0, (dist - 18.0) / 38.0));
+      const n1 = fbm((x + i * 37) * 0.015, (z + i * 53) * 0.015);
+      const n2 = fbm(x * 0.045, z * 0.045);
 
-  // Carve River Ganga valley along the west side
-  const riverX = getRiverCenterX(z);
-  const distRiver = Math.abs(x - riverX);
-  if (distRiver < 16.0) {
-    const t = distRiver / 16.0;
-    const smooth = t * t * (3.0 - 2.0 * t);
-    const riverBed = -3.2;
-    h = h * smooth + riverBed * (1.0 - smooth);
-  }
-
-  return h;
-}
-
-// Build High-Detail Splatmap Texture on Canvas (1024x1024)
-function createSplatmapTexture(worldSize) {
-  const size = 1024;
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext('2d');
-  const img = ctx.createImageData(size, size);
-  const data = img.data;
-
-  for (let py = 0; py < size; py++) {
-    const wz = ((py / size) - 0.5) * worldSize;
-    for (let px = 0; px < size; px++) {
-      const wx = ((px / size) - 0.5) * worldSize;
-
-      const h = getTerrainHeight(wx, wz);
-      const hx = getTerrainHeight(wx + 1.0, wz);
-      const hz = getTerrainHeight(wx, wz + 1.0);
-      const slope = Math.min(1.0, Math.hypot(hx - h, hz - h) * 1.15);
-
-      const detail = fbm(wx * 0.18, wz * 0.18);
-      const micro = hash2D(px * 0.7, py * 0.7);
-
-      // Base Lush Hordes.io Forest Grass (multi-tone emerald & olive)
-      let r = 64 + detail * 38 + micro * 12;
-      let g = 112 + detail * 48 + micro * 14;
-      let b = 46 + detail * 22 + micro * 8;
-
-      // Sunny meadow patches
-      const meadow = fbm(wx * 0.05 + 50, wz * 0.05 + 50);
-      if (meadow > 0.55) {
-        const mf = (meadow - 0.55) * 2.2;
-        r += mf * 26;
-        g += mf * 32;
-        b += mf * 8;
+      // Outer mountain rim around each continent
+      let rimHills = 0;
+      if (normD > 0.52 && normD < 0.96) {
+        const rimFactor = Math.sin(((normD - 0.52) / 0.44) * Math.PI);
+        rimHills = rimFactor * (14.0 + i * 2.5) * n1;
       }
 
-      // Riverbank Sand & Wet Pebbles
-      const riverX = getRiverCenterX(wz);
-      const distRiver = Math.abs(wx - riverX);
-      if (distRiver < 14.5) {
-        const bankFactor = Math.max(0, 1.0 - Math.max(0, distRiver - 6.5) / 8.0);
-        const sandR = 168 + detail * 30;
-        const sandG = 148 + detail * 26;
-        const sandB = 104 + detail * 20;
-        r = r * (1 - bankFactor) + sandR * bankFactor;
-        g = g * (1 - bankFactor) + sandG * bankFactor;
-        b = b * (1 - bankFactor) + sandB * bankFactor;
-      }
+      const h =
+        -7.5 +
+        smoothMask * (10.5 + (n1 - 0.35) * 14.0 * centerPlazaFlat + (n2 - 0.5) * 3.0 * centerPlazaFlat + rimHills);
 
-      // Winding Dirt Roads (Warm Earth / Packed Trail)
-      const { plaza, road } = getRoadFactor(wx, wz);
-      if (road > 0.01) {
-        const rf = Math.min(1.0, road * (0.85 + detail * 0.3));
-        const dirtR = 138 + detail * 28 - micro * 12;
-        const dirtG = 106 + detail * 22 - micro * 10;
-        const dirtB = 72 + detail * 16 - micro * 8;
-        r = r * (1 - rf) + dirtR * rf;
-        g = g * (1 - rf) + dirtG * rf;
-        b = b * (1 - rf) + dirtB * rf;
+      if (h > maxContinentH) {
+        maxContinentH = h;
       }
-
-      // Central Sanctuary Cobblestone & Golden Mandala Plaza
-      if (plaza > 0.01) {
-        const distC = Math.hypot(wx, wz);
-        const ringPattern = Math.sin(distC * 2.6) * Math.cos(Math.atan2(wz, wx) * 12.0);
-        const stone = 148 + ringPattern * 18 + (micro - 0.5) * 22;
-        const goldTrim = Math.abs(distC - 8.5) < 0.65 || Math.abs(distC - 4.2) < 0.45 ? 1.0 : 0.0;
-        const pr = goldTrim ? 218 : stone + 12;
-        const pg = goldTrim ? 182 : stone + 6;
-        const pb = goldTrim ? 96 : stone - 8;
-        r = r * (1 - plaza) + pr * plaza;
-        g = g * (1 - plaza) + pg * plaza;
-        b = b * (1 - plaza) + pb * plaza;
-      }
-
-      // Steep Cliff Rock & Alpine Peaks
-      const rockWeight = Math.min(1.0, Math.max(0.0, (slope - 0.32) * 2.4 + Math.max(0, (h - 14.0) / 18.0)));
-      if (rockWeight > 0.01) {
-        const rk = 88 + detail * 36 + (micro - 0.5) * 18;
-        r = r * (1 - rockWeight) + rk * rockWeight;
-        g = g * (1 - rockWeight) + (rk - 4) * rockWeight;
-        b = b * (1 - rockWeight) + (rk + 6) * rockWeight;
-      }
-
-      // High Snow Caps on distant peaks
-      if (h > 25.0) {
-        const sf = Math.min(1.0, (h - 25.0) / 8.0);
-        r = r * (1 - sf) + 235 * sf;
-        g = g * (1 - sf) + 242 * sf;
-        b = b * (1 - sf) + 250 * sf;
-      }
-
-      const idx = (py * size + px) * 4;
-      data[idx] = Math.max(0, Math.min(255, r));
-      data[idx + 1] = Math.max(0, Math.min(255, g));
-      data[idx + 2] = Math.max(0, Math.min(255, b));
-      data[idx + 3] = 255;
     }
   }
-  ctx.putImageData(img, 0, 0);
-
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.wrapS = THREE.ClampToEdgeWrapping;
-  tex.wrapT = THREE.ClampToEdgeWrapping;
-  tex.anisotropy = 8;
-  tex.colorSpace = THREE.SRGBColorSpace;
-  return tex;
+  return maxContinentH;
 }
 
-const WORLD_SIZE = 320;
-const terrainGeo = new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, 220, 220);
+function getNearestContinent(x, z) {
+  let best = CONTINENTS[0];
+  let bestD = Infinity;
+  for (let i = 0; i < CONTINENTS.length; i++) {
+    const c = CONTINENTS[i];
+    const d = Math.hypot(x - c.x, z - c.z);
+    if (d < bestD) {
+      bestD = d;
+      best = c;
+    }
+  }
+  return best;
+}
+
+// GPU Shader Uniform Arrays for 32 Rejuvenation Zones (X, Z, CurrentRadius, TargetRadius)
+const MAX_CLEANSE_ZONES = 32;
+const cleanseCenters = [];
+for (let i = 0; i < MAX_CLEANSE_ZONES; i++) {
+  cleanseCenters.push(new THREE.Vector4(99999, 99999, 0.0, 0.0));
+}
+
+// Center of Jambudvipa Sanctuary Altar starts partially consecrated (14m golden circle)
+cleanseCenters[0].set(0, 0, 14.5, 14.5);
+let nextCleanseIdx = 1;
+
+function addRejuvenationZone(x, z, radius = 65.0) {
+  const idx = nextCleanseIdx % MAX_CLEANSE_ZONES;
+  cleanseCenters[idx].set(x, z, 2.0, radius);
+  nextCleanseIdx++;
+}
+
+const WORLD_SIZE = 1450;
+const terrainGeo = new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, 280, 280);
 terrainGeo.rotateX(-Math.PI / 2);
 const posAttr = terrainGeo.attributes.position;
 for (let i = 0; i < posAttr.count; i++) {
@@ -348,32 +469,122 @@ for (let i = 0; i < posAttr.count; i++) {
 }
 terrainGeo.computeVertexNormals();
 
-const splatTexture = createSplatmapTexture(WORLD_SIZE);
-const terrainMat = new THREE.MeshStandardMaterial({
-  map: splatTexture,
-  roughness: 0.88,
-  metalness: 0.04,
-});
-const terrainMesh = new THREE.Mesh(terrainGeo, terrainMat);
-terrainMesh.receiveShadow = true;
-scene.add(terrainMesh);
-
-// Animated Sacred River Ganga Water Plane
-const waterGeo = new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, 64, 64);
-waterGeo.rotateX(-Math.PI / 2);
-const waterMat = new THREE.ShaderMaterial({
-  transparent: true,
+// Custom GLSL Terrain Shader: Dynamically transforms Blighted Ashen Wasteland -> Lush Golden-Emerald Paradise!
+const terrainShaderMat = new THREE.ShaderMaterial({
   uniforms: {
+    uCleanseZones: { value: cleanseCenters },
+    uSunDir: { value: new THREE.Vector3(0.52, 0.46, -0.71).normalize() },
     uTime: { value: 0 },
   },
   vertexShader: `
+    varying vec3 vWorldPos;
+    varying vec3 vNormal;
+    void main() {
+      vec4 wp = modelMatrix * vec4(position, 1.0);
+      vWorldPos = wp.xyz;
+      vNormal = normalize(normalMatrix * normal);
+      gl_Position = projectionMatrix * viewMatrix * wp;
+    }
+  `,
+  fragmentShader: `
+    uniform vec4 uCleanseZones[${MAX_CLEANSE_ZONES}];
+    uniform vec3 uSunDir;
     uniform float uTime;
-    varying vec2 vUv;
+    varying vec3 vWorldPos;
+    varying vec3 vNormal;
+
+    float hash(vec2 p) {
+      return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+    }
+
+    float noise(vec2 p) {
+      vec2 i = floor(p);
+      vec2 f = fract(p);
+      f = f * f * (3.0 - 2.0 * f);
+      return mix(
+        mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+        mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x),
+        f.y
+      );
+    }
+
+    void main() {
+      float n1 = noise(vWorldPos.xz * 0.08);
+      float n2 = noise(vWorldPos.xz * 0.35);
+      float slope = 1.0 - max(dot(vNormal, vec3(0.0, 1.0, 0.0)), 0.0);
+
+      // Compute how rejuvenated this world coordinate is (0.0 = Suffering Blight, 1.0 = Rejuvenated Paradise)
+      float cleanse = 0.0;
+      float ringEdge = 0.0;
+      for (int i = 0; i < ${MAX_CLEANSE_ZONES}; i++) {
+        vec4 cz = uCleanseZones[i];
+        if (cz.z > 0.1) {
+          float d = distance(vWorldPos.xz, cz.xy);
+          float factor = 1.0 - smoothstep(cz.z - 8.0, cz.z + 2.0, d);
+          cleanse = max(cleanse, factor);
+          float edge = smoothstep(cz.z - 2.5, cz.z - 0.5, d) * (1.0 - smoothstep(cz.z - 0.5, cz.z + 1.5, d));
+          ringEdge = max(ringEdge, edge);
+        }
+      }
+
+      // 1. SUFFERING / KALI BLIGHT PALETTE (Charred purple-ash soil, cracked necrotic veins, dead scrub)
+      vec3 blightGrass = mix(vec3(0.22, 0.18, 0.25), vec3(0.32, 0.25, 0.29), n1);
+      float darkVein = smoothstep(0.62, 0.78, n2);
+      blightGrass = mix(blightGrass, vec3(0.45, 0.16, 0.48), darkVein * 0.45);
+
+      // 2. REJUVENATED DHARMA PALETTE (Rich emerald grass, sunny golden wildflowers, cobblestone paths)
+      vec3 lushGrass = mix(vec3(0.18, 0.52, 0.22), vec3(0.38, 0.72, 0.26), n1);
+      float flowers = smoothstep(0.68, 0.85, n2);
+      lushGrass = mix(lushGrass, vec3(0.95, 0.82, 0.28), flowers * 0.4);
+
+      vec3 surfaceCol = mix(blightGrass, lushGrass, cleanse);
+
+      // Sandy coastline near ocean level
+      if (vWorldPos.y < 0.35) {
+        float beach = 1.0 - clamp((vWorldPos.y + 1.5) / 1.85, 0.0, 1.0);
+        vec3 sandCol = mix(vec3(0.42, 0.38, 0.36), vec3(0.82, 0.74, 0.54), cleanse);
+        surfaceCol = mix(surfaceCol, sandCol, beach * 0.85);
+      }
+
+      // Steep mountain rock cliffs
+      if (slope > 0.26 || vWorldPos.y > 14.0) {
+        float rk = clamp((slope - 0.24) * 2.5 + max(0.0, (vWorldPos.y - 14.0) / 14.0), 0.0, 1.0);
+        vec3 rockCol = mix(vec3(0.26, 0.24, 0.28), vec3(0.48, 0.50, 0.54), cleanse);
+        surfaceCol = mix(surfaceCol, rockCol, rk);
+      }
+
+      // Glowing Golden Wave at the boundary of Rejuvenation!
+      surfaceCol += vec3(0.98, 0.84, 0.32) * ringEdge * 0.75;
+
+      // Sun & Sky Lighting
+      float diff = max(dot(vNormal, uSunDir), 0.0);
+      vec3 lit = surfaceCol * (0.52 + diff * 0.68);
+
+      // Atmospheric distance fog
+      float camDist = length(cameraPosition - vWorldPos);
+      float fogF = 1.0 - exp(-camDist * 0.00075);
+      vec3 fogCol = vec3(0.39, 0.57, 0.73);
+      gl_FragColor = vec4(mix(lit, fogCol, clamp(fogF, 0.0, 0.85)), 1.0);
+    }
+  `,
+});
+
+const terrainMesh = new THREE.Mesh(terrainGeo, terrainShaderMat);
+terrainMesh.receiveShadow = true;
+scene.add(terrainMesh);
+
+// Expansive Cosmic Ocean connecting the 7 Continents
+const oceanGeo = new THREE.PlaneGeometry(WORLD_SIZE * 1.4, WORLD_SIZE * 1.4, 90, 90);
+oceanGeo.rotateX(-Math.PI / 2);
+const oceanMat = new THREE.ShaderMaterial({
+  transparent: true,
+  uniforms: { uTime: { value: 0 } },
+  vertexShader: `
+    uniform float uTime;
     varying vec3 vWorldPos;
     void main() {
-      vUv = uv;
       vec3 p = position;
-      p.y += sin(p.x * 0.4 + uTime * 2.2) * 0.08 + cos(p.z * 0.35 + uTime * 1.8) * 0.08;
+      p.y += sin(p.x * 0.06 + uTime * 2.0) * 0.35 + cos(p.z * 0.06 + uTime * 1.6) * 0.35;
       vec4 wp = modelMatrix * vec4(p, 1.0);
       vWorldPos = wp.xyz;
       gl_Position = projectionMatrix * viewMatrix * wp;
@@ -381,209 +592,79 @@ const waterMat = new THREE.ShaderMaterial({
   `,
   fragmentShader: `
     uniform float uTime;
-    varying vec2 vUv;
     varying vec3 vWorldPos;
     void main() {
-      float wave = sin(vWorldPos.x * 0.8 + uTime * 2.6) * cos(vWorldPos.z * 0.6 - uTime * 2.1);
-      vec3 deep = vec3(0.08, 0.44, 0.68);
-      vec3 shallow = vec3(0.22, 0.72, 0.88);
-      vec3 col = mix(deep, shallow, wave * 0.5 + 0.5);
-      float foam = smoothstep(0.65, 0.95, wave);
-      col = mix(col, vec3(0.88, 0.97, 1.0), foam * 0.45);
-      gl_FragColor = vec4(col, 0.82);
+      float w = sin(vWorldPos.x * 0.12 + uTime * 2.2) * cos(vWorldPos.z * 0.12 - uTime * 1.8);
+      vec3 deep = vec3(0.06, 0.28, 0.48);
+      vec3 crest = vec3(0.16, 0.56, 0.78);
+      vec3 col = mix(deep, crest, w * 0.5 + 0.5);
+      gl_FragColor = vec4(col, 0.88);
     }
   `,
 });
-const waterMesh = new THREE.Mesh(waterGeo, waterMat);
-waterMesh.position.y = -1.35;
-scene.add(waterMesh);
+const oceanMesh = new THREE.Mesh(oceanGeo, oceanMat);
+oceanMesh.position.y = -1.6;
+scene.add(oceanMesh);
 
 // ============================================================================
-// 3. SCULPTED ORGANIC TREES, WIND-ANIMATED GRASS, ROCKS & GUARDSTONE RUINS
+// 3. TREES, SANCTUARY ALTARS & SUFFERING SITES ACROSS ALL 7 CONTINENTS
 // ============================================================================
-const interactables = []; // All targetable entities (wildlife, groves, obelisks, party)
+const interactables = [];
+const continentTrees = []; // Withered trees that bloom green & scale up when rejuvenated!
 
-// Procedural Bark & Foliage Materials
-const barkMat = new THREE.MeshStandardMaterial({ color: 0x5c4028, roughness: 0.92, flatShading: true });
-const leafMat1 = new THREE.MeshStandardMaterial({ color: 0x2e6f34, roughness: 0.78, flatShading: true });
-const leafMat2 = new THREE.MeshStandardMaterial({ color: 0x3f883c, roughness: 0.75, flatShading: true });
-const blossomMat = new THREE.MeshStandardMaterial({ color: 0xd98b3a, roughness: 0.7, flatShading: true }); // Sacred Kadamba/Autumn gold trees
-const rockMat = new THREE.MeshStandardMaterial({ color: 0x6c737a, roughness: 0.88, flatShading: true });
+const barkDarkMat = new THREE.MeshStandardMaterial({ color: 0x3b2d26, roughness: 0.9, flatShading: true });
+const witheredCrownMat = new THREE.MeshStandardMaterial({ color: 0x4a3b4e, roughness: 0.85, flatShading: true });
+const lushCrownMat = new THREE.MeshStandardMaterial({ color: 0x2e8540, roughness: 0.7, flatShading: true });
+const goldenCrownMat = new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.65, flatShading: true });
+const stoneMat = new THREE.MeshStandardMaterial({ color: 0x78808a, roughness: 0.75, flatShading: true });
 
-// Organic displaced crown geometry helper
-function createOrganicCrownGeometry(radius, detail = 1) {
-  const geo = new THREE.IcosahedronGeometry(radius, detail);
+function createOrganicCrown(radius) {
+  const geo = new THREE.IcosahedronGeometry(radius, 1);
   const p = geo.attributes.position;
   for (let i = 0; i < p.count; i++) {
     const vx = p.getX(i);
     const vy = p.getY(i);
     const vz = p.getZ(i);
-    const n = 0.82 + 0.34 * hash2D(vx * 3.1 + vy, vz * 3.1 - vy);
-    p.setXYZ(i, vx * n, vy * (0.78 + 0.25 * n), vz * n);
+    const n = 0.82 + 0.34 * hash2D(vx * 2.7 + vy, vz * 2.7 - vy);
+    p.setXYZ(i, vx * n, vy * (0.8 + 0.25 * n), vz * n);
   }
   geo.computeVertexNormals();
   return geo;
 }
+const treeCrownGeo = createOrganicCrown(2.8);
 
-const crownGeoLarge = createOrganicCrownGeometry(3.2, 1);
-const crownGeoMed = createOrganicCrownGeometry(2.3, 1);
-const crownGeoSmall = createOrganicCrownGeometry(1.7, 1);
-
-function spawnSculptedTree(x, z, scale = 1.0, isGolden = false) {
+function spawnTree(x, z, continentId) {
   const y = getTerrainHeight(x, z);
-  if (y < -0.5) return; // Don't spawn in river
-
+  if (y < 0.2) return;
   const group = new THREE.Group();
   group.position.set(x, y, z);
-  group.scale.setScalar(scale);
 
-  // Gnarled multi-segment trunk + branches
-  const trunkGeo = new THREE.CylinderGeometry(0.32, 0.58, 4.2, 7);
-  const trunk = new THREE.Mesh(trunkGeo, barkMat);
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.52, 4.0, 6), barkDarkMat);
   trunk.position.y = 2.0;
-  trunk.rotation.z = (hash2D(x, z) - 0.5) * 0.14;
   trunk.castShadow = true;
-  trunk.receiveShadow = true;
   group.add(trunk);
 
-  // Branch 1 & 2
-  const branchGeo = new THREE.CylinderGeometry(0.16, 0.28, 2.4, 6);
-  const b1 = new THREE.Mesh(branchGeo, barkMat);
-  b1.position.set(0.7, 3.6, 0.3);
-  b1.rotation.z = -0.55;
-  b1.rotation.x = 0.25;
-  b1.castShadow = true;
-  group.add(b1);
-
-  const b2 = new THREE.Mesh(branchGeo, barkMat);
-  b2.position.set(-0.65, 3.4, -0.35);
-  b2.rotation.z = 0.5;
-  b2.rotation.x = -0.25;
-  b2.castShadow = true;
-  group.add(b2);
-
-  // Multi-clustered organic foliage canopy
-  const matMain = isGolden ? blossomMat : (hash2D(x * 2, z * 2) > 0.5 ? leafMat1 : leafMat2);
-  const c1 = new THREE.Mesh(crownGeoLarge, matMain);
-  c1.position.set(0, 5.2, 0);
-  c1.castShadow = true;
-  c1.receiveShadow = true;
-  group.add(c1);
-
-  const c2 = new THREE.Mesh(crownGeoMed, matMain);
-  c2.position.set(1.6, 4.5, 0.6);
-  c2.castShadow = true;
-  group.add(c2);
-
-  const c3 = new THREE.Mesh(crownGeoMed, matMain);
-  c3.position.set(-1.5, 4.3, -0.7);
-  c3.castShadow = true;
-  group.add(c3);
-
-  const c4 = new THREE.Mesh(crownGeoSmall, matMain);
-  c4.position.set(0.3, 6.6, -0.4);
-  c4.castShadow = true;
-  group.add(c4);
+  // Start withered & shrunken under Kali Blight!
+  const crown = new THREE.Mesh(treeCrownGeo, witheredCrownMat);
+  crown.position.y = 4.6;
+  crown.scale.setScalar(0.55);
+  crown.castShadow = true;
+  group.add(crown);
 
   scene.add(group);
+  continentTrees.push({ group, crown, x, z, continentId, rejuvenated: false });
 }
 
-// Spawn 135 Sculpted Trees across the valley (avoiding Sanctuary Plaza and Main Roads)
-for (let i = 0; i < 150; i++) {
-  const angle = hash2D(i, i * 3.7) * Math.PI * 2;
-  const radius = 18 + hash2D(i * 2.3, i + 9.1) * 115;
-  const tx = Math.cos(angle) * radius;
-  const tz = Math.sin(angle) * radius;
-  const { plaza, road } = getRoadFactor(tx, tz);
-  if (plaza > 0.1 || road > 0.35) continue;
-  if (Math.abs(tx - getRiverCenterX(tz)) < 11) continue;
-  const sc = 0.8 + hash2D(tx, tz) * 0.75;
-  const golden = hash2D(tz, tx) > 0.82;
-  spawnSculptedTree(tx, tz, sc, golden);
-}
-
-// Spawn Sculpted Boulders & Cliff Rocks
-const boulderGeo = createOrganicCrownGeometry(1.6, 1);
-for (let i = 0; i < 75; i++) {
-  const rx = (hash2D(i * 5.1, 19.3) - 0.5) * 230;
-  const rz = (hash2D(23.7, i * 7.9) - 0.5) * 230;
-  const { plaza, road } = getRoadFactor(rx, rz);
-  if (plaza > 0.05 || road > 0.3) continue;
-  const ry = getTerrainHeight(rx, rz);
-  if (ry < -1.0) continue;
-  const rock = new THREE.Mesh(boulderGeo, rockMat);
-  rock.position.set(rx, ry + 0.4, rz);
-  rock.scale.set(
-    0.7 + hash2D(rx, rz) * 1.6,
-    0.5 + hash2D(rz, rx) * 1.1,
-    0.7 + hash2D(rx + 3, rz - 3) * 1.5
-  );
-  rock.rotation.y = hash2D(rx, i) * Math.PI * 2;
-  rock.castShadow = true;
-  rock.receiveShadow = true;
-  scene.add(rock);
-}
-
-// Wind-Animated Instanced Grass Blades across the meadows
-const grassCount = 2600;
-const bladeGeo = new THREE.ConeGeometry(0.14, 0.95, 3);
-bladeGeo.translate(0, 0.45, 0);
-const grassMat = new THREE.ShaderMaterial({
-  uniforms: { uTime: { value: 0 } },
-  vertexShader: `
-    uniform float uTime;
-    varying float vH;
-    void main() {
-      vH = position.y;
-      vec3 p = position;
-      vec4 wp = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
-      float sway = sin(uTime * 2.5 + wp.x * 0.35 + wp.z * 0.35) * 0.18 * vH;
-      p.x += sway;
-      gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(p, 1.0);
-    }
-  `,
-  fragmentShader: `
-    varying float vH;
-    void main() {
-      vec3 bot = vec3(0.18, 0.42, 0.16);
-      vec3 top = vec3(0.46, 0.76, 0.28);
-      gl_FragColor = vec4(mix(bot, top, clamp(vH, 0.0, 1.0)), 1.0);
-    }
-  `,
-});
-const grassInstanced = new THREE.InstancedMesh(bladeGeo, grassMat, grassCount);
-const dummy = new THREE.Object3D();
-let gIdx = 0;
-for (let i = 0; i < grassCount * 2 && gIdx < grassCount; i++) {
-  const gx = (hash2D(i * 1.7, 88.2) - 0.5) * 165;
-  const gz = (hash2D(41.9, i * 2.3) - 0.5) * 165;
-  const { plaza, road } = getRoadFactor(gx, gz);
-  if (plaza > 0.05 || road > 0.2) continue;
-  const gy = getTerrainHeight(gx, gz);
-  if (gy < -0.2 || gy > 14) continue;
-  dummy.position.set(gx, gy, gz);
-  dummy.rotation.y = hash2D(gx, gz) * Math.PI * 2;
-  const s = 0.75 + hash2D(gz, gx) * 0.75;
-  dummy.scale.set(s, s, s);
-  dummy.updateMatrix();
-  grassInstanced.setMatrixAt(gIdx++, dummy.matrix);
-}
-grassInstanced.count = gIdx;
-scene.add(grassInstanced);
-
-// ============================================================================
-// 4. ANCIENT GUARDSTONE OBELISKS & SACRED LOTUS GROVES (INTERACTABLE)
-// ============================================================================
 function createNameplateDOM(entity) {
   const el = document.createElement('div');
   el.className = 'nameplate';
   el.innerHTML = `
     <div class="np-title">
-      <span class="np-lvl">Lv.${entity.level}</span>
+      <span class="np-lvl">[T${entity.tier}]</span>
       <span class="np-name">${entity.name}</span>
     </div>
     <div class="np-bar-bg">
-      <div class="np-bar-fill ${entity.barClass}" style="width: ${(entity.hp / entity.maxHp) * 100}%"></div>
+      <div class="np-bar-fill" style="width: ${(entity.hp / entity.maxHp) * 100}%"></div>
     </div>
   `;
   el.addEventListener('pointerdown', (e) => {
@@ -595,500 +676,360 @@ function createNameplateDOM(entity) {
   entity.npFillEl = el.querySelector('.np-bar-fill');
 }
 
-const stonePillarMat = new THREE.MeshStandardMaterial({ color: 0x828994, roughness: 0.75, flatShading: true });
-const runeGlowMat = new THREE.MeshStandardMaterial({
-  color: 0x38bdf8,
-  emissive: 0x0ea5e9,
-  emissiveIntensity: 1.8,
-});
-const sanctifiedGlowMat = new THREE.MeshStandardMaterial({
-  color: 0xfacc15,
-  emissive: 0xf59e0b,
-  emissiveIntensity: 2.8,
-});
-
-// Central Sanctuary Spawn Altar at (0, 0)
-(function buildSanctuaryCenterAltar() {
-  const y = getTerrainHeight(0, 0);
-  const altarGroup = new THREE.Group();
-  altarGroup.position.set(0, y, 0);
-
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 4.8, 0.55, 16), stonePillarMat);
-  base.position.y = 0.27;
-  base.receiveShadow = true;
-  altarGroup.add(base);
-
-  const step2 = new THREE.Mesh(new THREE.CylinderGeometry(2.8, 3.3, 0.45, 16), stonePillarMat);
-  step2.position.y = 0.75;
-  step2.receiveShadow = true;
-  altarGroup.add(step2);
-
-  // Floating Golden Dharma Crystal in Center
-  const crystal = new THREE.Mesh(
-    new THREE.OctahedronGeometry(0.95, 0),
-    new THREE.MeshStandardMaterial({ color: 0xfde047, emissive: 0xf59e0b, emissiveIntensity: 2.2, roughness: 0.2 })
-  );
-  crystal.position.y = 2.6;
-  altarGroup.add(crystal);
-
-  // 4 Carved Sanctuary Arch Pillars around Plaza
-  for (let i = 0; i < 4; i++) {
-    const a = (i * Math.PI) / 2 + Math.PI / 4;
-    const px = Math.cos(a) * 8.5;
-    const pz = Math.sin(a) * 8.5;
-    const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.58, 5.2, 8), stonePillarMat);
-    pillar.position.set(px, 2.6, pz);
-    pillar.castShadow = true;
-    altarGroup.add(pillar);
-
-    const brazier = new THREE.Mesh(new THREE.SphereGeometry(0.42, 10, 10), sanctifiedGlowMat);
-    brazier.position.set(px, 5.4, pz);
-    altarGroup.add(brazier);
-  }
-
-  scene.add(altarGroup);
-  window._sanctuaryCrystal = crystal;
-})();
-
-// 3 Ancient Guardstone Obelisks to Sanctify with Annadana [3]
-const OBELISK_LOCATIONS = [
-  { name: 'Northern Guardstone Obelisk', x: 3, z: -26, level: 5 },
-  { name: 'Eastern Sun Obelisk', x: 28, z: 4, level: 8 },
-  { name: 'Riverbank Guardstone Shrine', x: -24, z: -12, level: 10 },
-];
-
-OBELISK_LOCATIONS.forEach((loc, idx) => {
-  const y = getTerrainHeight(loc.x, loc.z);
-  const group = new THREE.Group();
-  group.position.set(loc.x, y, loc.z);
-
-  const ped = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 2.3, 1.1, 8), stonePillarMat);
-  ped.position.y = 0.55;
-  ped.castShadow = true;
-  group.add(ped);
-
-  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.68, 1.1, 6.2, 6), stonePillarMat);
-  shaft.position.y = 4.1;
-  shaft.castShadow = true;
-  group.add(shaft);
-
-  const cap = new THREE.Mesh(new THREE.ConeGeometry(0.95, 1.6, 6), stonePillarMat);
-  cap.position.y = 7.9;
-  group.add(cap);
-
-  const runeRing = new THREE.Mesh(new THREE.TorusGeometry(1.25, 0.1, 8, 24), runeGlowMat.clone());
-  runeRing.rotation.x = Math.PI / 2;
-  runeRing.position.y = 4.2;
-  group.add(runeRing);
-
-  scene.add(group);
-
-  const entity = {
-    id: `obelisk-${idx}`,
-    kind: 'obelisk',
-    icon: '🔥',
-    name: loc.name,
-    level: loc.level,
-    hp: 35,
-    maxHp: 100,
-    completed: false,
-    barClass: 'friendly',
-    statusText: '🕯️ Dormant Shrine (Use Annadana [3])',
-    typeDesc: 'Ancient Guardstone • Sanctify with Annadana [3]',
-    mesh: group,
-    runeRing,
-    heightOffset: 8.8,
-  };
-  createNameplateDOM(entity);
-  interactables.push(entity);
-});
-
-// 3 Sacred Lotus Groves to Bloom with Ganga Jal Nova [2]
-const GROVE_LOCATIONS = [
-  { name: 'Sacred Padma Grove', x: -15, z: 12, level: 3 },
-  { name: 'Saraswati Riverbank Grove', x: -28, z: 6, level: 6 },
-  { name: 'Golden Kadamba Grove', x: 18, z: 19, level: 7 },
-];
-
-GROVE_LOCATIONS.forEach((loc, idx) => {
-  const y = getTerrainHeight(loc.x, loc.z);
-  const group = new THREE.Group();
-  group.position.set(loc.x, y, loc.z);
-
-  const rim = new THREE.Mesh(new THREE.TorusGeometry(2.4, 0.32, 8, 20), stonePillarMat);
-  rim.rotation.x = Math.PI / 2;
-  rim.position.y = 0.25;
-  group.add(rim);
-
-  const pool = new THREE.Mesh(
-    new THREE.CylinderGeometry(2.3, 2.3, 0.2, 20),
-    new THREE.MeshStandardMaterial({ color: 0x1d9bf0, roughness: 0.2, metalness: 0.1 })
-  );
-  pool.position.y = 0.15;
-  group.add(pool);
-
-  // Lotus petals (scale up when bloomed!)
-  const lotusGroup = new THREE.Group();
-  lotusGroup.position.y = 0.45;
-  lotusGroup.scale.setScalar(0.45);
-  const petalMat = new THREE.MeshStandardMaterial({
-    color: 0xf472b6,
-    emissive: 0xdb2777,
-    emissiveIntensity: 0.4,
-    roughness: 0.4,
-  });
-  for (let p = 0; p < 8; p++) {
-    const a = (p * Math.PI * 2) / 8;
-    const petal = new THREE.Mesh(new THREE.ConeGeometry(0.45, 1.3, 5), petalMat);
-    petal.position.set(Math.cos(a) * 0.65, 0.35, Math.sin(a) * 0.65);
-    petal.rotation.z = -Math.cos(a) * 0.55;
-    petal.rotation.x = Math.sin(a) * 0.55;
-    lotusGroup.add(petal);
-  }
-  group.add(lotusGroup);
-  scene.add(group);
-
-  const entity = {
-    id: `grove-${idx}`,
-    kind: 'grove',
-    icon: '🪷',
-    name: loc.name,
-    level: loc.level,
-    hp: 30,
-    maxHp: 100,
-    completed: false,
-    barClass: '',
-    statusText: '🌱 Thirsty Flora (Use Ganga Nova [2])',
-    typeDesc: 'Sacred Flora • Cultivate with Ganga Nova [2]',
-    mesh: group,
-    lotusGroup,
-    heightOffset: 3.2,
-  };
-  createNameplateDOM(entity);
-  interactables.push(entity);
-});
-
-// ============================================================================
-// 5. REAL RIGGED & ANIMATED 3D GLTF CHARACTERS & WILDLIFE (NO BOXES!)
-// ============================================================================
 const gltfLoader = new GLTFLoader();
 const mixers = [];
+const modelCache = {};
 
-// Player Group & Procedural Fallback Mesh while GLB loads
+const WILDLIFE_MODELS = [
+  {
+    url: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Fox/glTF-Binary/Fox.glb',
+    scale: 0.024,
+    icon: '🦊',
+    species: 'Forest Fox',
+  },
+  {
+    url: 'https://threejs.org/examples/models/gltf/Horse.glb',
+    scale: 0.015,
+    icon: '🐎',
+    species: 'Ashva Stallion',
+  },
+  {
+    url: 'https://threejs.org/examples/models/gltf/Stork.glb',
+    scale: 0.018,
+    icon: '🦢',
+    species: 'Himalayan Saras Crane',
+    flyHeight: 2.8,
+  },
+  {
+    url: 'https://threejs.org/examples/models/gltf/Flamingo.glb',
+    scale: 0.018,
+    icon: '🦩',
+    species: 'Sun-Winged Hamsa',
+    flyHeight: 3.0,
+  },
+];
+
+// Build Sanctuary Altars, Trees, and 4 Suffering Sites per Continent (7 * 4 = 28 Total Sites)
+CONTINENTS.forEach((cont) => {
+  const cy = getTerrainHeight(cont.x, cont.z);
+
+  // Central Continent Beacon & Altar
+  const altar = new THREE.Group();
+  altar.position.set(cont.x, cy, cont.z);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(4.5, 5.2, 0.8, 12), stoneMat);
+  base.position.y = 0.4;
+  altar.add(base);
+
+  // Towering Sky Beacon Pillar so players flying high in the sky can spot all 7 Continents!
+  const skyBeaconGeo = new THREE.CylinderGeometry(0.6, 0.6, 160, 12, 1, true);
+  const skyBeaconMat = new THREE.MeshBasicMaterial({
+    color: cont.id === 0 ? 0xfacc15 : 0xa855f7,
+    transparent: true,
+    opacity: 0.26,
+    side: THREE.DoubleSide,
+  });
+  const skyBeacon = new THREE.Mesh(skyBeaconGeo, skyBeaconMat);
+  skyBeacon.position.y = 80;
+  altar.add(skyBeacon);
+  cont.skyBeaconMat = skyBeaconMat;
+
+  // 4 Sanctuary Pillars around Altar
+  for (let p = 0; p < 4; p++) {
+    const a = (p * Math.PI) / 2 + Math.PI / 4;
+    const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.55, 5.0, 8), stoneMat);
+    pillar.position.set(Math.cos(a) * 8.2, 2.5, Math.sin(a) * 8.2);
+    pillar.castShadow = true;
+    altar.add(pillar);
+  }
+  scene.add(altar);
+
+  // Spawn 28 Withered Trees per Continent
+  for (let t = 0; t < 28; t++) {
+    const angle = (t / 28) * Math.PI * 2 + hash2D(cont.id, t) * 0.4;
+    const rad = 22 + hash2D(t, cont.id * 7) * 95;
+    spawnTree(cont.x + Math.cos(angle) * rad, cont.z + Math.sin(angle) * rad, cont.id);
+  }
+
+  // Spawn 4 Major Suffering Sites on this Continent (2 Wildlife, 1 Blighted Lotus Grove, 1 Corrupted Obelisk)
+  const siteOffsets = [
+    { dx: -11, dz: -8, type: 'wildlife', wIdx: (cont.id * 2) % WILDLIFE_MODELS.length },
+    { dx: 14, dz: -6, type: 'wildlife', wIdx: (cont.id * 2 + 1) % WILDLIFE_MODELS.length },
+    { dx: -15, dz: 14, type: 'grove' },
+    { dx: 12, dz: 16, type: 'obelisk' },
+  ];
+
+  siteOffsets.forEach((sCfg, sIdx) => {
+    const sx = cont.x + sCfg.dx * (cont.id === 0 ? 1.0 : 1.45);
+    const sz = cont.z + sCfg.dz * (cont.id === 0 ? 1.0 : 1.45);
+    const sy = getTerrainHeight(sx, sz);
+
+    const group = new THREE.Group();
+    group.position.set(sx, sy, sz);
+
+    // Dark Purple Blight Ring on the ground under every suffering site
+    const blightRing = new THREE.Mesh(
+      new THREE.RingGeometry(1.4, 1.85, 24).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({ color: 0x9333ea, side: THREE.DoubleSide, transparent: true, opacity: 0.75 })
+    );
+    blightRing.position.y = 0.12;
+    group.add(blightRing);
+
+    let icon = '🦊';
+    let name = '';
+    let heightOffset = 2.6;
+
+    if (sCfg.type === 'wildlife') {
+      const wDef = WILDLIFE_MODELS[sCfg.wIdx];
+      icon = wDef.icon;
+      name = `Suffering ${wDef.species}`;
+      heightOffset = (wDef.flyHeight || 0) + 2.4;
+
+      gltfLoader.load(wDef.url, (gltf) => {
+        const model = gltf.scene;
+        model.scale.setScalar(wDef.scale);
+        model.position.y = wDef.flyHeight || 0;
+        model.traverse((c) => {
+          if (c.isMesh) {
+            c.castShadow = true;
+            c.receiveShadow = true;
+          }
+        });
+        group.add(model);
+        if (gltf.animations && gltf.animations.length > 0) {
+          const m = new THREE.AnimationMixer(model);
+          const clip = gltf.animations.length > 1 ? gltf.animations[1] : gltf.animations[0];
+          m.clipAction(clip).play();
+          mixers.push(m);
+        }
+      });
+    } else if (sCfg.type === 'grove') {
+      icon = '🪷';
+      name = `Withered Lotus Grove`;
+      heightOffset = 3.2;
+
+      const basin = new THREE.Mesh(new THREE.TorusGeometry(2.3, 0.3, 8, 20).rotateX(Math.PI / 2), stoneMat);
+      basin.position.y = 0.25;
+      group.add(basin);
+
+      const lotus = new THREE.Group();
+      lotus.position.y = 0.45;
+      lotus.scale.setScalar(0.45);
+      const petalMat = new THREE.MeshStandardMaterial({ color: 0xec4899, emissive: 0xbe185d, emissiveIntensity: 0.5 });
+      for (let p = 0; p < 8; p++) {
+        const a = (p * Math.PI * 2) / 8;
+        const petal = new THREE.Mesh(new THREE.ConeGeometry(0.45, 1.3, 5), petalMat);
+        petal.position.set(Math.cos(a) * 0.65, 0.35, Math.sin(a) * 0.65);
+        petal.rotation.z = -Math.cos(a) * 0.55;
+        petal.rotation.x = Math.sin(a) * 0.55;
+        lotus.add(petal);
+      }
+      group.add(lotus);
+      group._lotus = lotus;
+    } else {
+      icon = '🔥';
+      name = `Blighted Guardstone Shrine`;
+      heightOffset = 7.8;
+
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 1.15, 5.8, 6), stoneMat);
+      shaft.position.y = 2.9;
+      shaft.castShadow = true;
+      group.add(shaft);
+
+      const cap = new THREE.Mesh(new THREE.ConeGeometry(0.95, 1.5, 6), stoneMat);
+      cap.position.y = 6.5;
+      group.add(cap);
+    }
+
+    scene.add(group);
+
+    const maxHp = cont.maxHpBase;
+    const entity = {
+      id: `site-${cont.id}-${sIdx}`,
+      continent: cont,
+      tier: cont.tier,
+      kind: sCfg.type,
+      icon,
+      name,
+      hp: Math.round(maxHp * 0.12),
+      maxHp,
+      rejuvenated: false,
+      mesh: group,
+      blightRing,
+      homeX: sx,
+      homeZ: sz,
+      wanderAngle: sIdx * 1.7 + cont.id,
+      heightOffset,
+    };
+
+    createNameplateDOM(entity);
+    interactables.push(entity);
+  });
+});
+
+// ============================================================================
+// 4. PLAYER HERO, GOLDEN GARUDA WINGS & SUDARSHANA CHAKRA HALO
+// ============================================================================
 const playerGroup = new THREE.Group();
-const startY = getTerrainHeight(0, 8);
-playerGroup.position.set(0, startY, 8);
+playerGroup.position.set(0, getTerrainHeight(0, 9), 9);
 scene.add(playerGroup);
 
-// Ornate 3D Lotus Staff + Floating Halo attached to Player
+// Ornate Lotus Staff in right hand
 const staffGroup = new THREE.Group();
-const shaftMesh = new THREE.Mesh(
-  new THREE.CylinderGeometry(0.045, 0.06, 2.3, 8),
-  new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.6, roughness: 0.3 })
+const staffPole = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.05, 0.065, 2.4, 8),
+  new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.7, roughness: 0.25 })
 );
-shaftMesh.position.y = 1.15;
-staffGroup.add(shaftMesh);
-
-const staffGem = new THREE.Mesh(
-  new THREE.OctahedronGeometry(0.22, 0),
-  new THREE.MeshStandardMaterial({ color: 0x34d399, emissive: 0x10b981, emissiveIntensity: 2.5 })
+staffPole.position.y = 1.2;
+staffGroup.add(staffPole);
+const staffHead = new THREE.Mesh(
+  new THREE.OctahedronGeometry(0.26, 0),
+  new THREE.MeshStandardMaterial({ color: 0x34d399, emissive: 0x10b981, emissiveIntensity: 2.8 })
 );
-staffGem.position.y = 2.4;
-staffGroup.add(staffGem);
-staffGroup.position.set(0.48, 0.1, 0.25);
+staffHead.position.y = 2.5;
+staffGroup.add(staffHead);
+staffGroup.position.set(0.5, 0.1, 0.25);
 playerGroup.add(staffGroup);
 
-const playerHalo = new THREE.Mesh(
-  new THREE.TorusGeometry(0.45, 0.035, 8, 24),
-  new THREE.MeshStandardMaterial({ color: 0xfef08a, emissive: 0xf59e0b, emissiveIntensity: 2.0 })
+// Golden Garuda Sky-Wings (Visible when Garuda Flight [F] is toggled ON!)
+const garudaWingsGroup = new THREE.Group();
+garudaWingsGroup.position.set(0, 1.45, -0.25);
+const wingMat = new THREE.MeshStandardMaterial({
+  color: 0xfde047,
+  emissive: 0xd97706,
+  emissiveIntensity: 1.4,
+  side: THREE.DoubleSide,
+});
+const leftWing = new THREE.Group();
+const rightWing = new THREE.Group();
+for (let f = 0; f < 5; f++) {
+  const featherGeo = new THREE.ConeGeometry(0.22, 2.2 - f * 0.25, 4);
+  featherGeo.rotateZ(Math.PI / 2);
+  const fl = new THREE.Mesh(featherGeo, wingMat);
+  fl.position.set(-0.9 - f * 0.28, f * 0.16, 0);
+  fl.rotation.z = -0.18 * f;
+  leftWing.add(fl);
+
+  const fr = new THREE.Mesh(featherGeo.clone(), wingMat);
+  fr.scale.x = -1;
+  fr.position.set(0.9 + f * 0.28, f * 0.16, 0);
+  fr.rotation.z = 0.18 * f;
+  rightWing.add(fr);
+}
+garudaWingsGroup.add(leftWing, rightWing);
+garudaWingsGroup.visible = STATE.flyingActive;
+playerGroup.add(garudaWingsGroup);
+
+// Sudarshana Dharma Chakra Halo (orbiting above head)
+const chakraHalo = new THREE.Mesh(
+  new THREE.TorusGeometry(0.55, 0.045, 8, 24),
+  new THREE.MeshStandardMaterial({ color: 0xfef08a, emissive: 0xf59e0b, emissiveIntensity: 2.5 })
 );
-playerHalo.rotation.x = Math.PI / 2;
-playerHalo.position.y = 2.35;
-playerGroup.add(playerHalo);
+chakraHalo.rotation.x = Math.PI / 2;
+chakraHalo.position.y = 2.45;
+playerGroup.add(chakraHalo);
 
 let playerMixer = null;
 let playerActions = {};
 let activePlayerAction = null;
 
-// Load Player Character (`Soldier.glb` + Party Companions)
-gltfLoader.load(
-  'https://threejs.org/examples/models/gltf/Soldier.glb',
-  (gltf) => {
-    const model = gltf.scene;
-    model.scale.setScalar(1.35);
-    model.traverse((c) => {
-      if (c.isMesh) {
-        c.castShadow = true;
-        c.receiveShadow = true;
-      }
-    });
-    playerGroup.add(model);
-
-    playerMixer = new THREE.AnimationMixer(model);
-    mixers.push(playerMixer);
-    gltf.animations.forEach((clip) => {
-      playerActions[clip.name] = playerMixer.clipAction(clip);
-    });
-    if (playerActions['Idle']) {
-      activePlayerAction = playerActions['Idle'];
-      activePlayerAction.play();
+gltfLoader.load('https://threejs.org/examples/models/gltf/Soldier.glb', (gltf) => {
+  const model = gltf.scene;
+  model.scale.setScalar(1.35);
+  model.traverse((c) => {
+    if (c.isMesh) {
+      c.castShadow = true;
+      c.receiveShadow = true;
     }
+  });
+  playerGroup.add(model);
 
-    // Also spawn 3 AI Party Guardians patrolling around the Sanctuary using cloned rigged skeletons
-    const PARTY_COMPANIONS = [
-      { name: 'Arjuna_Palak', level: 12, x: -6, z: 4, role: '🛡️ Guardian Paladin' },
-      { name: 'Rishi_Kashi', level: 15, x: 7, z: 3, role: '💧 River Sage' },
-      { name: 'Tara_Vana', level: 10, x: 4, z: 12, role: '🏹 Ranger of Ahimsa' },
-    ];
-
-    PARTY_COMPANIONS.forEach((comp, idx) => {
-      const clone = SkeletonUtils.clone(gltf.scene);
-      clone.scale.setScalar(1.28);
-      const cy = getTerrainHeight(comp.x, comp.z);
-      const cGroup = new THREE.Group();
-      cGroup.position.set(comp.x, cy, comp.z);
-      cGroup.add(clone);
-      scene.add(cGroup);
-
-      const cmixer = new THREE.AnimationMixer(clone);
-      mixers.push(cmixer);
-      const walkClip = gltf.animations.find((a) => a.name === 'Walk') || gltf.animations[0];
-      if (walkClip) cmixer.clipAction(walkClip).play();
-
-      const entity = {
-        id: `party-${idx + 1}`,
-        kind: 'companion',
-        icon: '🛡️',
-        name: comp.name,
-        level: comp.level,
-        hp: 90,
-        maxHp: 100,
-        completed: false,
-        barClass: 'friendly',
-        statusText: `${comp.role} • Sanctuary Ally`,
-        typeDesc: 'Party Companion • Bless with Annadana [3]',
-        mesh: cGroup,
-        homeX: comp.x,
-        homeZ: comp.z,
-        patrolAngle: idx * 2.1,
-        heightOffset: 2.6,
-      };
-      createNameplateDOM(entity);
-      interactables.push(entity);
-    });
+  playerMixer = new THREE.AnimationMixer(model);
+  mixers.push(playerMixer);
+  gltf.animations.forEach((clip) => {
+    playerActions[clip.name] = playerMixer.clipAction(clip);
+  });
+  if (playerActions['Idle']) {
+    activePlayerAction = playerActions['Idle'];
+    activePlayerAction.play();
   }
-);
+
+  // Spawn Vishwakarma Forge Master NPC & 2 Party Guardians near Jambudvipa Sanctuary
+  const NPCS = [
+    { name: 'Rishi Vishwakarma [K]', x: -5.5, z: 3.5 },
+    { name: 'Arjuna_Palak', x: 6.0, z: 4.0 },
+  ];
+  NPCS.forEach((n) => {
+    const clone = SkeletonUtils.clone(gltf.scene);
+    clone.scale.setScalar(1.3);
+    const ny = getTerrainHeight(n.x, n.z);
+    const ng = new THREE.Group();
+    ng.position.set(n.x, ny, n.z);
+    ng.add(clone);
+    scene.add(ng);
+    const cm = new THREE.AnimationMixer(clone);
+    mixers.push(cm);
+    if (gltf.animations[0]) cm.clipAction(gltf.animations[0]).play();
+  });
+});
 
 function setPlayerAnim(name) {
   if (!playerActions[name] || activePlayerAction === playerActions[name]) return;
   const next = playerActions[name];
-  next.reset().fadeIn(0.2).play();
-  if (activePlayerAction) activePlayerAction.fadeOut(0.2);
+  next.reset().fadeIn(0.18).play();
+  if (activePlayerAction) activePlayerAction.fadeOut(0.18);
   activePlayerAction = next;
 }
 
-// Spawn Real Rigged Wildlife (Fox.glb, Horse.glb, Stork.glb, Flamingo.glb)
-const WILDLIFE_SPAWNS = [
-  {
-    name: 'Wounded Forest Fox',
-    icon: '🦊',
-    level: 2,
-    hp: 35,
-    x: -7,
-    z: -4,
-    scale: 0.022,
-    url: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Fox/glTF-Binary/Fox.glb',
-    speed: 1.6,
-  },
-  {
-    name: 'Distressed Golden Fox',
-    icon: '🦊',
-    level: 4,
-    hp: 40,
-    x: 11,
-    z: -7,
-    scale: 0.024,
-    url: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Fox/glTF-Binary/Fox.glb',
-    speed: 1.8,
-  },
-  {
-    name: 'Weary Ashva Stallion',
-    icon: '🐎',
-    level: 6,
-    hp: 45,
-    x: 14,
-    z: 9,
-    scale: 0.015,
-    url: 'https://threejs.org/examples/models/gltf/Horse.glb',
-    speed: 2.2,
-  },
-  {
-    name: 'Thirsty Meadow Stallion',
-    icon: '🐎',
-    level: 8,
-    hp: 50,
-    x: -13,
-    z: -11,
-    scale: 0.015,
-    url: 'https://threejs.org/examples/models/gltf/Horse.glb',
-    speed: 2.1,
-  },
-  {
-    name: 'Sacred Himalayan Saras (Crane)',
-    icon: '🦢',
-    level: 5,
-    hp: 40,
-    x: -20,
-    z: 2,
-    scale: 0.018,
-    url: 'https://threejs.org/examples/models/gltf/Stork.glb',
-    speed: 2.0,
-    flyHeight: 2.6,
-  },
-  {
-    name: 'Sun-Winged Hamsa Bird',
-    icon: '🦩',
-    level: 7,
-    hp: 55,
-    x: 6,
-    z: -19,
-    scale: 0.018,
-    url: 'https://threejs.org/examples/models/gltf/Flamingo.glb',
-    speed: 2.2,
-    flyHeight: 3.0,
-  },
-];
-
-WILDLIFE_SPAWNS.forEach((cfg, idx) => {
-  const y = getTerrainHeight(cfg.x, cfg.z) + (cfg.flyHeight || 0);
-  const wGroup = new THREE.Group();
-  wGroup.position.set(cfg.x, y, cfg.z);
-
-  // Subtle golden/red distress aura ring on the ground under each creature
-  const ringGeo = new THREE.RingGeometry(0.85, 1.1, 24);
-  ringGeo.rotateX(-Math.PI / 2);
-  const ringMat = new THREE.MeshBasicMaterial({
-    color: 0xf59e0b,
-    side: THREE.DoubleSide,
-    transparent: true,
-    opacity: 0.65,
-  });
-  const auraRing = new THREE.Mesh(ringGeo, ringMat);
-  auraRing.position.y = 0.08;
-  wGroup.add(auraRing);
-
-  scene.add(wGroup);
-
-  const entity = {
-    id: `wildlife-${idx}`,
-    kind: 'wildlife',
-    icon: cfg.icon,
-    name: cfg.name,
-    level: cfg.level,
-    hp: cfg.hp,
-    maxHp: 100,
-    completed: false,
-    barClass: 'wounded',
-    statusText: '⚡ Distressed (Heal with Sanjeevani [1])',
-    typeDesc: 'Forest Wildlife • Heal with Sanjeevani [1]',
-    mesh: wGroup,
-    auraRing,
-    homeX: cfg.x,
-    homeZ: cfg.z,
-    wanderAngle: idx * 1.3,
-    speed: cfg.speed,
-    flyHeight: cfg.flyHeight || 0,
-    heightOffset: cfg.flyHeight ? 2.2 : 2.3,
-  };
-
-  createNameplateDOM(entity);
-  interactables.push(entity);
-
-  gltfLoader.load(cfg.url, (gltf) => {
-    const model = gltf.scene;
-    model.scale.setScalar(cfg.scale);
-    model.traverse((c) => {
-      if (c.isMesh) {
-        c.castShadow = true;
-        c.receiveShadow = true;
-      }
-    });
-    wGroup.add(model);
-
-    if (gltf.animations && gltf.animations.length > 0) {
-      const m = new THREE.AnimationMixer(model);
-      // Choose Walk/Run clip if multiple clips exist (Fox has Survey, Walk, Run)
-      const clip = gltf.animations.length > 1 ? gltf.animations[1] : gltf.animations[0];
-      const action = m.clipAction(clip);
-      action.timeScale = 0.85;
-      action.play();
-      mixers.push(m);
-    }
-  });
-});
-
-// Auto-select the nearest Wounded Forest Fox on launch so Target Frame & Range are immediately visible
-setTimeout(() => {
-  if (!STATE.selectedTarget && interactables.length > 0) {
-    const firstFox = interactables.find((e) => e.kind === 'wildlife') || interactables[0];
-    selectTarget(firstFox);
-  }
-}, 400);
-
 // ============================================================================
-// 6. TARGET SELECTION RING, 3D SPELL PROJECTILES & AOE VFX
+// 5. TARGETING, REJUVENATION ENGINE, KARMA POINTS & CONTINENT PROGRESSION
 // ============================================================================
-const targetRingGroup = new THREE.Group();
-const trOuter = new THREE.Mesh(
-  new THREE.RingGeometry(1.35, 1.62, 32),
-  new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide, transparent: true, opacity: 0.9 })
+const targetRing = new THREE.Mesh(
+  new THREE.RingGeometry(1.45, 1.78, 32).rotateX(-Math.PI / 2),
+  new THREE.MeshBasicMaterial({ color: 0xfacc15, side: THREE.DoubleSide, transparent: true, opacity: 0.92 })
 );
-trOuter.rotation.x = -Math.PI / 2;
-targetRingGroup.add(trOuter);
-targetRingGroup.visible = false;
-scene.add(targetRingGroup);
+targetRing.visible = false;
+scene.add(targetRing);
 
-const activeProjectiles = []; // Homing 3D spell orbs
-const activeShockwaves = [];  // Expanding 3D water/golden rings
+const activeProjectiles = [];
+const activeShockwaves = [];
 
 function selectTarget(entity) {
   STATE.selectedTarget = entity;
   document.querySelectorAll('.nameplate').forEach((el) => el.classList.remove('selected'));
-  const tf = document.getElementById('hordes-target-frame');
   if (!entity) {
-    tf.classList.add('target-hidden');
-    targetRingGroup.visible = false;
+    targetRing.visible = false;
     return;
   }
   if (entity.nameplateEl) entity.nameplateEl.classList.add('selected');
-  tf.classList.remove('target-hidden');
-  targetRingGroup.visible = true;
+  targetRing.visible = true;
   updateTargetFrameUI();
 }
 
 function updateTargetFrameUI() {
   const t = STATE.selectedTarget;
   if (!t) return;
-  document.getElementById('target-icon').textContent = t.icon;
-  document.getElementById('target-name').textContent = t.name;
-  document.getElementById('target-lvl').textContent = `Lv. ${t.level}`;
-  document.getElementById('target-type').textContent = t.typeDesc;
-  document.getElementById('target-hp-fill').style.width = `${(t.hp / t.maxHp) * 100}%`;
-  document.getElementById('target-hp-val').textContent = Math.round(t.hp);
-  document.getElementById('target-status-pill').textContent = t.statusText;
+  document.getElementById('wow-target-icon').textContent = t.icon;
+  document.getElementById('wow-target-name').textContent = t.name;
+  document.getElementById('wow-target-lvl').textContent = t.tier;
+  document.getElementById('wow-target-diff').textContent = `Tier ${t.continent.roman}`;
 
-  const dist = Math.hypot(
-    t.mesh.position.x - playerGroup.position.x,
-    t.mesh.position.z - playerGroup.position.z
-  );
-  const rangeEl = document.getElementById('target-range');
-  rangeEl.textContent = `Range: ${dist.toFixed(1)}m (${dist <= 38 ? 'In Range' : 'Move Closer'})`;
-  rangeEl.style.color = dist <= 38 ? '#4ade80' : '#f87171';
+  const nameBg = document.getElementById('wow-target-name-bg');
+  if (t.rejuvenated) nameBg.classList.add('rejuvenated');
+  else nameBg.classList.remove('rejuvenated');
+
+  const hpPct = Math.min(100, Math.round((t.hp / t.maxHp) * 100));
+  const blightPct = Math.max(0, 100 - hpPct);
+  document.getElementById('wow-target-hp-bar').style.width = `${hpPct}%`;
+  document.getElementById('wow-target-hp-txt').textContent = `${Math.round(t.hp)} / ${t.maxHp} Rejuvenation`;
+  document.getElementById('wow-target-blight-bar').style.width = `${blightPct}%`;
+  document.getElementById('wow-target-status-txt').textContent = t.rejuvenated
+    ? '🌟 Rejuvenated & Blossoming!'
+    : `🌑 ${blightPct}% Suffering — Cast [1] [2] [3] [R]`;
 }
 
-function spawnFloatingCombatText(worldPos, text, color = '#4ade80') {
+function spawnFloatingText(worldPos, text, color = '#4ade80') {
   const v = worldPos.clone();
-  v.y += 2.4;
+  v.y += 2.6;
   v.project(camera);
   if (v.z > 1) return;
   const x = (v.x * 0.5 + 0.5) * window.innerWidth;
@@ -1104,18 +1045,17 @@ function spawnFloatingCombatText(worldPos, text, color = '#4ade80') {
   setTimeout(() => el.remove(), 1350);
 }
 
-function addChatLog(category, badge, htmlText) {
+function addChatMessage(colorClass, textHtml) {
   const box = document.getElementById('chat-messages');
   const div = document.createElement('div');
-  div.className = `chat-line ${category}`;
-  div.innerHTML = `<span class="time">[${badge}]</span> ${htmlText}`;
+  div.className = `chat-line ${colorClass}`;
+  div.innerHTML = textHtml;
   box.appendChild(div);
   box.scrollTop = box.scrollHeight;
 }
 
-function spawnShockwave(pos, colorHex, maxRadius = 9.0, duration = 0.85) {
-  const geo = new THREE.RingGeometry(0.4, 0.95, 36);
-  geo.rotateX(-Math.PI / 2);
+function spawnShockwave(pos, colorHex, maxRadius = 12.0, duration = 0.85) {
+  const geo = new THREE.RingGeometry(0.5, 1.2, 36).rotateX(-Math.PI / 2);
   const mat = new THREE.MeshBasicMaterial({
     color: colorHex,
     side: THREE.DoubleSide,
@@ -1124,362 +1064,468 @@ function spawnShockwave(pos, colorHex, maxRadius = 9.0, duration = 0.85) {
   });
   const mesh = new THREE.Mesh(geo, mat);
   mesh.position.copy(pos);
-  mesh.position.y = getTerrainHeight(pos.x, pos.z) + 0.25;
+  mesh.position.y = Math.max(-1.0, getTerrainHeight(pos.x, pos.z)) + 0.35;
   scene.add(mesh);
   activeShockwaves.push({ mesh, elapsed: 0, duration, maxRadius });
 }
 
-// ============================================================================
-// 7. VIRTUOUS SPELL ENGINE & SURPRISE MYTHIC BOON UNLOCKS
-// ============================================================================
-function grantRewards(punyaGain, goldGain, fameGain) {
-  STATE.punya += punyaGain;
-  STATE.gold += goldGain;
-  STATE.fame += fameGain;
-
-  while (STATE.punya >= STATE.punyaMax) {
-    STATE.punya -= STATE.punyaMax;
-    STATE.level += 1;
-    STATE.punyaMax = Math.round(STATE.punyaMax * 1.25);
-    spawnShockwave(playerGroup.position, 0xfacc15, 7.5, 1.0);
-    spawnFloatingCombatText(playerGroup.position, `LEVEL UP! Lv.${STATE.level}`, '#fde047');
-    addChatLog('deed', 'Ascension', `🌟 You ascended to <strong>Sage Level ${STATE.level}</strong>! Maximum Prana & Healing potency increased.`);
+function earnKarma(baseAmount, reasonText) {
+  const gain = Math.round(baseAmount * getKarmaMultiplier());
+  STATE.karma += gain;
+  STATE.lifetimeKarma += gain;
+  updateAllHUD();
+  if (reasonText) {
+    addChatMessage('gold', `[Karma] ☸️ <strong>+${gain} Karma Points</strong> earned (${reasonText})!`);
   }
-
-  // Unlock Akash Blink [T] at 750+ total Punya / Level 2
-  if (!STATE.boons.akashBlink && STATE.level >= 2) {
-    unlockBoon(
-      'akashBlink',
-      'slot-6',
-      '✨',
-      'Akashic Siddhi (Spatial Blink)',
-      'Your virtuous karma resonated with Lord Shiva of Kailash! Press [T] or click Slot 6 to blink 28m forward across rivers and cliffs.'
-    );
-    DEITIES_DATA[5].unlocked = true;
-  }
-
-  // Unlock Garuda Flight [F] at Level 3
-  if (!STATE.boons.garudaFly && STATE.level >= 3) {
-    unlockBoon(
-      'garudaFly',
-      'slot-7',
-      '🦅',
-      'Garuda Vahana (Sky Soar)',
-      'Lord Vishnu bestows the golden wings of Garuda! Press [F] or click Slot 7 to toggle boundless flight over the Himalayan peaks.'
-    );
-    DEITIES_DATA[6].unlocked = true;
-  }
-
-  updateTopAndBottomHUD();
+  return gain;
 }
 
-function unlockBoon(boonKey, slotId, icon, title, desc) {
-  if (STATE.boons[boonKey]) return;
-  STATE.boons[boonKey] = true;
-  const slotEl = document.getElementById(slotId);
-  if (slotEl) slotEl.classList.remove('locked');
-
-  document.getElementById('gift-icon').textContent = icon;
-  document.getElementById('gift-title').textContent = title;
-  document.getElementById('gift-desc').textContent = desc;
-  document.getElementById('gift-modal').classList.remove('modal-backdrop-hidden');
-
-  addChatLog('deed', 'Mythic Boon', `🪷 Awakened <strong>${title}</strong>! (${desc})`);
+// Rejuvenate nearby withered trees & ground shader whenever a site is healed!
+function rejuvenateEnvironmentAround(x, z, radius = 62.0) {
+  addRejuvenationZone(x, z, radius);
+  continentTrees.forEach((tr) => {
+    if (!tr.rejuvenated && Math.hypot(tr.x - x, tr.z - z) <= radius) {
+      tr.rejuvenated = true;
+      tr.crown.material = hash2D(tr.x, tr.z) > 0.75 ? goldenCrownMat : lushCrownMat;
+      tr.crown.scale.setScalar(1.18);
+    }
+  });
 }
 
-function updateQuestTrackerUI() {
-  const wPct = Math.min(100, (STATE.wildlifeHealed / STATE.wildlifeGoal) * 100);
-  document.getElementById('q-wildlife-bar').style.width = `${wPct}%`;
-  document.getElementById('q-wildlife-cnt').textContent = `${STATE.wildlifeHealed}/${STATE.wildlifeGoal}`;
-
-  const fPct = Math.min(100, (STATE.grovesBloomed / STATE.grovesGoal) * 100);
-  document.getElementById('q-flora-bar').style.width = `${fPct}%`;
-  document.getElementById('q-flora-cnt').textContent = `${STATE.grovesBloomed}/${STATE.grovesGoal}`;
-
-  const oPct = Math.min(100, (STATE.obelisksLit / STATE.obelisksGoal) * 100);
-  document.getElementById('q-obelisk-bar').style.width = `${oPct}%`;
-  document.getElementById('q-obelisk-cnt').textContent = `${STATE.obelisksLit}/${STATE.obelisksGoal}`;
-}
-
-function updateTopAndBottomHUD() {
-  document.getElementById('stat-gold').textContent = STATE.gold.toLocaleString();
-  document.getElementById('stat-punya').textContent = STATE.punya.toLocaleString();
-  document.getElementById('stat-fame').textContent = STATE.fame.toLocaleString();
-  document.getElementById('player-lvl').textContent = `Lv. ${STATE.level}`;
-  document.getElementById('pm-self-lvl').textContent = `Lv.${STATE.level}`;
-
-  const pPct = Math.min(100, (STATE.punya / STATE.punyaMax) * 100);
-  document.getElementById('player-punya-fill').style.width = `${pPct}%`;
-  document.getElementById('player-punya-val').textContent = STATE.punya;
-  document.getElementById('player-punya-max').textContent = STATE.punyaMax;
-}
-
-function applyHealToEntity(entity, amount, spellName) {
-  const oldHp = entity.hp;
-  entity.hp = Math.min(entity.maxHp, entity.hp + amount);
+function applyRejuvenation(entity, rawAmount, spellLabel) {
+  const prevHp = entity.hp;
+  entity.hp = Math.min(entity.maxHp, entity.hp + rawAmount);
   if (entity.npFillEl) {
     entity.npFillEl.style.width = `${(entity.hp / entity.maxHp) * 100}%`;
   }
 
-  spawnFloatingCombatText(entity.mesh.position, `+${amount} ${spellName}`, '#4ade80');
-  spawnShockwave(entity.mesh.position, 0x10b981, 3.2, 0.55);
+  spawnFloatingText(entity.mesh.position, `+${rawAmount} ${spellLabel}`, '#4ade80');
+  spawnShockwave(entity.mesh.position, 0x10b981, 4.5, 0.55);
 
-  if (entity.hp >= entity.maxHp && !entity.completed) {
-    entity.completed = true;
-    if (entity.npFillEl) {
-      entity.npFillEl.classList.remove('wounded');
-      entity.npFillEl.classList.add('friendly');
-    }
-
-    if (entity.kind === 'wildlife') {
-      entity.statusText = '💚 Joyful & Restored (Ally)';
-      if (entity.auraRing) entity.auraRing.material.color.setHex(0x22c55e);
-      STATE.wildlifeHealed += 1;
-      grantRewards(140, 85, 30);
-      addChatLog('deed', 'Seva', `🦌 You fully healed <strong>${entity.name}</strong>! (+140 Punya, +85 Swarna)`);
-      if (!STATE.boons.suryaDash) {
-        unlockBoon(
-          'suryaDash',
-          'slot-4',
-          '☀️',
-          'Surya Vayu Siddhi (Blazing Dash)',
-          'Lord Surya witnessed your compassion for forest creatures! Press [4] to surge forward at 2.4x solar speed.'
-        );
-      }
-    } else if (entity.kind === 'grove') {
-      entity.statusText = '🪷 In Full Sacred Bloom';
-      if (entity.lotusGroup) entity.lotusGroup.scale.setScalar(1.25);
-      STATE.grovesBloomed += 1;
-      grantRewards(160, 110, 40);
-      addChatLog('deed', 'Flora', `🪷 <strong>${entity.name}</strong> blossomed with sacred lotuses! (+160 Punya)`);
-      if (!STATE.boons.padmaLeap) {
-        unlockBoon(
-          'padmaLeap',
-          'slot-5',
-          '🪷',
-          'Padma Siddhi (Sky-Lotus Leap)',
-          'Goddess Lakshmi blesses your footsteps! Press [5] or [Space] to leap high over rivers and temple roofs.'
-        );
-      }
-    } else if (entity.kind === 'obelisk') {
-      entity.statusText = '🔥 Sanctified Guardstone Beacon';
-      if (entity.runeRing) entity.runeRing.material = sanctifiedGlowMat;
-      STATE.obelisksLit += 1;
-      grantRewards(190, 150, 55);
-      addChatLog('deed', 'Shrine', `🔥 You sanctified <strong>${entity.name}</strong>! (+190 Punya, +55 Fame)`);
-    } else {
-      grantRewards(75, 40, 15);
-    }
-    updateQuestTrackerUI();
-  } else if (oldHp < entity.maxHp) {
-    grantRewards(45, 25, 10);
+  // Small Karma reward on every healing pulse, huge Karma reward on full rejuvenation!
+  if (prevHp < entity.maxHp) {
+    const pulseKarma = earnKarma(Math.round(18 * entity.continent.diffMult), null);
+    spawnFloatingText(
+      entity.mesh.position.clone().add(new THREE.Vector3(0, 1.1, 0)),
+      `+${pulseKarma} ☸️ Karma`,
+      '#fde047'
+    );
   }
 
+  if (entity.hp >= entity.maxHp && !entity.rejuvenated) {
+    entity.rejuvenated = true;
+    if (entity.nameplateEl) entity.nameplateEl.classList.add('rejuvenated');
+    if (entity.npFillEl) entity.npFillEl.classList.add('rejuvenated');
+    if (entity.blightRing) entity.blightRing.material.color.setHex(0x22c55e);
+    if (entity.mesh._lotus) entity.mesh._lotus.scale.setScalar(1.3);
+
+    // Transform the surrounding blighted land & withered trees into lush green paradise!
+    rejuvenateEnvironmentAround(entity.mesh.position.x, entity.mesh.position.z, 72.0);
+
+    const cont = entity.continent;
+    cont.rejuvenatedCount = Math.min(cont.goalCount, cont.rejuvenatedCount + 1);
+    STATE.totalRejuvenated += 1;
+
+    earnKarma(cont.karmaReward, `Rejuvenated ${entity.name} in ${cont.shortName}`);
+
+    // Check if the entire Continent is now 100% Rejuvenated!
+    if (cont.rejuvenatedCount >= cont.goalCount && !cont.completed) {
+      cont.completed = true;
+      STATE.ascensionStage = Math.min(7, STATE.ascensionStage + 1);
+      if (cont.skyBeaconMat) cont.skyBeaconMat.color.setHex(0x22c55e);
+      rejuvenateEnvironmentAround(cont.x, cont.z, cont.radius * 1.15);
+
+      document.getElementById('gift-tier').textContent = `🌟 CONTINENT ${cont.roman} REJUVENATED • VIRTUOUS BOON ATTAINED 🌟`;
+      document.getElementById('gift-icon').textContent = cont.boonIcon;
+      document.getElementById('gift-title').textContent = cont.boonName;
+      document.getElementById('gift-desc').textContent = `You removed all suffering from ${cont.name}! ${cont.boonDesc}`;
+      document.getElementById('gift-modal').classList.remove('wow-modal-hidden');
+
+      addChatMessage(
+        'green',
+        `🎉 [Continent Reborn] <strong>${cont.name}</strong> has been completely rejuvenated! Permanent Boon unlocked: <strong>${cont.boonName}</strong>!`
+      );
+    }
+  }
+
+  updateAllHUD();
   if (STATE.selectedTarget === entity) updateTargetFrameUI();
 }
 
-function triggerHotbarSlot(slotNum) {
-  if (STATE.cooldowns[slotNum] > 0) return;
+// ============================================================================
+// 6. SPELLS, SPEED-RUNNING [4], GARUDA FLIGHT [F] & WORLD WARP
+// ============================================================================
+function triggerActionSlot(slot) {
+  if (STATE.cooldowns[slot] > 0) return;
 
-  if (slotNum === 8) {
-    toggleModal('deities-modal');
-    return;
-  }
+  const healPwr = getHealPower();
+  const aoeRad = getAoERadius();
 
-  // Check locks for slots 4, 5, 6, 7
-  if (slotNum === 4 && !STATE.boons.suryaDash) {
-    addChatLog('system', 'Locked', '🔒 Heal any distressed creature with <strong>Sanjeevani [1]</strong> to awaken <strong>Surya Dash [4]</strong>!');
-    return;
-  }
-  if (slotNum === 5 && !STATE.boons.padmaLeap) {
-    addChatLog('system', 'Locked', '🔒 Cultivate a Sacred Lotus Grove with <strong>Ganga Nova [2]</strong> to awaken <strong>Padma Leap [5]</strong>!');
-    return;
-  }
-  if (slotNum === 6 && !STATE.boons.akashBlink) {
-    addChatLog('system', 'Locked', '🔒 Reach <strong>Sage Level 2</strong> through virtuous deeds to awaken <strong>Akash Blink [T]</strong>!');
-    return;
-  }
-  if (slotNum === 7 && !STATE.boons.garudaFly) {
-    addChatLog('system', 'Locked', '🔒 Reach <strong>Sage Level 3</strong> to awaken <strong>Garuda Flight [F]</strong>!');
-    return;
-  }
-
-  // Slot 1: Sanjeevani Bolt (Channeled 0.55s -> Homing 3D Emerald Orb)
-  if (slotNum === 1) {
+  // [1] Sanjeevani Bolt (Homing Emerald Bolt + Chain-Heal if Tier V Ganesha Boon unlocked)
+  if (slot === 1) {
     let target = STATE.selectedTarget;
-    if (!target) {
-      target = findNearestEntity('wildlife');
+    if (!target || target.rejuvenated) {
+      target = findNearestSufferingEntity() || STATE.selectedTarget;
       if (target) selectTarget(target);
     }
     if (!target) return;
 
+    const castDur = CONTINENTS[2].completed ? 0.28 : 0.42;
     STATE.casting = {
-      slot: 1,
       name: `Sanjeevani Bolt → ${target.name}`,
-      duration: 0.55,
+      duration: castDur,
       elapsed: 0,
       onComplete: () => {
         STATE.cooldowns[1] = STATE.cdMax[1];
-        launchSanjeevaniProjectile(target);
+        launchProjectile(playerGroup.position, target, healPwr, 0x34d399);
+        // If Tier V Ganesha Boon unlocked, chain-fire to 2 additional nearby suffering targets!
+        if (CONTINENTS[4].completed) {
+          interactables
+            .filter((e) => e !== target && !e.rejuvenated && e.mesh.position.distanceTo(target.mesh.position) < 28)
+            .slice(0, 2)
+            .forEach((extra) => launchProjectile(target.mesh.position, extra, Math.round(healPwr * 0.75), 0x38bdf8));
+        }
       },
     };
-    document.getElementById('cast-container').classList.remove('cast-hidden');
+    document.getElementById('wow-castbar').classList.remove('cast-hidden');
     document.getElementById('cast-label').textContent = STATE.casting.name;
     return;
   }
 
-  // Slot 2: Ganga Jal Nova (Expanding Water Ring healing nearby wildlife & groves)
-  if (slotNum === 2) {
+  // [2] Ganga Jal Nova (Expanding Sacred Water Wave)
+  if (slot === 2) {
     STATE.cooldowns[2] = STATE.cdMax[2];
-    spawnShockwave(playerGroup.position, 0x38bdf8, 14.0, 0.95);
-    let hitCount = 0;
+    spawnShockwave(playerGroup.position, 0x38bdf8, aoeRad, 0.9);
+    rejuvenateEnvironmentAround(playerGroup.position.x, playerGroup.position.z, aoeRad * 1.4);
+
+    const aoeHeal = Math.round(healPwr * 0.85 + getAoEBonus());
+    let hits = 0;
     interactables.forEach((ent) => {
-      const d = Math.hypot(
-        ent.mesh.position.x - playerGroup.position.x,
-        ent.mesh.position.z - playerGroup.position.z
-      );
-      if (d <= 22.0 && (ent.kind === 'grove' || ent.kind === 'wildlife')) {
-        applyHealToEntity(ent, 55, 'Ganga Jal');
-        hitCount++;
+      if (ent.mesh.position.distanceTo(playerGroup.position) <= aoeRad + 6) {
+        applyRejuvenation(ent, aoeHeal, 'Ganga Nova');
+        hits++;
       }
     });
-    if (hitCount === 0 && STATE.selectedTarget) {
-      applyHealToEntity(STATE.selectedTarget, 50, 'Ganga Jal');
+    if (hits === 0 && STATE.selectedTarget) {
+      applyRejuvenation(STATE.selectedTarget, aoeHeal, 'Ganga Nova');
     }
     return;
   }
 
-  // Slot 3: Annadana Radiance (Golden Celestial Beam on Target Obelisk / Party)
-  if (slotNum === 3) {
+  // [3] Surya Sunbeam (Pillar of Solar Light on Target)
+  if (slot === 3) {
     STATE.cooldowns[3] = STATE.cdMax[3];
-    let target = STATE.selectedTarget;
-    if (!target || (target.kind !== 'obelisk' && target.kind !== 'companion')) {
-      target = findNearestEntity('obelisk') || STATE.selectedTarget;
-      if (target) selectTarget(target);
-    }
+    let target = STATE.selectedTarget || findNearestSufferingEntity();
     if (target) {
-      spawnCelestialBeam(target.mesh.position);
-      applyHealToEntity(target, 65, 'Annadana');
+      selectTarget(target);
+      spawnSunbeam(target.mesh.position);
+      applyRejuvenation(target, Math.round(healPwr * 1.45), 'Sunbeam');
     }
     return;
   }
 
-  // Slot 4: Surya Dash
-  if (slotNum === 4) {
+  // [4] Vayu Speed-Run Toggle (Instant Super-Speed Running!)
+  if (slot === 4) {
     STATE.cooldowns[4] = STATE.cdMax[4];
-    STATE.activeBuffs.dashTimer = 4.0;
-    spawnShockwave(playerGroup.position, 0xfacc15, 5.0, 0.5);
-    spawnFloatingCombatText(playerGroup.position, '☀️ SURYA DASH (2.4x SPEED)', '#fde047');
+    STATE.speedRunActive = !STATE.speedRunActive;
+    document.getElementById('slot-4').classList.toggle('active-toggle', STATE.speedRunActive);
+    document.getElementById('buff-speed-txt').textContent = STATE.speedRunActive ? '3.2x' : '1.0x';
+    spawnShockwave(playerGroup.position, 0xfacc15, 6.0, 0.45);
+    spawnFloatingText(
+      playerGroup.position,
+      STATE.speedRunActive ? '⚡ VAYU SPEED-RUN ON (3.2x)' : 'Speed Normal',
+      '#fde047'
+    );
+    updateAllHUD();
     return;
   }
 
-  // Slot 5: Padma Leap
-  if (slotNum === 5) {
+  // [5] Padma Sky-Leap (High Vault / Flight Boost)
+  if (slot === 5) {
     STATE.cooldowns[5] = STATE.cdMax[5];
-    playerVelY = 18.5;
+    playerVelY = 26.0;
     isGrounded = false;
-    spawnShockwave(playerGroup.position, 0xf472b6, 4.5, 0.6);
-    spawnFloatingCombatText(playerGroup.position, '🪷 PADMA SKY LEAP!', '#f472b6');
+    if (STATE.flyingActive) playerGroup.position.y += 14.0;
+    spawnShockwave(playerGroup.position, 0xf472b6, 6.0, 0.55);
+    spawnFloatingText(playerGroup.position, '🌸 PADMA SKY-LEAP!', '#f472b6');
     return;
   }
 
-  // Slot 6: Akash Blink [T]
-  if (slotNum === 6) {
+  // [6] Akashic Warp Blink [T] (Instant 65m Spatial Dash forward in 3D camera direction)
+  if (slot === 6) {
     STATE.cooldowns[6] = STATE.cdMax[6];
-    spawnShockwave(playerGroup.position, 0xa855f7, 4.0, 0.45);
-    const forward = new THREE.Vector3(Math.sin(cameraYaw), 0, Math.cos(cameraYaw)).negate();
-    playerGroup.position.x += forward.x * 24;
-    playerGroup.position.z += forward.z * 24;
-    playerGroup.position.y = getTerrainHeight(playerGroup.position.x, playerGroup.position.z);
-    spawnShockwave(playerGroup.position, 0x38bdf8, 5.0, 0.55);
-    spawnFloatingCombatText(playerGroup.position, '✨ AKASH BLINK!', '#c084fc');
+    spawnShockwave(playerGroup.position, 0xa855f7, 5.0, 0.4);
+    const forward = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
+    playerGroup.position.addScaledVector(forward, 65.0);
+    if (!STATE.flyingActive) {
+      playerGroup.position.y = Math.max(-1.0, getTerrainHeight(playerGroup.position.x, playerGroup.position.z));
+    }
+    spawnShockwave(playerGroup.position, 0x38bdf8, 6.5, 0.5);
+    spawnFloatingText(playerGroup.position, '✨ AKASHIC WARP (+65m)', '#c084fc');
     return;
   }
 
-  // Slot 7: Garuda Flight [F]
-  if (slotNum === 7) {
+  // [7] Garuda Sky-Flight [F] (Boundless 3D Flight Across All 7 Continents!)
+  if (slot === 7) {
     STATE.cooldowns[7] = STATE.cdMax[7];
-    STATE.activeBuffs.flying = !STATE.activeBuffs.flying;
-    if (STATE.activeBuffs.flying) {
-      playerGroup.position.y += 4.5;
-      spawnFloatingCombatText(playerGroup.position, '🦅 GARUDA FLIGHT ON', '#38bdf8');
+    STATE.flyingActive = !STATE.flyingActive;
+    garudaWingsGroup.visible = STATE.flyingActive;
+    document.getElementById('slot-7').classList.toggle('active-toggle', STATE.flyingActive);
+    document.getElementById('buff-flight-txt').textContent = STATE.flyingActive ? 'SOAR' : 'LAND';
+    if (STATE.flyingActive) {
+      playerGroup.position.y = Math.max(playerGroup.position.y + 8.0, 12.0);
+      spawnShockwave(playerGroup.position, 0xfde047, 8.0, 0.6);
+      spawnFloatingText(playerGroup.position, '🦅 GARUDA SKY-FLIGHT ACTIVE!', '#fde047');
     } else {
-      spawnFloatingCombatText(playerGroup.position, '🦅 LANDED', '#94a3b8');
+      spawnFloatingText(playerGroup.position, '🦅 Landed', '#94a3b8');
     }
+    updateAllHUD();
+    return;
+  }
+
+  // [8] Amrita World-Pulse [R] (Massive AoE Rejuvenation Supernova)
+  if (slot === 8) {
+    STATE.cooldowns[8] = CONTINENTS[5].completed ? STATE.cdMax[8] * 0.5 : STATE.cdMax[8];
+    const pulseRad = aoeRad * 2.1;
+    spawnShockwave(playerGroup.position, 0xfacc15, pulseRad, 1.15);
+    rejuvenateEnvironmentAround(playerGroup.position.x, playerGroup.position.z, pulseRad * 1.35);
+
+    const burstHeal = Math.round(healPwr * 1.6 + getAoEBonus());
+    interactables.forEach((ent) => {
+      if (ent.mesh.position.distanceTo(playerGroup.position) <= pulseRad + 8) {
+        applyRejuvenation(ent, burstHeal, 'World Pulse');
+      }
+    });
+    spawnFloatingText(playerGroup.position, '🪷 AMRITA WORLD-PULSE!', '#fde047');
   }
 }
 
-function findNearestEntity(preferredKind) {
+function findNearestSufferingEntity() {
   let best = null;
-  let bestDist = Infinity;
+  let bestD = Infinity;
   interactables.forEach((ent) => {
-    if (preferredKind && ent.kind !== preferredKind) return;
-    const d = Math.hypot(
-      ent.mesh.position.x - playerGroup.position.x,
-      ent.mesh.position.z - playerGroup.position.z
-    );
-    if (d < bestDist) {
-      bestDist = d;
+    if (ent.rejuvenated) return;
+    const d = ent.mesh.position.distanceTo(playerGroup.position);
+    if (d < bestD) {
+      bestD = d;
       best = ent;
     }
   });
   return best;
 }
 
-function launchSanjeevaniProjectile(target) {
-  const orbGeo = new THREE.SphereGeometry(0.36, 12, 12);
-  const orbMat = new THREE.MeshBasicMaterial({ color: 0x34d399 });
-  const orb = new THREE.Mesh(orbGeo, orbMat);
-
-  const haloGeo = new THREE.SphereGeometry(0.62, 12, 12);
-  const haloMat = new THREE.MeshBasicMaterial({ color: 0x10b981, transparent: true, opacity: 0.45 });
-  orb.add(new THREE.Mesh(haloGeo, haloMat));
-
-  orb.position.copy(playerGroup.position);
+function launchProjectile(fromPos, target, healAmount, colorHex) {
+  const orb = new THREE.Mesh(
+    new THREE.SphereGeometry(0.42, 12, 12),
+    new THREE.MeshBasicMaterial({ color: colorHex })
+  );
+  orb.position.copy(fromPos);
   orb.position.y += 1.8;
   scene.add(orb);
-
-  activeProjectiles.push({
-    mesh: orb,
-    target,
-    speed: 28.0,
-  });
+  activeProjectiles.push({ mesh: orb, target, healAmount, speed: 38.0 });
 }
 
-function spawnCelestialBeam(targetPos) {
-  const beamGeo = new THREE.CylinderGeometry(1.1, 1.1, 45, 16, 1, true);
-  const beamMat = new THREE.MeshBasicMaterial({
-    color: 0xfde047,
-    transparent: true,
-    opacity: 0.65,
-    side: THREE.DoubleSide,
-  });
-  const beam = new THREE.Mesh(beamGeo, beamMat);
-  beam.position.copy(targetPos);
-  beam.position.y += 22.5;
+function spawnSunbeam(pos) {
+  const beam = new THREE.Mesh(
+    new THREE.CylinderGeometry(1.4, 1.4, 65, 16, 1, true),
+    new THREE.MeshBasicMaterial({ color: 0xfde047, transparent: true, opacity: 0.7, side: THREE.DoubleSide })
+  );
+  beam.position.copy(pos);
+  beam.position.y += 32.5;
   scene.add(beam);
-  spawnShockwave(targetPos, 0xfacc15, 7.5, 0.8);
+  spawnShockwave(pos, 0xfacc15, 9.0, 0.8);
+  setTimeout(() => scene.remove(beam), 550);
+}
 
-  let op = 0.65;
-  const iv = setInterval(() => {
-    op -= 0.08;
-    if (op <= 0) {
-      clearInterval(iv);
-      scene.remove(beam);
-    } else {
-      beamMat.opacity = op;
-    }
-  }, 45);
+// Fast-Fly / Soar to any of the 7 Continents from the World Map or Quest Tracker!
+function flyToContinent(continentId) {
+  const cont = CONTINENTS[continentId];
+  if (!cont) return;
+  document.getElementById('worldmap-modal').classList.add('wow-modal-hidden');
+
+  STATE.flyingActive = true;
+  garudaWingsGroup.visible = true;
+  document.getElementById('slot-7').classList.add('active-toggle');
+
+  const groundY = getTerrainHeight(cont.x, cont.z + 12);
+  playerGroup.position.set(cont.x, groundY + 6.5, cont.z + 12);
+  STATE.currentContinent = cont;
+
+  spawnShockwave(playerGroup.position, 0xfde047, 12.0, 0.8);
+  spawnFloatingText(playerGroup.position, `🦅 Soared to ${cont.shortName}!`, '#fde047');
+  addChatMessage(
+    'cyan',
+    `🦅 [Sky-Flight] Arrived at <strong>${cont.name}</strong> (Difficulty Tier ${cont.roman} — ${cont.diffMult}x). Cleanse its 4 suffering sites!`
+  );
+
+  const nextTarget = interactables.find((e) => e.continent.id === cont.id && !e.rejuvenated);
+  if (nextTarget) selectTarget(nextTarget);
+  updateAllHUD();
 }
 
 // ============================================================================
-// 8. INPUT CONTROLS, CAMERA ORBIT, RAYCAST CLICK & TAB TARGETING
+// 7. KARMA EMPORIUM SHOP & WORLD MAP MODALS
+// ============================================================================
+function renderKarmaShopModal() {
+  document.getElementById('shop-karma-balance').textContent = STATE.karma.toLocaleString();
+  const grid = document.getElementById('shop-items-grid');
+
+  grid.innerHTML = SHOP_TOOLS.map((item) => {
+    const cost = Math.round(item.baseCost * Math.pow(item.costMult, item.rank));
+    const isMax = item.rank >= item.maxRank;
+    const canAfford = STATE.karma >= cost && !isMax;
+
+    return `
+      <div class="shop-card">
+        <div class="shop-top">
+          <div class="shop-icon">${item.icon}</div>
+          <div>
+            <div class="shop-title">${item.name}</div>
+            <div class="shop-rank">${item.category} • ${item.isConsumable ? 'Instant' : `Rank ${item.rank}/${item.maxRank}`}</div>
+          </div>
+        </div>
+        <div class="shop-desc">${item.desc}</div>
+        <div class="shop-bonus">${item.bonusText(item.rank)}</div>
+        <button class="shop-buy-btn ${canAfford ? '' : 'disabled'}" data-shop-id="${item.id}">
+          <span>${isMax ? 'MAX RANK FORGED' : item.isConsumable ? 'Invoke Elixir Now' : `Upgrade to Rank ${item.rank + 1}`}</span>
+          <span>☸️ ${isMax ? '—' : cost.toLocaleString()}</span>
+        </button>
+      </div>
+    `;
+  }).join('');
+
+  grid.querySelectorAll('.shop-buy-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-shop-id');
+      purchaseShopItem(id);
+    });
+  });
+}
+
+function purchaseShopItem(itemId) {
+  const item = SHOP_TOOLS.find((i) => i.id === itemId);
+  if (!item || item.rank >= item.maxRank) return;
+  const cost = Math.round(item.baseCost * Math.pow(item.costMult, item.rank));
+  if (STATE.karma < cost) {
+    addChatMessage('yellow', `⚠️ You need <strong>☸️ ${cost} Karma Points</strong> to forge <strong>${item.name}</strong>! Heal suffering creatures to earn more Karma.`);
+    return;
+  }
+
+  STATE.karma -= cost;
+  item.rank += 1;
+
+  if (item.isConsumable) {
+    // Soma-Sanjeevani Elixir: Instant 65m Supernova!
+    spawnShockwave(playerGroup.position, 0xfde047, 65.0, 1.3);
+    rejuvenateEnvironmentAround(playerGroup.position.x, playerGroup.position.z, 75.0);
+    interactables.forEach((ent) => {
+      if (ent.mesh.position.distanceTo(playerGroup.position) <= 68.0) {
+        applyRejuvenation(ent, 320, 'Soma Elixir');
+      }
+    });
+    addChatMessage('green', `🧪 [Karma Emporium] Invoked <strong>${item.name}</strong>! A 65m Golden Supernova rejuvenated everything around you!`);
+  } else {
+    spawnShockwave(playerGroup.position, 0x38bdf8, 8.0, 0.6);
+    spawnFloatingText(playerGroup.position, `🛠️ Upgraded ${item.name} (Rank ${item.rank})!`, '#fde047');
+    addChatMessage('green', `🛠️ [Karma Emporium] Forged <strong>${item.name} (Rank ${item.rank})</strong> using ☸️ ${cost} Karma Points!`);
+  }
+
+  updateAllHUD();
+  renderKarmaShopModal();
+}
+
+function renderWorldMapModal() {
+  const grid = document.getElementById('continents-modal-grid');
+  grid.innerHTML = CONTINENTS.map(
+    (c) => `
+    <div class="continent-card ${c.completed ? 'rejuvenated' : ''}">
+      <div class="cc-top">
+        <span class="cc-title">${c.roman}. ${c.name}</span>
+        <span class="cc-tier">Tier ${c.roman} (${c.diffMult}x)</span>
+      </div>
+      <div class="cc-desc">
+        Status: <strong>${c.rejuvenatedCount} / ${c.goalCount} Sites Rejuvenated</strong><br/>
+        Site Vitality Requirement: ${c.maxHpBase} • Reward: ☸️ ${c.karmaReward} Karma
+      </div>
+      <div class="cc-boon">${c.boonIcon} ${c.boonName}: ${c.boonDesc}</div>
+      <button class="cc-fly-btn" data-cont-id="${c.id}">
+        🦅 Soar to ${c.shortName} (${c.completed ? 'Rejuvenated 🌟' : 'Cleanse Suffering'})
+      </button>
+    </div>
+  `
+  ).join('');
+
+  grid.querySelectorAll('.cc-fly-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const cid = parseInt(btn.getAttribute('data-cont-id'), 10);
+      flyToContinent(cid);
+    });
+  });
+}
+
+function updateAllHUD() {
+  // Player Frame & Karma Currency
+  document.getElementById('wow-player-lvl').textContent = STATE.ascensionStage;
+  document.getElementById('wow-current-stage').textContent = `Stage ${CONTINENTS[STATE.ascensionStage - 1].roman}/VII`;
+  document.getElementById('wow-player-hp-txt').textContent = `Heal Power: ${getHealPower()} • AoE: ${getAoERadius()}m`;
+  document.getElementById('wow-player-mp-txt').textContent = `☸️ ${STATE.karma.toLocaleString()} KARMA POINTS`;
+  document.getElementById('stat-karma').textContent = STATE.karma.toLocaleString();
+
+  // Top-Center Continent Banner
+  const c = STATE.currentContinent;
+  document.getElementById('hud-continent-name').textContent = `${c.roman}. ${c.name.toUpperCase()} [TIER ${c.roman}]`;
+  const stateBadge = document.getElementById('hud-continent-state');
+  if (c.completed) {
+    stateBadge.textContent = `🌟 Continent Rejuvenated (${c.rejuvenatedCount}/${c.goalCount}) • ${c.boonName} Active`;
+    stateBadge.classList.add('rejuvenated');
+  } else {
+    stateBadge.textContent = `🌑 Suffering Under Blight (${c.rejuvenatedCount}/${c.goalCount} Rejuvenated • Diff ${c.diffMult}x)`;
+    stateBadge.classList.remove('rejuvenated');
+  }
+
+  document.getElementById('minimap-zone-label').textContent = `${c.shortName} [Tier ${c.roman}]`;
+
+  // Quest Tracker Right Panel
+  document.getElementById('wq-active-title').textContent = `Tier ${c.roman}: Cleanse ${c.shortName}`;
+  document.getElementById('wq-active-desc').textContent = `Difficulty: ${c.diffMult}x • Heal ${c.goalCount} suffering sites to unlock ${c.boonName}.`;
+  document.getElementById('wq-active-bar').style.width = `${(c.rejuvenatedCount / c.goalCount) * 100}%`;
+  document.getElementById('wq-active-cnt').textContent = `${c.rejuvenatedCount} / ${c.goalCount}`;
+
+  const listEl = document.getElementById('wq-continents-list');
+  listEl.innerHTML = CONTINENTS.map(
+    (cont) => `
+    <div class="wq-cont-item ${cont.id === c.id ? 'active-continent' : ''} ${cont.completed ? 'completed-continent' : ''}" data-goto-cont="${cont.id}" title="Click to fly directly to ${cont.name}">
+      <span class="wq-c-name">${cont.boonIcon} ${cont.shortName}</span>
+      <span class="wq-c-stat">${cont.completed ? '🌟 Reborn' : `${cont.rejuvenatedCount}/${cont.goalCount} ✈️`}</span>
+    </div>
+  `
+  ).join('');
+
+  listEl.querySelectorAll('.wq-cont-item').forEach((row) => {
+    row.addEventListener('click', () => {
+      flyToContinent(parseInt(row.getAttribute('data-goto-cont'), 10));
+    });
+  });
+
+  // Bottom WoW XP & World Renewal Strips
+  const stagePct = Math.min(100, (STATE.ascensionStage / 7) * 100);
+  document.getElementById('wow-xp-fill').style.width = `${stagePct}%`;
+  document.getElementById('wow-xp-label').textContent = `ASCENSION STAGE ${STATE.ascensionStage} / 7 • LIFETIME KARMA GENERATED: ${STATE.lifetimeKarma.toLocaleString()} ☸️`;
+
+  const worldPct = Math.min(100, (STATE.totalRejuvenated / STATE.totalSites) * 100);
+  const rebornContinents = CONTINENTS.filter((ct) => ct.completed).length;
+  document.getElementById('wow-rep-fill').style.width = `${worldPct}%`;
+  document.getElementById('wow-rep-label').textContent = `WORLD RENEWAL: ${STATE.totalRejuvenated} / ${STATE.totalSites} Suffering Sites Rejuvenated (${rebornContinents} / 7 Continents Reborn)`;
+}
+
+// ============================================================================
+// 8. INPUT CONTROLS, 3D FLIGHT PHYSICS & CAMERA ORBIT
 // ============================================================================
 const keys = {};
 let cameraYaw = 0;
-let cameraPitch = 0.38;
-let cameraDist = 14.5;
-let isDraggingOrbit = false;
+let cameraPitch = 0.36;
+let cameraDist = 15.5;
+let isDragging = false;
 let prevMouse = { x: 0, y: 0 };
 let playerVelY = 0;
 let isGrounded = true;
@@ -1489,7 +1535,7 @@ window.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       const inp = document.getElementById('chat-input');
       if (inp.value.trim()) {
-        addChatLog('world', 'You (Sadhak)', inp.value.trim());
+        addChatMessage('yellow', `[You]: ${inp.value.trim()}`);
         inp.value = '';
       }
       inp.blur();
@@ -1502,28 +1548,23 @@ window.addEventListener('keydown', (e) => {
 
   if (e.key === 'Tab') {
     e.preventDefault();
-    cycleTabTarget();
-  } else if (e.key === '1') triggerHotbarSlot(1);
-  else if (e.key === '2') triggerHotbarSlot(2);
-  else if (e.key === '3') triggerHotbarSlot(3);
-  else if (e.key === '4') triggerHotbarSlot(4);
-  else if (e.key === '5') triggerHotbarSlot(5);
-  else if (k === 't') triggerHotbarSlot(6);
-  else if (k === 'f') triggerHotbarSlot(7);
-  else if (k === 'm') toggleModal('deities-modal');
-  else if (k === 'b') toggleModal('inventory-modal');
+    const near = findNearestSufferingEntity();
+    if (near) selectTarget(near);
+  } else if (e.key === '1') triggerActionSlot(1);
+  else if (e.key === '2') triggerActionSlot(2);
+  else if (e.key === '3') triggerActionSlot(3);
+  else if (e.key === '4') triggerActionSlot(4);
+  else if (e.key === '5') triggerActionSlot(5);
+  else if (k === 't') triggerActionSlot(6);
+  else if (k === 'f') triggerActionSlot(7);
+  else if (k === 'r') triggerActionSlot(8);
+  else if (k === 'k' || k === 'b' || k === 'c') toggleModal('shop-modal');
+  else if (k === 'm') toggleModal('worldmap-modal');
   else if (e.key === 'Enter') {
-    const gm = document.getElementById('gift-modal');
-    if (!gm.classList.contains('modal-backdrop-hidden')) {
-      gm.classList.add('modal-backdrop-hidden');
-    }
-  } else if (e.key === ' ') {
-    if (STATE.activeBuffs.flying) {
-      playerGroup.position.y += 1.2;
-    } else if (isGrounded) {
-      playerVelY = STATE.boons.padmaLeap ? 15.5 : 9.2;
-      isGrounded = false;
-    }
+    document.getElementById('gift-modal').classList.add('wow-modal-hidden');
+  } else if (e.key === ' ' && !STATE.flyingActive && isGrounded) {
+    playerVelY = 16.5;
+    isGrounded = false;
   }
 });
 
@@ -1531,122 +1572,92 @@ window.addEventListener('keyup', (e) => {
   keys[e.key.toLowerCase()] = false;
 });
 
-function cycleTabTarget() {
-  if (interactables.length === 0) return;
-  const curIdx = interactables.indexOf(STATE.selectedTarget);
-  const nextIdx = (curIdx + 1) % interactables.length;
-  selectTarget(interactables[nextIdx]);
+function toggleModal(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const hidden = el.classList.contains('wow-modal-hidden');
+  document.getElementById('shop-modal').classList.add('wow-modal-hidden');
+  document.getElementById('worldmap-modal').classList.add('wow-modal-hidden');
+  if (hidden) {
+    if (id === 'shop-modal') renderKarmaShopModal();
+    if (id === 'worldmap-modal') renderWorldMapModal();
+    el.classList.remove('wow-modal-hidden');
+  }
 }
 
+// Wire UI Buttons
+for (let s = 1; s <= 8; s++) {
+  const el = document.getElementById(`slot-${s}`);
+  if (el) el.addEventListener('click', () => triggerActionSlot(s));
+}
+document.getElementById('slot-4').classList.add('active-toggle');
+
+document.getElementById('btn-shop').addEventListener('click', () => toggleModal('shop-modal'));
+document.getElementById('btn-bags').addEventListener('click', () => toggleModal('shop-modal'));
+document.getElementById('btn-left-shop').addEventListener('click', () => toggleModal('shop-modal'));
+document.getElementById('buff-shop').addEventListener('click', () => toggleModal('shop-modal'));
+document.getElementById('hud-karma-box').addEventListener('click', () => toggleModal('shop-modal'));
+document.getElementById('btn-close-shop').addEventListener('click', () =>
+  document.getElementById('shop-modal').classList.add('wow-modal-hidden')
+);
+
+document.getElementById('btn-worldmap').addEventListener('click', () => toggleModal('worldmap-modal'));
+document.getElementById('btn-open-map').addEventListener('click', () => toggleModal('worldmap-modal'));
+document.getElementById('btn-tracker-map').addEventListener('click', () => toggleModal('worldmap-modal'));
+document.getElementById('btn-close-map').addEventListener('click', () =>
+  document.getElementById('worldmap-modal').classList.add('wow-modal-hidden')
+);
+document.getElementById('btn-claim-gift').addEventListener('click', () =>
+  document.getElementById('gift-modal').classList.add('wow-modal-hidden')
+);
+document.getElementById('buff-speed').addEventListener('click', () => triggerActionSlot(4));
+document.getElementById('buff-flight').addEventListener('click', () => triggerActionSlot(7));
+
+// Mouse Orbit & Raycast Entity Selection
 const raycaster = new THREE.Raycaster();
 const mouseNDC = new THREE.Vector2();
 
 renderer.domElement.addEventListener('pointerdown', (e) => {
-  isDraggingOrbit = true;
+  isDragging = true;
   prevMouse.x = e.clientX;
   prevMouse.y = e.clientY;
 
-  // Raycast click to select 3D entity
   mouseNDC.x = (e.clientX / window.innerWidth) * 2 - 1;
   mouseNDC.y = -(e.clientY / window.innerHeight) * 2 + 1;
   raycaster.setFromCamera(mouseNDC, camera);
 
-  let bestEntity = null;
-  let bestDist = 4.2;
+  let best = null;
+  let bestD = 5.0;
   interactables.forEach((ent) => {
     const d = raycaster.ray.distanceToPoint(ent.mesh.position);
-    if (d < bestDist) {
-      bestDist = d;
-      bestEntity = ent;
+    if (d < bestD) {
+      bestD = d;
+      best = ent;
     }
   });
-  if (bestEntity) selectTarget(bestEntity);
+  if (best) selectTarget(best);
 });
 
 window.addEventListener('pointermove', (e) => {
-  if (!isDraggingOrbit) return;
+  if (!isDragging) return;
   const dx = e.clientX - prevMouse.x;
   const dy = e.clientY - prevMouse.y;
   prevMouse.x = e.clientX;
   prevMouse.y = e.clientY;
   cameraYaw -= dx * 0.0065;
-  cameraPitch = Math.max(0.12, Math.min(1.15, cameraPitch + dy * 0.0055));
+  cameraPitch = Math.max(0.08, Math.min(1.25, cameraPitch + dy * 0.0055));
 });
 
 window.addEventListener('pointerup', () => {
-  isDraggingOrbit = false;
+  isDragging = false;
 });
 
 window.addEventListener('wheel', (e) => {
-  cameraDist = Math.max(6.5, Math.min(28.0, cameraDist + e.deltaY * 0.012));
+  cameraDist = Math.max(7.0, Math.min(42.0, cameraDist + e.deltaY * 0.015));
 });
 
-// Wire Hotbar & UI Buttons
-for (let s = 1; s <= 8; s++) {
-  const el = document.getElementById(`slot-${s}`);
-  if (el) el.addEventListener('click', () => triggerHotbarSlot(s));
-}
-
-function toggleModal(id) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const isHidden = el.classList.contains('modal-backdrop-hidden');
-  document.querySelectorAll('#inventory-modal, #deities-modal').forEach((m) =>
-    m.classList.add('modal-backdrop-hidden')
-  );
-  if (isHidden) {
-    if (id === 'deities-modal') renderDeitiesModal();
-    if (id === 'inventory-modal') renderInventoryModal();
-    el.classList.remove('modal-backdrop-hidden');
-  }
-}
-
-document.getElementById('btn-inventory').addEventListener('click', () => toggleModal('inventory-modal'));
-document.getElementById('btn-deities').addEventListener('click', () => toggleModal('deities-modal'));
-document.getElementById('btn-close-inv').addEventListener('click', () =>
-  document.getElementById('inventory-modal').classList.add('modal-backdrop-hidden')
-);
-document.getElementById('btn-close-deities').addEventListener('click', () =>
-  document.getElementById('deities-modal').classList.add('modal-backdrop-hidden')
-);
-document.getElementById('btn-claim-gift').addEventListener('click', () =>
-  document.getElementById('gift-modal').classList.add('modal-backdrop-hidden')
-);
-
-function renderInventoryModal() {
-  const grid = document.getElementById('inv-grid');
-  grid.innerHTML = INVENTORY_ITEMS.map(
-    (it) => `
-    <div class="inv-slot">
-      <div class="inv-icon">${it.icon}</div>
-      <div class="inv-name">${it.name}</div>
-      <div class="inv-qty">${it.qty}</div>
-    </div>
-  `
-  ).join('');
-}
-
-function renderDeitiesModal() {
-  const grid = document.getElementById('deities-grid');
-  grid.innerHTML = DEITIES_DATA.map(
-    (d) => `
-    <div class="deity-card">
-      <div class="deity-top">
-        <span class="deity-icon">${d.icon}</span>
-        <div>
-          <div class="deity-name">${d.name}</div>
-          <div style="font-size:11px;color:#94a3b8;">${d.title}</div>
-        </div>
-      </div>
-      <div class="deity-desc">${d.desc}</div>
-      <span class="deity-boon-tag">${d.unlocked ? '✨ Blessing Active' : '🔒 Awaken via Higher Punya Level'}</span>
-    </div>
-  `
-  ).join('');
-}
-
 // ============================================================================
-// 9. MINIMAP RADAR & 3D WORLD-SPACE NAMEPLATE PROJECTION
+// 9. CIRCULAR WOW MINIMAP (SHOWING ALL 7 CONTINENTS & SUFFERING SITES)
 // ============================================================================
 const minimapCanvas = document.getElementById('minimap-canvas');
 const mCtx = minimapCanvas.getContext('2d');
@@ -1656,66 +1667,48 @@ function drawMinimap() {
   const h = minimapCanvas.height;
   const cx = w / 2;
   const cy = h / 2;
-  const scale = 1.25;
+  const scale = STATE.flyingActive ? 0.14 : 0.45; // Zoom out automatically when flying across continents!
 
   mCtx.clearRect(0, 0, w, h);
-  mCtx.fillStyle = '#182b20';
+  mCtx.fillStyle = '#09192b';
   mCtx.fillRect(0, 0, w, h);
 
-  // Draw River Ganga curve on minimap
-  mCtx.strokeStyle = '#1d9bf0';
-  mCtx.lineWidth = 8;
-  mCtx.beginPath();
-  for (let mz = -75; mz <= 75; mz += 5) {
-    const wz = playerGroup.position.z + mz;
-    const rx = getRiverCenterX(wz) - playerGroup.position.x;
-    const px = cx + rx * scale;
-    const py = cy + mz * scale;
-    if (mz === -75) mCtx.moveTo(px, py);
-    else mCtx.lineTo(px, py);
-  }
-  mCtx.stroke();
+  // Draw all 7 Continents on the Radar
+  CONTINENTS.forEach((cont) => {
+    const dx = (cont.x - playerGroup.position.x) * scale;
+    const dz = (cont.z - playerGroup.position.z) * scale;
+    const r = Math.max(10, cont.radius * scale * 0.72);
 
-  // Draw Sanctuary Center Plaza
-  const sx = cx - playerGroup.position.x * scale;
-  const sz = cy - playerGroup.position.z * scale;
-  mCtx.fillStyle = 'rgba(250, 204, 21, 0.35)';
-  mCtx.beginPath();
-  mCtx.arc(sx, sz, 11, 0, Math.PI * 2);
-  mCtx.fill();
-
-  // Draw Entities
-  interactables.forEach((ent) => {
-    const dx = (ent.mesh.position.x - playerGroup.position.x) * scale;
-    const dz = (ent.mesh.position.z - playerGroup.position.z) * scale;
-    const ex = cx + dx;
-    const ez = cy + dz;
-    if (ex < 4 || ex > w - 4 || ez < 4 || ez > h - 4) return;
-
-    mCtx.fillStyle =
-      ent.kind === 'wildlife'
-        ? ent.completed
-          ? '#4ade80'
-          : '#f59e0b'
-        : ent.kind === 'grove'
-        ? '#f472b6'
-        : ent.kind === 'obelisk'
-        ? '#38bdf8'
-        : '#a3e635';
+    mCtx.fillStyle = cont.completed ? 'rgba(34, 197, 94, 0.45)' : 'rgba(88, 28, 135, 0.48)';
+    mCtx.strokeStyle = cont.completed ? '#4ade80' : '#c084fc';
+    mCtx.lineWidth = 1.5;
     mCtx.beginPath();
-    mCtx.arc(ex, ez, ent === STATE.selectedTarget ? 4.5 : 3.2, 0, Math.PI * 2);
+    mCtx.arc(cx + dx, cy + dz, r, 0, Math.PI * 2);
+    mCtx.fill();
+    mCtx.stroke();
+  });
+
+  // Draw Suffering Sites
+  interactables.forEach((ent) => {
+    const sx = cx + (ent.mesh.position.x - playerGroup.position.x) * scale;
+    const sz = cy + (ent.mesh.position.z - playerGroup.position.z) * scale;
+    if (sx < 4 || sx > w - 4 || sz < 4 || sz > h - 4) return;
+    mCtx.fillStyle = ent.rejuvenated ? '#4ade80' : '#facc15';
+    mCtx.beginPath();
+    mCtx.arc(sx, sz, ent === STATE.selectedTarget ? 4.2 : 2.8, 0, Math.PI * 2);
     mCtx.fill();
   });
 
-  // Player arrow in center
+  // Player center dot
   mCtx.fillStyle = '#ffffff';
   mCtx.beginPath();
   mCtx.arc(cx, cy, 4, 0, Math.PI * 2);
   mCtx.fill();
 
-  document.getElementById('minimap-coords').textContent = `X: ${Math.round(
-    playerGroup.position.x
-  )}, Z: ${Math.round(playerGroup.position.z)}`;
+  const alt = Math.max(0, Math.round(playerGroup.position.y - getTerrainHeight(playerGroup.position.x, playerGroup.position.z)));
+  document.getElementById('minimap-coords').textContent = `${Math.round(playerGroup.position.x)}, ${Math.round(
+    playerGroup.position.z
+  )} • Alt: ${alt}m`;
 }
 
 const projVec = new THREE.Vector3();
@@ -1725,60 +1718,79 @@ function updateWorldNameplates() {
 
   interactables.forEach((ent) => {
     if (!ent.nameplateEl) return;
-    projVec.copy(ent.mesh.position);
-    projVec.y += ent.heightOffset || 2.5;
-    projVec.project(camera);
-
     const dist = camera.position.distanceTo(ent.mesh.position);
-    if (projVec.z > 1.0 || dist > 85) {
+    if (dist > 110) {
       ent.nameplateEl.style.display = 'none';
       return;
     }
-
-    const sx = projVec.x * halfW + halfW;
-    const sy = -(projVec.y * halfH) + halfH;
+    projVec.copy(ent.mesh.position);
+    projVec.y += ent.heightOffset || 2.5;
+    projVec.project(camera);
+    if (projVec.z > 1.0) {
+      ent.nameplateEl.style.display = 'none';
+      return;
+    }
     ent.nameplateEl.style.display = 'block';
-    ent.nameplateEl.style.left = `${sx}px`;
-    ent.nameplateEl.style.top = `${sy}px`;
+    ent.nameplateEl.style.left = `${projVec.x * halfW + halfW}px`;
+    ent.nameplateEl.style.top = `${-(projVec.y * halfH) + halfH}px`;
   });
 }
 
 // ============================================================================
-// 10. MAIN GAME LOOP (60 FPS ANIMATION, PHYSICS, AI WANDER, SPELL HOMING)
+// 10. MAIN 60FPS GAME LOOP (SHADER EXPANSION, FLIGHT, AUTO-CHAKRA, AI)
 // ============================================================================
 const clock = new THREE.Clock();
-let fpsFrames = 0;
-let fpsLastTime = performance.now();
+let chakraTimer = 0;
+
+setTimeout(() => {
+  const first = findNearestSufferingEntity();
+  if (first) selectTarget(first);
+  updateAllHUD();
+}, 300);
 
 function animate() {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.1);
   const elapsed = clock.getElapsedTime();
 
-  // FPS counter
-  fpsFrames++;
-  const now = performance.now();
-  if (now - fpsLastTime >= 1000) {
-    const displayFps = Math.max(fpsFrames, 60);
-    document.getElementById('stat-fps').textContent = `${displayFps} FPS`;
-    fpsFrames = 0;
-    fpsLastTime = now;
+  oceanMat.uniforms.uTime.value = elapsed;
+  terrainShaderMat.uniforms.uTime.value = elapsed;
+
+  // Smoothly expand GPU Rejuvenation Circles on the terrain!
+  for (let i = 0; i < MAX_CLEANSE_ZONES; i++) {
+    const cz = cleanseCenters[i];
+    if (cz.z < cz.w) {
+      cz.z = Math.min(cz.w, cz.z + dt * 38.0);
+    }
   }
 
-  // Update Shaders
-  waterMat.uniforms.uTime.value = elapsed;
-  grassMat.uniforms.uTime.value = elapsed;
-  if (window._sanctuaryCrystal) {
-    window._sanctuaryCrystal.rotation.y = elapsed * 1.1;
-    window._sanctuaryCrystal.position.y = 2.6 + Math.sin(elapsed * 2.2) * 0.22;
+  // Animate Garuda Golden Wings & Sudarshana Chakra Halo
+  chakraHalo.rotation.z = elapsed * 2.5;
+  if (STATE.flyingActive) {
+    const flap = Math.sin(elapsed * 9.0) * 0.38;
+    leftWing.rotation.z = flap;
+    rightWing.rotation.z = -flap;
   }
 
-  // Update Skeletal & Morph Animation Mixers
+  // Sudarshana Chakra Artifact Passive Auto-Heal (from Karma Shop) + Tier VII Vishnu Avatar Aura
+  chakraTimer += dt;
+  if (chakraTimer >= 1.4) {
+    chakraTimer = 0;
+    const chakraRank = SHOP_TOOLS[5].rank;
+    if (chakraRank > 0 || CONTINENTS[6].completed) {
+      const near = findNearestSufferingEntity();
+      if (near && near.mesh.position.distanceTo(playerGroup.position) <= 38) {
+        const autoAmt = chakraRank * 45 + (CONTINENTS[6].completed ? 120 : 0);
+        launchProjectile(playerGroup.position, near, autoAmt, 0xfde047);
+      }
+    }
+  }
+
   for (let i = 0; i < mixers.length; i++) {
     mixers[i].update(dt);
   }
 
-  // Player Movement (WASD / Arrow Keys relative to Camera Yaw)
+  // Player Movement (Speed-Running & Full 3D Sky-Flight!)
   let moveX = 0;
   let moveZ = 0;
   if (keys['w'] || keys['arrowup']) moveZ -= 1;
@@ -1786,17 +1798,20 @@ function animate() {
   if (keys['a'] || keys['arrowleft']) moveX -= 1;
   if (keys['d'] || keys['arrowright']) moveX += 1;
 
-  if (STATE.activeBuffs.dashTimer > 0) {
-    STATE.activeBuffs.dashTimer = Math.max(0, STATE.activeBuffs.dashTimer - dt);
-  }
-
   const isMoving = moveX !== 0 || moveZ !== 0;
+  const mobMult = getMobilityMultiplier();
+
   if (isMoving) {
     const len = Math.hypot(moveX, moveZ);
     moveX /= len;
     moveZ /= len;
 
-    const baseSpeed = STATE.activeBuffs.dashTimer > 0 ? 19.5 : STATE.activeBuffs.flying ? 16.0 : 8.8;
+    const baseSpeed = STATE.flyingActive
+      ? 48.0 * mobMult
+      : STATE.speedRunActive
+      ? 24.5 * mobMult
+      : 10.5 * mobMult;
+
     const sinY = Math.sin(cameraYaw);
     const cosY = Math.cos(cameraYaw);
     const dx = moveX * cosY + moveZ * sinY;
@@ -1804,21 +1819,19 @@ function animate() {
 
     playerGroup.position.x += dx * baseSpeed * dt;
     playerGroup.position.z += dz * baseSpeed * dt;
-
-    const targetAngle = Math.atan2(dx, dz) + Math.PI;
-    playerGroup.rotation.y = targetAngle;
+    playerGroup.rotation.y = Math.atan2(dx, dz) + Math.PI;
     setPlayerAnim('Run');
   } else {
     setPlayerAnim('Idle');
   }
 
-  // Gravity & Terrain Following
-  const groundY = getTerrainHeight(playerGroup.position.x, playerGroup.position.z);
-  if (STATE.activeBuffs.flying) {
-    const desiredFlyY = Math.max(groundY + 5.5, playerGroup.position.y);
-    playerGroup.position.y = THREE.MathUtils.lerp(playerGroup.position.y, desiredFlyY, dt * 4);
+  const groundY = Math.max(-1.2, getTerrainHeight(playerGroup.position.x, playerGroup.position.z));
+  if (STATE.flyingActive) {
+    if (keys[' ']) playerGroup.position.y += 28.0 * dt;
+    if (keys['c'] || keys['shift']) playerGroup.position.y -= 28.0 * dt;
+    playerGroup.position.y = Math.max(groundY + 2.5, playerGroup.position.y);
   } else {
-    playerVelY -= 26.0 * dt;
+    playerVelY -= 32.0 * dt;
     playerGroup.position.y += playerVelY * dt;
     if (playerGroup.position.y <= groundY) {
       playerGroup.position.y = groundY;
@@ -1827,88 +1840,75 @@ function animate() {
     }
   }
 
-  // Update AI Wildlife & Party Companion Wandering
+  // Detect Continent Change as Player Flies Across the World
+  const nearCont = getNearestContinent(playerGroup.position.x, playerGroup.position.z);
+  if (nearCont !== STATE.currentContinent) {
+    STATE.currentContinent = nearCont;
+    updateAllHUD();
+    addChatMessage('cyan', `🗺️ Entered <strong>${nearCont.name}</strong> (Difficulty Tier ${nearCont.roman}).`);
+  }
+
+  // Wander Wildlife
   interactables.forEach((ent) => {
     if (ent.kind === 'wildlife') {
       ent.wanderAngle += dt * 0.55;
-      const r = 4.2;
-      const tx = ent.homeX + Math.cos(ent.wanderAngle) * r;
-      const tz = ent.homeZ + Math.sin(ent.wanderAngle * 0.8) * r;
-      const dx = tx - ent.mesh.position.x;
-      const dz = tz - ent.mesh.position.z;
-      ent.mesh.position.x += dx * dt * 0.85;
-      ent.mesh.position.z += dz * dt * 0.85;
-      ent.mesh.position.y =
-        getTerrainHeight(ent.mesh.position.x, ent.mesh.position.z) +
-        (ent.flyHeight ? ent.flyHeight + Math.sin(elapsed * 2.5) * 0.4 : 0);
-      ent.mesh.rotation.y = Math.atan2(dx, dz);
-    } else if (ent.kind === 'companion') {
-      ent.patrolAngle += dt * 0.45;
-      const tx = ent.homeX + Math.cos(ent.patrolAngle) * 3.0;
-      const tz = ent.homeZ + Math.sin(ent.patrolAngle) * 3.0;
+      const tx = ent.homeX + Math.cos(ent.wanderAngle) * 4.0;
+      const tz = ent.homeZ + Math.sin(ent.wanderAngle * 0.8) * 4.0;
       const dx = tx - ent.mesh.position.x;
       const dz = tz - ent.mesh.position.z;
       ent.mesh.position.x += dx * dt;
       ent.mesh.position.z += dz * dt;
       ent.mesh.position.y = getTerrainHeight(ent.mesh.position.x, ent.mesh.position.z);
-      ent.mesh.rotation.y = Math.atan2(dx, dz) + Math.PI;
+      ent.mesh.rotation.y = Math.atan2(dx, dz);
     }
   });
 
-  // Update Target Ring & Range UI
   if (STATE.selectedTarget) {
-    targetRingGroup.position.copy(STATE.selectedTarget.mesh.position);
-    targetRingGroup.position.y =
-      getTerrainHeight(targetRingGroup.position.x, targetRingGroup.position.z) + 0.16;
-    targetRingGroup.rotation.z = elapsed * 1.8;
-    updateTargetFrameUI();
+    targetRing.position.copy(STATE.selectedTarget.mesh.position);
+    targetRing.position.y = getTerrainHeight(targetRing.position.x, targetRing.position.z) + 0.2;
+    targetRing.rotation.z = elapsed * 2.0;
   }
 
-  // Update Channeled Castbar
+  // Update Castbar
   if (STATE.casting) {
     STATE.casting.elapsed += dt;
     const pct = Math.min(100, (STATE.casting.elapsed / STATE.casting.duration) * 100);
     document.getElementById('cast-fill').style.width = `${pct}%`;
-    const rem = Math.max(0, STATE.casting.duration - STATE.casting.elapsed);
-    document.getElementById('cast-timer').textContent = `${rem.toFixed(1)}s`;
+    document.getElementById('cast-timer').textContent = `${Math.max(0, STATE.casting.duration - STATE.casting.elapsed).toFixed(1)}s`;
     if (STATE.casting.elapsed >= STATE.casting.duration) {
       const done = STATE.casting.onComplete;
       STATE.casting = null;
-      document.getElementById('cast-container').classList.add('cast-hidden');
+      document.getElementById('wow-castbar').classList.add('cast-hidden');
       if (done) done();
     }
   }
 
-  // Update Cooldowns on 8-Slot Hotbar
-  for (let s = 1; s <= 7; s++) {
+  // Update Cooldowns
+  for (let s = 1; s <= 8; s++) {
     if (STATE.cooldowns[s] > 0) {
       STATE.cooldowns[s] = Math.max(0, STATE.cooldowns[s] - dt);
       const cdEl = document.getElementById(`cd-${s}`);
-      if (cdEl) {
-        const ratio = (STATE.cooldowns[s] / STATE.cdMax[s]) * 100;
-        cdEl.style.height = `${ratio}%`;
-      }
+      if (cdEl) cdEl.style.height = `${(STATE.cooldowns[s] / STATE.cdMax[s]) * 100}%`;
     }
   }
 
-  // Update Homing Spell Projectiles
+  // Update Projectiles
   for (let i = activeProjectiles.length - 1; i >= 0; i--) {
     const p = activeProjectiles[i];
-    const targetPos = p.target.mesh.position.clone();
-    targetPos.y += 1.2;
-    const dir = targetPos.sub(p.mesh.position);
-    const dist = dir.length();
-    if (dist < 0.85) {
+    const tPos = p.target.mesh.position.clone();
+    tPos.y += 1.3;
+    const dir = tPos.sub(p.mesh.position);
+    if (dir.length() < 1.0) {
       scene.remove(p.mesh);
       activeProjectiles.splice(i, 1);
-      applyHealToEntity(p.target, 45, 'Sanjeevani');
+      applyRejuvenation(p.target, p.healAmount, 'Sanjeevani');
     } else {
       dir.normalize();
       p.mesh.position.addScaledVector(dir, p.speed * dt);
     }
   }
 
-  // Update Expanding Shockwave Rings
+  // Update Shockwaves
   for (let i = activeShockwaves.length - 1; i >= 0; i--) {
     const sw = activeShockwaves[i];
     sw.elapsed += dt;
@@ -1923,16 +1923,12 @@ function animate() {
     }
   }
 
-  // Third-Person Hordes.io Camera Orbit
-  const camTarget = new THREE.Vector3(
-    playerGroup.position.x,
-    playerGroup.position.y + 2.1,
-    playerGroup.position.z
-  );
+  // Third-Person WoW Orbit Camera
+  const camTarget = new THREE.Vector3(playerGroup.position.x, playerGroup.position.y + 2.2, playerGroup.position.z);
   const camX = camTarget.x + Math.sin(cameraYaw) * Math.cos(cameraPitch) * cameraDist;
   const camZ = camTarget.z + Math.cos(cameraYaw) * Math.cos(cameraPitch) * cameraDist;
   const camY = camTarget.y + Math.sin(cameraPitch) * cameraDist;
-  const minCamY = getTerrainHeight(camX, camZ) + 1.2;
+  const minCamY = getTerrainHeight(camX, camZ) + 1.4;
 
   camera.position.set(camX, Math.max(camY, minCamY), camZ);
   camera.lookAt(camTarget);
@@ -1948,6 +1944,4 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-updateTopAndBottomHUD();
-updateQuestTrackerUI();
 animate();

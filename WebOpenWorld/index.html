@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>Dharma.io — Virtuous Open-World WebGL MMORPG</title>
+  <title>World of Dharma — 7 Continents, Karma Currency &amp; Sacred Forge MMORPG</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☸️</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Cinzel:wght@700;800;900&display=swap" rel="stylesheet">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪷</text></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
   <script type="importmap">
     {
@@ -19,271 +19,327 @@
   </script>
 </head>
 <body>
-  <!-- 3D WebGL Canvas Layer -->
+  <!-- 3D WebGL World Canvas -->
   <div id="canvas-container"></div>
 
-  <!-- 3D WORLD-SPACE FLOATING NAMEPLATES LAYER -->
+  <!-- 3D World-Space Floating Nameplates -->
   <div id="nameplates-container"></div>
 
-  <!-- HORDES.IO TOP BAR -->
-  <header id="hordes-topbar">
-    <div class="topbar-left">
-      <div class="logo">
-        <span class="logo-icon">☀️</span>
-        <span class="logo-text">DHARMA<span class="logo-io">.IO</span></span>
+  <!-- =====================================================================
+       1. WORLD OF WARCRAFT CLASSIC TOP-LEFT PLAYER & TARGET UNIT FRAMES
+       ===================================================================== -->
+  <div id="wow-unit-frames">
+    <!-- PLAYER UNIT FRAME -->
+    <div class="wow-unit-frame" id="wow-player-frame">
+      <div class="wow-portrait-ring">
+        <div class="wow-portrait-inner player-portrait">🧙‍♂️</div>
+        <div class="wow-level-circle" id="wow-player-lvl">1</div>
       </div>
-      <div class="faction-pill surya" id="faction-badge">
-        <span class="faction-dot"></span>
-        <span id="faction-name">ORDER OF SURYA</span>
-      </div>
-      <div class="zone-pill" id="zone-badge">
-        <span>📍 Guardstone Sanctuary [Lv. 1–20]</span>
-      </div>
-    </div>
-
-    <div class="topbar-right">
-      <div class="stat-pill gold-pill" title="Swarna (Gold)"><span class="icon">🪙</span> <span id="stat-gold">3,450</span></div>
-      <div class="stat-pill punya-pill" title="Punya (Spiritual Karma)"><span class="icon">✨</span> <span id="stat-punya">480</span> <small>PUNYA</small></div>
-      <div class="stat-pill fame-pill" title="Kirti (Fame)"><span class="icon">🌟</span> <span id="stat-fame">210</span> <small>FAME</small></div>
-      <div class="stat-pill fps-pill"><span class="ping-dot green"></span> <span id="stat-fps">60 FPS</span> • <span id="stat-ping">14ms</span></div>
-      <button class="icon-btn" id="btn-inventory" title="Inventory &amp; Relics [B]">🎒</button>
-      <button class="icon-btn" id="btn-deities" title="7 Deities &amp; Boons [M]">🛕</button>
-    </div>
-  </header>
-
-  <!-- HORDES.IO PARTY FRAMES (Top Left) -->
-  <aside id="hordes-party-frame">
-    <div class="party-title">PARTY • SANCTUARY GUARDIANS (4/4)</div>
-    <div class="party-member" id="party-0">
-      <div class="pm-top">
-        <span class="pm-role healer">✚</span>
-        <span class="pm-name">You (Vaidya)</span>
-        <span class="pm-lvl" id="pm-self-lvl">Lv.1</span>
-      </div>
-      <div class="pm-bar"><div class="pm-fill hp" id="pm-self-hp" style="width:100%"></div></div>
-      <div class="pm-bar mana"><div class="pm-fill mp" id="pm-self-mp" style="width:100%"></div></div>
-    </div>
-    <div class="party-member" id="party-1">
-      <div class="pm-top">
-        <span class="pm-role tank">🛡️</span>
-        <span class="pm-name">Arjuna_Palak</span>
-        <span class="pm-lvl">Lv.12</span>
-      </div>
-      <div class="pm-bar"><div class="pm-fill hp" id="pm-1-hp" style="width:92%"></div></div>
-      <div class="pm-bar mana"><div class="pm-fill mp" style="width:78%"></div></div>
-    </div>
-    <div class="party-member" id="party-2">
-      <div class="pm-top">
-        <span class="pm-role mage">💧</span>
-        <span class="pm-name">Rishi_Kashi</span>
-        <span class="pm-lvl">Lv.15</span>
-      </div>
-      <div class="pm-bar"><div class="pm-fill hp" id="pm-2-hp" style="width:88%"></div></div>
-      <div class="pm-bar mana"><div class="pm-fill mp" style="width:95%"></div></div>
-    </div>
-    <div class="party-member" id="party-3">
-      <div class="pm-top">
-        <span class="pm-role archer">🏹</span>
-        <span class="pm-name">Tara_Vana</span>
-        <span class="pm-lvl">Lv.10</span>
-      </div>
-      <div class="pm-bar"><div class="pm-fill hp" id="pm-3-hp" style="width:100%"></div></div>
-      <div class="pm-bar mana"><div class="pm-fill mp" style="width:84%"></div></div>
-    </div>
-  </aside>
-
-  <!-- HORDES.IO MINIMAP (Top Right) -->
-  <div id="hordes-minimap">
-    <canvas id="minimap-canvas" width="170" height="170"></canvas>
-    <div class="minimap-overlay">
-      <div class="minimap-zone-label">Guardstone Sanctuary</div>
-      <div class="minimap-coords" id="minimap-coords">X: 0, Z: 0</div>
-    </div>
-  </div>
-
-  <!-- HORDES.IO QUEST / VIRTUE TRACKER (Right Below Minimap) -->
-  <aside id="hordes-quest-panel">
-    <div class="qp-header">📜 ACTIVE SEVA &amp; QUESTS</div>
-    <div class="qp-item" id="q-wildlife">
-      <div class="qp-title">🦌 Heal Distressed Forest Wildlife</div>
-      <div class="qp-bar-wrap"><div class="qp-bar-fill" id="q-wildlife-bar" style="width:0%"></div></div>
-      <div class="qp-sub"><span id="q-wildlife-cnt">0/4</span> Restored with Sanjeevani [1]</div>
-    </div>
-    <div class="qp-item" id="q-flora">
-      <div class="qp-title">🌿 Cultivate Sacred Lotus Groves</div>
-      <div class="qp-bar-wrap"><div class="qp-bar-fill" id="q-flora-bar" style="width:0%"></div></div>
-      <div class="qp-sub"><span id="q-flora-cnt">0/3</span> Grown with Ganga Jal [2]</div>
-    </div>
-    <div class="qp-item" id="q-obelisk">
-      <div class="qp-title">🔥 Sanctify Ancient Guardstones</div>
-      <div class="qp-bar-wrap"><div class="qp-bar-fill" id="q-obelisk-bar" style="width:0%"></div></div>
-      <div class="qp-sub"><span id="q-obelisk-cnt">0/3</span> Awakened with Annadana [3]</div>
-    </div>
-  </aside>
-
-  <!-- HORDES.IO CHAT & COMBAT/DEED LOG (Bottom Left) -->
-  <div id="hordes-chat">
-    <div class="chat-header">
-      <button class="chat-tab active" data-tab="all">All</button>
-      <button class="chat-tab" data-tab="deed">Virtue Log</button>
-      <button class="chat-tab" data-tab="party">Party</button>
-      <span class="chat-controls-hint">WASD Move • Drag Mouse Orbit • Tab Target • 1-7 Spells</span>
-    </div>
-    <div class="chat-body" id="chat-messages">
-      <div class="chat-line system"><span class="time">[System]</span> Welcome to <strong>Dharma.io</strong>. Zero violence—all XP, Punya, and Mythic Boons come from healing wildlife, cultivating groves, and sanctifying Guardstones.</div>
-      <div class="chat-line world"><span class="time">[World]</span> <strong>Rishi_Kashi</strong> sanctified the Northern Guardstone Obelisk! (+150 Punya)</div>
-      <div class="chat-line guide"><span class="time">[Controls]</span> Press <kbd>[Tab]</kbd> or Click any Fox, Stallion, Stork, or Grove, then press <kbd>[1]</kbd>, <kbd>[2]</kbd>, or <kbd>[3]</kbd> to cast!</div>
-    </div>
-    <div class="chat-input-bar">
-      <input type="text" id="chat-input" placeholder="Press Enter to chat with party..." />
-    </div>
-  </div>
-
-  <!-- HORDES.IO TARGET UNIT FRAME (Top Center) -->
-  <div id="hordes-target-frame" class="target-hidden">
-    <div class="target-card">
-      <div class="target-header">
-        <span class="target-avatar" id="target-icon">🦊</span>
-        <div class="target-meta">
-          <div class="target-title-row">
-            <span class="target-name" id="target-name">Wounded Forest Fox</span>
-            <span class="target-lvl" id="target-lvl">Lv. 4</span>
-          </div>
-          <span class="target-type" id="target-type">Wildlife • Needs Sanjeevani Healing [1]</span>
+      <div class="wow-bars-column">
+        <div class="wow-name-plate player-name-bg">
+          <span id="wow-player-name">Sadhak (Vaidya)</span>
+          <span class="wow-realm-tag" id="wow-current-stage">Stage I/VII</span>
+        </div>
+        <div class="wow-bar-track hp-track">
+          <div class="wow-bar-fill hp-fill" id="wow-player-hp-bar" style="width: 100%;"></div>
+          <span class="wow-bar-text" id="wow-player-hp-txt">Power: 100 • Radius: 22m</span>
+        </div>
+        <div class="wow-bar-track mana-track">
+          <div class="wow-bar-fill mana-fill" id="wow-player-mp-bar" style="width: 100%;"></div>
+          <span class="wow-bar-text" id="wow-player-mp-txt">☸️ 350 KARMA POINTS</span>
         </div>
       </div>
-      <div class="bar-shell">
-        <div class="bar-fill hp-fill" id="target-hp-fill" style="width: 40%;"></div>
-        <span class="bar-text">VITALITY: <strong id="target-hp-val">40</strong> / 100</span>
+    </div>
+
+    <!-- TARGET UNIT FRAME (Directly beside Player Frame like WoW) -->
+    <div class="wow-unit-frame" id="wow-target-frame">
+      <div class="wow-bars-column target-column">
+        <div class="wow-name-plate target-name-bg" id="wow-target-name-bg">
+          <span id="wow-target-name">Suffering Forest Fox</span>
+          <span class="wow-target-diff" id="wow-target-diff">Tier I</span>
+        </div>
+        <div class="wow-bar-track hp-track">
+          <div class="wow-bar-fill target-hp-fill" id="wow-target-hp-bar" style="width: 15%;"></div>
+          <span class="wow-bar-text" id="wow-target-hp-txt">15 / 120 Rejuvenation</span>
+        </div>
+        <div class="wow-bar-track status-track">
+          <div class="wow-bar-fill blight-fill" id="wow-target-blight-bar" style="width: 85%;"></div>
+          <span class="wow-bar-text" id="wow-target-status-txt">🌑 Suffering — Cast [1] [2] [3] [R]</span>
+        </div>
       </div>
-      <div class="target-buffs-row">
-        <span class="target-buff" id="target-status-pill">⚡ Distressed</span>
-        <span class="target-range" id="target-range">Range: 8m (In Range)</span>
+      <div class="wow-portrait-ring target-ring">
+        <div class="wow-portrait-inner target-portrait" id="wow-target-icon">🦊</div>
+        <div class="wow-level-circle target-lvl" id="wow-target-lvl">1</div>
       </div>
     </div>
   </div>
 
-  <!-- HORDES.IO BOTTOM CENTER HUD: PLAYER UNIT BARS, CASTBAR & 8-SLOT HOTBAR -->
-  <div id="hordes-bottom-bar">
-    <!-- Active Buffs Row Above Player Frame -->
-    <div class="active-buffs-bar" id="active-buffs">
-      <div class="buff-icon" title="Blessing of Ahimsa: +25% Punya from all healing deeds">🌿</div>
-      <div class="buff-icon" title="Surya Grace: Natural Prana Regeneration">☀️</div>
-    </div>
-
-    <div class="player-unit-card">
-      <div class="unit-row-top">
-        <span class="class-badge" id="player-class-badge">VAIDYA (SHAMAN OF LIFE)</span>
-        <span class="player-handle" id="player-name">Sadhak</span>
-        <span class="player-lvl-badge" id="player-lvl">Lv. 1</span>
-      </div>
-      <div class="bar-shell prana-shell">
-        <div class="bar-fill prana-fill" id="player-prana-fill" style="width: 100%;"></div>
-        <span class="bar-text">PRANA (Health): <strong id="player-prana-val">100</strong> / 100</span>
-      </div>
-      <div class="bar-shell punya-shell">
-        <div class="bar-fill punya-fill" id="player-punya-fill" style="width: 30%;"></div>
-        <span class="bar-text">PUNYA (Karma XP): <strong id="player-punya-val">480</strong> / <strong id="player-punya-max">600</strong></span>
-      </div>
-      <!-- Interruptible / Channeled Cast Bar -->
-      <div class="cast-shell cast-hidden" id="cast-container">
-        <div class="cast-fill" id="cast-fill"></div>
-        <span class="cast-label" id="cast-label">Channelling Sanjeevani Bolt...</span>
-        <span class="cast-timer" id="cast-timer">0.7s</span>
+  <!-- =====================================================================
+       2. WOW PARTY & SANCTUARY VENDOR QUICK-ACCESS (Left Side)
+       ===================================================================== -->
+  <aside id="wow-party-frames">
+    <div class="wow-party-unit vendor-unit" id="btn-left-shop" title="Click or press [K] to open the Karma Emporium &amp; Sacred Tool Forge">
+      <div class="wow-party-portrait">🛠️<span class="p-lvl">★</span></div>
+      <div class="wow-party-bars">
+        <div class="p-name" style="color:#fde047;">Rishi Vishwakarma</div>
+        <div style="font-size:9.5px;color:#38bdf8;font-weight:700;">[K] Karma Shop &amp; Forge</div>
       </div>
     </div>
+    <div class="wow-party-unit">
+      <div class="wow-party-portrait">🛡️<span class="p-lvl">7</span></div>
+      <div class="wow-party-bars">
+        <div class="p-name">Arjuna_Palak</div>
+        <div class="p-hp"><div style="width:94%"></div></div>
+        <div class="p-mp"><div style="width:82%"></div></div>
+      </div>
+    </div>
+    <div class="wow-party-unit">
+      <div class="wow-party-portrait">💧<span class="p-lvl">7</span></div>
+      <div class="wow-party-bars">
+        <div class="p-name">Rishi_Kashi</div>
+        <div class="p-hp"><div style="width:89%"></div></div>
+        <div class="p-mp"><div style="width:96%"></div></div>
+      </div>
+    </div>
+  </aside>
 
-    <!-- Hordes.io Crisp 8-Slot Hotbar -->
-    <div class="action-hotbar">
-      <div class="h-slot" id="slot-1" data-slot="1" title="Sanjeevani Bolt [1]: Fires a homing emerald healing projectile at target">
-        <span class="h-key">1</span>
-        <div class="h-icon">🌿</div>
-        <div class="h-name">Sanjeevani</div>
-        <div class="h-cd" id="cd-1"></div>
-      </div>
-      <div class="h-slot" id="slot-2" data-slot="2" title="Ganga Jal Nova [2]: Expanding water ring that heals nearby wildlife &amp; blooms sacred groves">
-        <span class="h-key">2</span>
-        <div class="h-icon">💧</div>
-        <div class="h-name">Ganga Nova</div>
-        <div class="h-cd" id="cd-2"></div>
-      </div>
-      <div class="h-slot" id="slot-3" data-slot="3" title="Annadana Radiance [3]: Golden beam that sanctifies Guardstones &amp; feeds allies">
-        <span class="h-key">3</span>
-        <div class="h-icon">🍲</div>
-        <div class="h-name">Annadana</div>
-        <div class="h-cd" id="cd-3"></div>
-      </div>
-      <div class="h-slot locked" id="slot-4" data-slot="4" title="Surya Dash [4]: Blazing 2.5x speed aura (Unlocks after first wildlife rescue)">
-        <span class="h-key">4</span>
-        <div class="h-icon">☀️</div>
-        <div class="h-name">Surya Dash</div>
-        <div class="lock-glyph">🔒</div>
-        <div class="h-cd" id="cd-4"></div>
-      </div>
-      <div class="h-slot locked" id="slot-5" data-slot="5" title="Padma Leap [5]: High sky-levitation jump (Unlocks after cultivating a Lotus Grove)">
-        <span class="h-key">5</span>
-        <div class="h-icon">🌸</div>
-        <div class="h-name">Padma Leap</div>
-        <div class="lock-glyph">🔒</div>
-        <div class="h-cd" id="cd-5"></div>
-      </div>
-      <div class="h-slot locked" id="slot-6" data-slot="6" title="Akash Blink [T]: Instant 32m spatial teleport forward">
-        <span class="h-key">T</span>
-        <div class="h-icon">✨</div>
-        <div class="h-name">Akash Blink</div>
-        <div class="lock-glyph">🔒</div>
-        <div class="h-cd" id="cd-6"></div>
-      </div>
-      <div class="h-slot locked" id="slot-7" data-slot="7" title="Garuda Soar [F]: Ascend and fly freely over mountains and rivers">
-        <span class="h-key">F</span>
-        <div class="h-icon">🦅</div>
-        <div class="h-name">Garuda Fly</div>
-        <div class="lock-glyph">🔒</div>
-        <div class="h-cd" id="cd-7"></div>
-      </div>
-      <div class="h-slot" id="slot-8" data-slot="8" title="7 Deities &amp; Sacred Boons [M]">
-        <span class="h-key">M</span>
-        <div class="h-icon">🛕</div>
-        <div class="h-name">7 Deities</div>
-        <div class="h-cd" id="cd-8"></div>
-      </div>
+  <!-- =====================================================================
+       3. TOP-CENTER CONTINENT BANNER & LIVE KARMA / MOBILITY STATUS
+       ===================================================================== -->
+  <div id="wow-zone-header">
+    <div class="zone-continent-title" id="hud-continent-name">I. JAMBUDVIPA — THE ASHEN GROVES</div>
+    <div class="zone-sub-status">
+      <span id="hud-continent-state" class="blighted-badge">🌑 Suffering Under Blight (0/4 Rejuvenated)</span>
+      <span class="sep">•</span>
+      <span id="hud-mobility-state" class="mobility-badge">⚡ [4] Speed-Run • 🦅 [F] Garuda Flight • 🛠️ [K] Karma Shop</span>
     </div>
   </div>
 
-  <!-- SURPRISE MYTHIC BOON MODAL -->
-  <div id="gift-modal" class="modal-backdrop-hidden">
-    <div class="mythic-card">
-      <div class="mythic-badge" id="gift-tier">⭐ MYTHIC CELESTIAL BOON AWAKENED ⭐</div>
-      <div class="mythic-icon" id="gift-icon">🪷</div>
-      <h2 class="mythic-title" id="gift-title">Padma Siddhi (Lotus Leap)</h2>
-      <p class="mythic-desc" id="gift-desc">Born from selfless deeds of nurturing sacred life! Press [5] or [Space] to leap sky-high over rivers and cliffs.</p>
-      <button class="hordes-btn" id="btn-claim-gift">Claim Divine Boon [Enter]</button>
-    </div>
-  </div>
-
-  <!-- INVENTORY & RELICS WINDOW [B] -->
-  <div id="inventory-modal" class="modal-backdrop-hidden">
-    <div class="window-card">
-      <div class="window-header">
-        <span>🎒 SAGE INVENTORY &amp; SACRED RELICS</span>
-        <button class="close-x" id="btn-close-inv">✕</button>
+  <!-- =====================================================================
+       4. WOW CIRCULAR ORNATE MINIMAP & BUFFS (Top Right)
+       ===================================================================== -->
+  <div id="wow-top-right">
+    <!-- Active Buffs Row (Left of Minimap like WoW) -->
+    <div id="wow-buff-frame">
+      <div class="wow-buff-slot active" id="buff-shop" title="Open Karma Shop &amp; Sacred Tool Upgrades [K]">
+        <span class="b-icon">☸️</span>
+        <span class="b-time" id="buff-karma-txt">SHOP</span>
       </div>
-      <div class="inventory-grid" id="inv-grid"></div>
-    </div>
-  </div>
-
-  <!-- 7 DEITIES & SANCTUARY BOONS WINDOW [M] -->
-  <div id="deities-modal" class="modal-backdrop-hidden">
-    <div class="window-card wide-card">
-      <div class="window-header">
-        <span>🛕 THE 7 DEITIES OF BHARAT &amp; CELESTIAL BOONS</span>
-        <button class="close-x" id="btn-close-deities">✕</button>
+      <div class="wow-buff-slot active" id="buff-speed" title="Vayu Wind-Stride [4]: Toggle Super-Speed Running!">
+        <span class="b-icon">⚡</span>
+        <span class="b-time" id="buff-speed-txt">RUN</span>
       </div>
-      <div class="deities-grid" id="deities-grid"></div>
+      <div class="wow-buff-slot active" id="buff-flight" title="Garuda Sky-Flight [F]: Boundless 3D Flight Across All 7 Continents!">
+        <span class="b-icon">🦅</span>
+        <span class="b-time" id="buff-flight-txt">FLY</span>
+      </div>
+    </div>
+
+    <!-- Ornate Gold Circular Minimap -->
+    <div id="wow-minimap-cluster">
+      <div class="minimap-zone-banner" id="minimap-zone-label">Jambudvipa [Tier I]</div>
+      <div class="minimap-gold-bezel">
+        <canvas id="minimap-canvas" width="168" height="168"></canvas>
+        <div class="minimap-compass-n">N</div>
+        <button class="minimap-worldmap-btn" id="btn-open-map" title="Open 7 Continents World Map &amp; Fast-Fly [M]">🗺️</button>
+      </div>
+      <div class="minimap-coords-pill" id="minimap-coords">0, 0 • Alt: 0m</div>
     </div>
   </div>
 
-  <!-- FLOATING COMBAT/HEALING TEXT -->
+  <!-- =====================================================================
+       5. WOW QUEST & 7-CONTINENT REJUVENATION TRACKER (Right Side)
+       ===================================================================== -->
+  <aside id="wow-quest-tracker">
+    <div class="wq-header">
+      <span>📜 7 CONTINENTS REJUVENATION</span>
+      <button class="wq-map-btn" id="btn-tracker-map">[M] 7 Continents</button>
+    </div>
+    <div class="wq-current-box">
+      <div class="wq-quest-title" id="wq-active-title">Tier I: Cleanse Jambudvipa</div>
+      <div class="wq-quest-desc" id="wq-active-desc">Difficulty: 1.0x • Remove suffering to earn Karma Points (☸️) &amp; upgrade your Sacred Tools [K].</div>
+      <div class="wq-progress-row">
+        <div class="wq-bar"><div class="wq-fill" id="wq-active-bar" style="width: 0%;"></div></div>
+        <span class="wq-count" id="wq-active-cnt">0 / 4</span>
+      </div>
+    </div>
+    <div class="wq-continents-list" id="wq-continents-list">
+      <!-- Dynamically populated with all 7 Continents & click-to-fly -->
+    </div>
+  </aside>
+
+  <!-- =====================================================================
+       6. WOW CHAT & COMBAT LOG (Bottom Left)
+       ===================================================================== -->
+  <div id="wow-chat-frame">
+    <div class="wow-chat-tabs">
+      <button class="c-tab active">World</button>
+      <button class="c-tab">Karma Log</button>
+      <button class="c-tab">Forge</button>
+      <span class="c-hint">WASD Move • Space/C Fly Up/Down • [K] Karma Shop • [M] 7 Continents</span>
+    </div>
+    <div class="wow-chat-messages" id="chat-messages">
+      <div class="chat-line yellow">[Universe] Welcome to <strong>World of Dharma</strong>. Just like the real universe, <strong>☸️ Karma Points</strong> are the sole currency!</div>
+      <div class="chat-line green">[Rejuvenation] Suffering covers all <strong>7 Continents</strong>. Heal distressed wildlife, dead trees &amp; shrines with <strong>[1] [2] [3] [R]</strong> to turn blighted lands lush green and earn Karma!</div>
+      <div class="chat-line cyan">[Sacred Shop] Press <strong>[K]</strong> (or click the Shop button) to spend Karma Points on <strong>Sacred Tools, Relics &amp; Ability Upgrades</strong> needed to conquer Tiers II–VII!</div>
+    </div>
+    <div class="wow-chat-input-row">
+      <input type="text" id="chat-input" placeholder="Press Enter to chat..." />
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       7. WOW CAST BAR & BOTTOM GRYPHON ACTION BAR (Bottom Center)
+       ===================================================================== -->
+  <div id="wow-bottom-ui">
+    <!-- WoW Golden Channeled Castbar -->
+    <div id="wow-castbar" class="cast-hidden">
+      <div class="wow-cast-fill" id="cast-fill"></div>
+      <span class="wow-cast-text" id="cast-label">Sanjeevani Bolt</span>
+      <span class="wow-cast-time" id="cast-timer">0.5s</span>
+    </div>
+
+    <!-- Main Gryphon Dock -->
+    <div class="wow-main-dock">
+      <!-- Left Gryphon Endcap -->
+      <div class="wow-gryphon left-gryphon" title="Golden Gryphon Guard">🦅</div>
+
+      <div class="wow-dock-center">
+        <!-- Double Thin Progression Bars (Top of Action Bar like WoW) -->
+        <div class="wow-xp-strip" title="Cosmic Ascension Stage (1 to 7) &amp; Total Karma Generated">
+          <div class="wow-xp-fill" id="wow-xp-fill" style="width: 14%;"></div>
+          <div class="wow-xp-ticks">
+            <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <span class="wow-xp-label" id="wow-xp-label">ASCENSION STAGE I / VII • LIFETIME KARMA GENERATED: 350 ☸️</span>
+        </div>
+
+        <div class="wow-reputation-strip" title="Global Rejuvenation across all 7 Continents">
+          <div class="wow-rep-fill" id="wow-rep-fill" style="width: 0%;"></div>
+          <span class="wow-rep-label" id="wow-rep-label">WORLD RENEWAL: 0 / 28 Suffering Sites Rejuvenated (0 / 7 Continents Reborn)</span>
+        </div>
+
+        <!-- 8 Action Slots + Karma Currency & Micro Menu Bar -->
+        <div class="wow-action-row">
+          <div class="wow-action-slots">
+            <div class="wow-slot" id="slot-1" data-slot="1" title="Sanjeevani Bolt [1]: Homing emerald life-bolt that removes suffering from a target">
+              <span class="s-hotkey">1</span>
+              <div class="s-icon">🌿</div>
+              <div class="s-name">Sanjeevani</div>
+              <div class="s-cd" id="cd-1"></div>
+            </div>
+            <div class="wow-slot" id="slot-2" data-slot="2" title="Ganga Jal Nova [2]: Expanding sacred water wave that rejuvenates all nearby blighted flora &amp; wildlife">
+              <span class="s-hotkey">2</span>
+              <div class="s-icon">💧</div>
+              <div class="s-name">Ganga Nova</div>
+              <div class="s-cd" id="cd-2"></div>
+            </div>
+            <div class="wow-slot" id="slot-3" data-slot="3" title="Surya Sunbeam [3]: Pillar of solar grace that sanctifies corrupted Guardstones &amp; heals deeply">
+              <span class="s-hotkey">3</span>
+              <div class="s-icon">☀️</div>
+              <div class="s-name">Sunbeam</div>
+              <div class="s-cd" id="cd-3"></div>
+            </div>
+            <div class="wow-slot" id="slot-4" data-slot="4" title="Vayu Wind-Sprint [4]: Toggle Super Speed-Running!">
+              <span class="s-hotkey">4</span>
+              <div class="s-icon">⚡</div>
+              <div class="s-name">Speed Run</div>
+              <div class="s-cd" id="cd-4"></div>
+            </div>
+            <div class="wow-slot" id="slot-5" data-slot="5" title="Padma Sky-Leap [5]: Vault high into the sky or boost upward while flying!">
+              <span class="s-hotkey">5</span>
+              <div class="s-icon">🌸</div>
+              <div class="s-name">Sky Leap</div>
+              <div class="s-cd" id="cd-5"></div>
+            </div>
+            <div class="wow-slot" id="slot-6" data-slot="6" title="Akashic Blink [T]: Instant spatial warp forward!">
+              <span class="s-hotkey">T</span>
+              <div class="s-icon">✨</div>
+              <div class="s-name">Warp Blink</div>
+              <div class="s-cd" id="cd-6"></div>
+            </div>
+            <div class="wow-slot active-toggle" id="slot-7" data-slot="7" title="Garuda Sky-Flight [F]: Toggle high-speed 3D flight to soar far and wide across all 7 Continents!">
+              <span class="s-hotkey">F</span>
+              <div class="s-icon">🦅</div>
+              <div class="s-name">Garuda Fly</div>
+              <div class="s-cd" id="cd-7"></div>
+            </div>
+            <div class="wow-slot" id="slot-8" data-slot="8" title="Amrita World-Pulse [R]: Massive AoE Rejuvenation wave!">
+              <span class="s-hotkey">R</span>
+              <div class="s-icon">🌟</div>
+              <div class="s-name">World Pulse</div>
+              <div class="s-cd" id="cd-8"></div>
+            </div>
+          </div>
+
+          <!-- WoW Karma Currency & Micro-Menu -->
+          <div class="wow-micro-menu">
+            <div class="wow-gold-counter" id="hud-karma-box" title="Universal Currency: Karma Points (Earned by removing suffering)">
+              <span>☸️</span> <strong id="stat-karma">350</strong> <small>KARMA</small>
+            </div>
+            <div class="wow-micro-buttons">
+              <button class="micro-btn highlight" id="btn-shop" title="Karma Emporium: Sacred Tools, Relics &amp; Ability Upgrades [K]">🛠️</button>
+              <button class="micro-btn" id="btn-bags" title="Equipped Tools &amp; Inventory [B]">🎒</button>
+              <button class="micro-btn highlight" id="btn-worldmap" title="World Map of the 7 Continents [M]">🗺️</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Gryphon Endcap -->
+      <div class="wow-gryphon right-gryphon" title="Golden Gryphon Guard">🦅</div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       8. KARMA EMPORIUM: SHOPS, SACRED TOOLS, ITEMS & ABILITY UPGRADES [K]
+       ===================================================================== -->
+  <div id="shop-modal" class="wow-modal-hidden">
+    <div class="wow-window">
+      <div class="wow-window-header">
+        <span>☸️ VISHWAKARMA'S KARMA EMPORIUM — SACRED TOOLS, ITEMS &amp; ABILITY UPGRADES</span>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span class="karma-balance-pill">☸️ Balance: <strong id="shop-karma-balance">350</strong> Karma</span>
+          <button class="wow-close-btn" id="btn-close-shop">✕</button>
+        </div>
+      </div>
+      <div class="wow-window-sub">
+        In this universe, <strong>☸️ Karma Points</strong> are the only currency. Every compassionate deed generates Karma. Spend Karma below to forge stronger <strong>Sacred Tools, Relics, and Consumables</strong> so you can cleanse higher-difficulty Continents (Tiers II–VII)!
+      </div>
+      <div class="shop-grid" id="shop-items-grid"></div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       9. WORLD MAP OF THE 7 CONTINENTS & 7 VIRTUOUS BOONS MODAL [M]
+       ===================================================================== -->
+  <div id="worldmap-modal" class="wow-modal-hidden">
+    <div class="wow-window">
+      <div class="wow-window-header">
+        <span>🗺️ THE 7 CONTINENTS (SAPTA DVIPA) &amp; 7 LEVELS OF VIRTUOUS BOONS</span>
+        <button class="wow-close-btn" id="btn-close-map">✕</button>
+      </div>
+      <div class="wow-window-sub">
+        Fly physically across the oceans with <strong>Garuda Flight [F]</strong> or click <strong>"Soar to Continent"</strong> below to fly directly to any of the 7 Continents! Each continent has escalating blight difficulty and rewards a permanent <strong>Virtuous Boon</strong>.
+      </div>
+      <div class="continents-grid" id="continents-modal-grid"></div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       10. CONTINENT REJUVENATED / MYTHIC BOON AWAKENED MODAL
+       ===================================================================== -->
+  <div id="gift-modal" class="wow-modal-hidden">
+    <div class="wow-boon-popup">
+      <div class="boon-banner" id="gift-tier">🌟 CONTINENT REJUVENATED • VIRTUOUS BOON ATTAINED 🌟</div>
+      <div class="boon-icon" id="gift-icon">🪷</div>
+      <h2 class="boon-title" id="gift-title">Boon of Jambudvipa</h2>
+      <p class="boon-desc" id="gift-desc">You removed all suffering from this continent! The withered land has blossomed into eternal life.</p>
+      <button class="wow-gold-btn" id="btn-claim-gift">Accept Divine Boon [Enter]</button>
+    </div>
+  </div>
+
+  <!-- Floating Combat / Rejuvenation Numbers -->
   <div id="floating-text-container"></div>
 
   <script type="module" src="game.js"></script>
