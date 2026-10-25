@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>World of Dharma (2026) — Skyriding Dragons, 7 Sacred Peaks, Trekking &amp; Camping MMORPG</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐉</text></svg>">
+  <title>World of Dharma — WoW Classic Mechanics, Seated Mounts &amp; 7 Weather Regions</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐎</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
   <script type="importmap">
     {
@@ -19,14 +19,14 @@
   </script>
 </head>
 <body>
-  <!-- 3D WebGL2 PBR + UnrealBloom Canvas -->
+  <!-- 3D WebGL2 PBR + UnrealBloom + 7-Biome Weather Canvas -->
   <div id="canvas-container"></div>
 
-  <!-- 3D World-Space Floating Nameplates (Chests, Wildlife, Shrines, Base Camps) -->
+  <!-- 3D World-Space Floating Nameplates -->
   <div id="nameplates-container"></div>
 
   <!-- =====================================================================
-       1. BORDERLESS TRANSPARENT TOP-LEFT UNIT FRAMES (2026 Modern WoW ElvUI)
+       1. TOP-LEFT PLAYER, TARGET & TARGET-OF-TARGET UNIT FRAMES (Borderless)
        ===================================================================== -->
   <div id="hud-unit-frames">
     <!-- PLAYER UNIT -->
@@ -34,91 +34,83 @@
       <div class="unit-header">
         <span class="unit-lvl" id="wow-player-lvl">1</span>
         <span class="unit-name">Sadhak</span>
-        <span class="unit-sub" id="wow-current-stage">Peak I/VII</span>
+        <span class="unit-sub" id="wow-mount-badge">🐎 Mounted (Seated)</span>
       </div>
       <div class="bar-slim hp-slim">
         <div class="bar-slim-fill player-hp" id="wow-player-hp-bar" style="width: 100%;"></div>
-        <span class="bar-slim-txt" id="wow-player-hp-txt">Trek Stamina: 100% • Power: 85</span>
+        <span class="bar-slim-txt" id="wow-player-hp-txt">100% Stamina • Power: 85</span>
       </div>
       <div class="bar-slim karma-slim">
         <div class="bar-slim-fill player-karma" id="wow-player-mp-bar" style="width: 100%;"></div>
-        <span class="bar-slim-txt" id="wow-player-mp-txt">☸️ 350 KARMA • 💎 0 RELICS</span>
+        <span class="bar-slim-txt" id="wow-player-mp-txt">☸️ 350 KARMA • 🎁 0/7 RELICS</span>
       </div>
     </div>
 
-    <!-- TARGET UNIT (Summit Chest / Suffering Wildlife / Shrine) -->
+    <!-- TARGET UNIT + TARGET OF TARGET -->
     <div class="unit-block" id="target-unit">
       <div class="unit-header">
         <span class="unit-icon" id="wow-target-icon">🎁</span>
         <span class="unit-name" id="wow-target-name">Sahyadri Summit Chest</span>
-        <span class="unit-sub" id="wow-target-diff">Alt 52m</span>
+        <span class="unit-sub" id="wow-target-diff">Summit</span>
       </div>
       <div class="bar-slim hp-slim">
         <div class="bar-slim-fill target-hp" id="wow-target-hp-bar" style="width: 20%;"></div>
-        <span class="bar-slim-txt" id="wow-target-hp-txt">20 / 120 Rejuvenation</span>
+        <span class="bar-slim-txt" id="wow-target-hp-txt">20 / 120 Seal</span>
       </div>
       <div class="bar-slim blight-slim">
         <div class="bar-slim-fill target-blight" id="wow-target-blight-bar" style="width: 80%;"></div>
-        <span class="bar-slim-txt" id="wow-target-status-txt">Climb or Fly to Summit • Cast [1] [2]</span>
+        <span class="bar-slim-txt" id="wow-target-status-txt">Right-Click or [1] • ToT: Sadhak</span>
       </div>
     </div>
   </div>
 
   <!-- =====================================================================
-       2. BORDERLESS TOP-CENTER PEAK, ALTIMETER & NO-FLY ZONE BANNER
+       2. TOP-CENTER REGION, WEATHER & MOUNT STATUS (Clean 1-Line Header)
        ===================================================================== -->
   <div id="hud-top-center">
-    <div class="zone-title" id="hud-continent-name">I. WESTERN GHATS (SAHYADRI) — KALSUBAI &amp; ANAMUDI</div>
+    <div class="zone-title" id="hud-continent-name">I. LUSH GREENERY — WESTERN GHATS (SAHYADRI)</div>
     <div class="zone-subtitle">
-      <span id="hud-fly-rule" class="fly-rule-pill allowed">🐉 Skyriding Allowed</span>
+      <span id="hud-weather-pill" class="weather-pill">🌿 Weather: Lush Blossoms</span>
       <span class="dot-sep">•</span>
-      <span id="hud-altimeter" class="alt-pill">⛰️ Elevation: 120m / 2,695m</span>
+      <span id="hud-fly-rule" class="fly-rule-pill allowed">🦅 Flying Allowed (Space = Fly Up, X = Sit/Down)</span>
       <span class="dot-sep">•</span>
-      <span id="hud-continent-state">0/4 Summit Objectives</span>
-      <span class="dot-sep">•</span>
-      <span id="btn-audio-toggle" class="audio-pill" title="Toggle WoW Orchestral &amp; Spatial Sound Engine">🔊 WoW Audio: ON</span>
+      <span id="hud-altimeter" class="alt-pill">⛰️ 110m / 2,695m</span>
     </div>
   </div>
 
   <!-- =====================================================================
-       3. BORDERLESS TOP-RIGHT COMPASS RADAR & 7 WORLD PEAKS TRACKER
+       3. TOP-RIGHT RADAR & COMPACT 7 BIOME REGIONS LIST
        ===================================================================== -->
   <div id="hud-top-right">
     <div class="radar-wrap">
-      <canvas id="minimap-canvas" width="146" height="146"></canvas>
+      <canvas id="minimap-canvas" width="140" height="140"></canvas>
       <div class="radar-coords" id="minimap-coords">0, 0 • Alt 0m</div>
     </div>
 
     <div id="hud-quest-list">
       <div class="q-heading">
-        <span id="wq-active-title">PEAK I • WESTERN GHATS</span>
+        <span id="wq-active-title">REGION I • GREENERY</span>
         <span id="wq-active-cnt" class="q-cnt">0/4</span>
       </div>
-      <div class="q-sub" id="wq-active-desc">Climb or Skyride to open the Summit Loot Chest &amp; heal wildlife</div>
       <div class="q-bar-track"><div class="q-bar-fill" id="wq-active-bar" style="width:0%"></div></div>
       <div id="wq-continents-list" class="q-continents"></div>
     </div>
   </div>
 
   <!-- =====================================================================
-       4. BORDERLESS BOTTOM-LEFT EXPEDITION & LOOT STREAM
+       4. SUBTLE 1-LINE STATUS TOAST (Bottom-Left — NO WALL OF TEXT!)
        ===================================================================== -->
-  <div id="hud-chat">
-    <div id="chat-messages" class="chat-stream">
-      <div class="chat-line gold">🐉 <strong>Dragonflight Skyriding &amp; 7 World Peaks Ready!</strong> Summon your <strong>Sky-Dragon [F]</strong> (6 Vigor Orbs) to soar up mountains and loot <strong>🎁 Summit Chests</strong>!</div>
-      <div class="chat-line cyan">🥾 <strong>Sacred No-Fly Trekking Peaks:</strong> Peaks II (Nilgiris), IV (Mount Kailash) &amp; VI (Mount Everest) are <strong>No-Fly Trekking Zones</strong>—sprint up the winding ridge trails with <strong>[4]</strong>, leap chasms with <strong>[5]</strong>, and pitch a <strong>⛺ Campfire [C]</strong> to rest!</div>
-      <div class="chat-line green">☸️ Every healed creature &amp; looted Summit Chest grants <strong>Karma Points</strong> &amp; Mythic Relics. Press <strong>[K]</strong> for the Karma Forge or <strong>[M]</strong> to view all 7 Peaks!</div>
-    </div>
-    <input type="text" id="chat-input" placeholder="Press Enter to chat..." />
+  <div id="hud-toast-bar">
+    <span id="status-toast-txt">🐎 Mounted &amp; Seated! Press [Space] to Fly, [Z] Mount/Dismount, [X] Sit/Down, [Esc] Settings</span>
   </div>
 
   <!-- =====================================================================
-       5. BORDERLESS BOTTOM CENTER: DRAGONFLIGHT VIGOR ORBS + HOTBAR
+       5. BOTTOM CENTER: VIGOR ORBS, CASTBAR, HOTBAR & WOW MICRO-MENU BAR
        ===================================================================== -->
   <div id="hud-bottom-center">
-    <!-- WoW Dragonflight 6 Vigor Orbs Bar -->
-    <div id="dragon-vigor-bar" title="Dragonflight Skyriding Vigor (Recharges automatically &amp; at Campfires [C])">
-      <span class="vigor-label">🐉 DRAGON VIGOR</span>
+    <!-- 6 Vigor Orbs -->
+    <div id="dragon-vigor-bar">
+      <span class="vigor-label" id="vigor-mount-name">🐎 ASHVA STEED (SEATED)</span>
       <div class="vigor-orbs" id="vigor-orbs-row">
         <div class="v-orb full"></div>
         <div class="v-orb full"></div>
@@ -127,101 +119,252 @@
         <div class="v-orb full"></div>
         <div class="v-orb full"></div>
       </div>
-      <span class="vigor-status" id="vigor-status-txt">Companion Following</span>
+      <span class="vigor-status" id="vigor-status-txt">[Space] Lift Off</span>
     </div>
 
-    <!-- Minimal Floating Castbar -->
+    <!-- WoW Castbar (Used for Spells & 1.5s Mount Summon) -->
     <div id="wow-castbar" class="cast-hidden">
       <div class="cast-bar-track">
         <div class="cast-bar-fill" id="cast-fill"></div>
       </div>
       <div class="cast-meta">
-        <span id="cast-label">Sanjeevani Bolt</span>
-        <span id="cast-timer">0.4s</span>
+        <span id="cast-label">Summoning Ashva Mount...</span>
+        <span id="cast-timer">1.5s</span>
       </div>
     </div>
 
-    <!-- Borderless Floating Action Hotbar -->
+    <!-- Main Action Row + Dedicated Mount [Z], Sit [X], Auto-Run [~] & WoW Micro-Menu -->
     <div class="floating-hotbar">
-      <div class="action-icon" id="slot-1" data-slot="1" title="Sanjeevani Bolt [1]: Heal suffering wildlife or open Summit Loot Chest">
+      <div class="action-icon" id="slot-1" data-slot="1" title="Sanjeevani Bolt [1]: Heal Creature / Unlock Chest (1.5s GCD)">
         <span class="hk">1</span>
         <span class="ic">🌿</span>
-        <span class="lb">Heal/Loot</span>
+        <span class="lb">Heal</span>
         <div class="cd-overlay" id="cd-1"></div>
       </div>
-      <div class="action-icon" id="slot-2" data-slot="2" title="Ganga Jal Nova [2]: AoE Rejuvenation &amp; Chest Opener">
+      <div class="action-icon" id="slot-2" data-slot="2" title="Ganga Jal Nova [2]: AoE Rejuvenation Wave">
         <span class="hk">2</span>
         <span class="ic">💧</span>
         <span class="lb">Nova</span>
         <div class="cd-overlay" id="cd-2"></div>
       </div>
-      <div class="action-icon" id="slot-3" data-slot="3" title="Surya Sunbeam [3]: Solar Pillar on Summit Shrine or Creature">
+      <div class="action-icon" id="slot-3" data-slot="3" title="Surya Sunbeam [3]: Solar Pillar Heal">
         <span class="hk">3</span>
         <span class="ic">☀️</span>
-        <span class="lb">Sunbeam</span>
+        <span class="lb">Beam</span>
         <div class="cd-overlay" id="cd-3"></div>
       </div>
-      <div class="action-icon active-aura" id="slot-4" data-slot="4" title="Vayu Trail-Sprint [4]: Essential for No-Fly Trekking Peaks!">
+      <div class="action-icon active-aura" id="slot-4" data-slot="4" title="Trail Sprint [4]: +150% Trekking Speed">
         <span class="hk">4</span>
         <span class="ic">🥾</span>
-        <span class="lb">Trek Run</span>
+        <span class="lb">Sprint</span>
         <div class="cd-overlay" id="cd-4"></div>
       </div>
-      <div class="action-icon" id="slot-5" data-slot="5" title="Skyward Ascent / Crag Leap [5]: Uses 1 Vigor Orb to surge 35m up a cliff or boost your Sky-Dragon!">
+      <div class="action-icon" id="slot-5" data-slot="5" title="Skyward Ascent [5]: Uses 1 Vigor to surge 35m upward">
         <span class="hk">5</span>
         <span class="ic">🚀</span>
         <span class="lb">Ascent</span>
         <div class="cd-overlay" id="cd-5"></div>
       </div>
-      <div class="action-icon" id="slot-6" data-slot="6" title="Pitch Mountain Campfire [C]: Spawns a 3D Tent &amp; Warm Fire! Restores 100% Stamina, Vigor &amp; +25% Well-Fed Speed!">
-        <span class="hk">C</span>
+      <div class="action-icon" id="slot-6" data-slot="6" title="Pitch Mountain Campfire [G]: Spawns 3D Tent &amp; Fire">
+        <span class="hk">G</span>
         <span class="ic">⛺</span>
-        <span class="lb">Campfire</span>
+        <span class="lb">Camp</span>
         <div class="cd-overlay" id="cd-6"></div>
-      </div>
-      <div class="action-icon" id="slot-7" data-slot="7" title="Summon Sky-Dragon Mount [F]: Mount your Dragon Companion to soar up mountains (Blocked in Sacred No-Fly Trekking Zones!)">
-        <span class="hk">F</span>
-        <span class="ic">🐉</span>
-        <span class="lb">Dragon</span>
-        <div class="cd-overlay" id="cd-7"></div>
-      </div>
-      <div class="action-icon" id="slot-8" data-slot="8" title="Whirling Surge / World Pulse [R]: Forward Dragon Surge + 45m Rejuvenation Burst!">
-        <span class="hk">R</span>
-        <span class="ic">🌟</span>
-        <span class="lb">Surge</span>
-        <div class="cd-overlay" id="cd-8"></div>
       </div>
 
       <div class="hotbar-divider"></div>
 
-      <div class="action-icon util-icon" id="btn-shop" title="Vishwakarma's Karma &amp; Trekking Gear Forge [K]">
+      <!-- DEDICATED MOUNT UP SHORTCUT [Z] (Default Active!) -->
+      <div class="action-icon active-aura" id="slot-mount" title="Mount Up / Dismount [Z]: Character sits astride your Steed/Dragon! Press Space while mounted to Fly!">
+        <span class="hk">Z</span>
+        <span class="ic">🐎</span>
+        <span class="lb">Mount</span>
+        <div class="cd-overlay" id="cd-7"></div>
+      </div>
+
+      <!-- SIT / MEDITATE / FLY DOWN SHORTCUT [X] -->
+      <div class="action-icon" id="slot-sit" title="Sit / Stand / Descend in Flight [X]">
+        <span class="hk">X</span>
+        <span class="ic">🧘</span>
+        <span class="lb">Sit/Down</span>
+      </div>
+
+      <!-- AUTO-RUN SHORTCUT [~] -->
+      <div class="action-icon" id="slot-autorun" title="Toggle Auto-Run [~ or NumLock]">
+        <span class="hk">~</span>
+        <span class="ic">⏩</span>
+        <span class="lb">AutoRun</span>
+      </div>
+
+      <div class="hotbar-divider"></div>
+
+      <!-- AUTHENTIC WOW MICRO-MENU BAR (Character, Spellbook/Mounts, Quest Log, Bags, Forge, Map, Settings [Esc]) -->
+      <div class="action-icon micro-icon" id="btn-char" title="Character Sheet &amp; Equipment [C]">
+        <span class="hk">C</span>
+        <span class="ic">👤</span>
+        <span class="lb">Hero</span>
+      </div>
+      <div class="action-icon micro-icon" id="btn-spells" title="Spellbook &amp; Mounts Collection [P]">
+        <span class="hk">P</span>
+        <span class="ic">📖</span>
+        <span class="lb">Mounts</span>
+      </div>
+      <div class="action-icon micro-icon" id="btn-quests" title="Quest Log [L]">
+        <span class="hk">L</span>
+        <span class="ic">📜</span>
+        <span class="lb">Quests</span>
+      </div>
+      <div class="action-icon micro-icon" id="btn-bags" title="16-Slot Backpack &amp; Relics [B]">
+        <span class="hk">B</span>
+        <span class="ic">🎒</span>
+        <span class="lb">Bags</span>
+      </div>
+      <div class="action-icon micro-icon" id="btn-shop" title="Karma Forge &amp; Gear Upgrades [K]">
         <span class="hk">K</span>
         <span class="ic">🛠️</span>
-        <span class="lb" id="stat-karma">350 ☸️</span>
+        <span class="lb" id="stat-karma">350☸️</span>
       </div>
-      <div class="action-icon util-icon" id="btn-worldmap" title="7 World Mountains &amp; Base Camp Map [M]">
+      <div class="action-icon micro-icon" id="btn-worldmap" title="7 Weather Regions &amp; Mountains Map [M]">
         <span class="hk">M</span>
-        <span class="ic">🏔️</span>
-        <span class="lb">7 Peaks</span>
+        <span class="ic">🗺️</span>
+        <span class="lb">Map</span>
+      </div>
+      <div class="action-icon micro-icon settings-highlight" id="btn-settings" title="WoW System Settings, Audio, Graphics &amp; Keybinds [Esc]">
+        <span class="hk">Esc</span>
+        <span class="ic">⚙️</span>
+        <span class="lb">Settings</span>
       </div>
     </div>
 
-    <!-- Ultra-Thin Bottom Progress Line -->
+    <!-- Thin XP / World Renewal Strip -->
     <div class="world-progress-line">
       <div class="world-progress-fill" id="wow-rep-fill" style="width: 0%;"></div>
     </div>
-    <div class="world-progress-caption" id="wow-rep-label">EXPEDITION PROGRESS: 0 / 28 Summit Objectives &amp; Chests Claimed • 0 / 7 World Peaks Conquered</div>
+    <div class="world-progress-caption" id="wow-rep-label">WORLD RENEWAL: 0 / 28 Objectives • 0 / 7 Regions Reborn</div>
   </div>
 
   <!-- =====================================================================
-       6. KARMA & MOUNTAINEERING FORGE MODAL [K]
+       6. WOW CLASSIC RIGHT-CLICK LOOT POPUP WINDOW
+       ===================================================================== -->
+  <div id="loot-modal" class="wow-modal-hidden">
+    <div class="loot-box">
+      <div class="loot-header">
+        <span id="loot-box-title">🎁 Summit Treasure Chest</span>
+        <button class="sleek-close small-x" id="btn-close-loot">✕</button>
+      </div>
+      <div id="loot-items-list" class="loot-items"></div>
+      <button class="shop-buy-btn" id="btn-loot-all">🖐️ Take All Loot [Space]</button>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       7. WOW SYSTEM SETTINGS & OPTIONS MENU [Esc]
+       ===================================================================== -->
+  <div id="settings-modal" class="wow-modal-hidden">
+    <div class="sleek-modal">
+      <div class="sleek-modal-header">
+        <div>
+          <div class="sm-title">⚙️ WORLD OF DHARMA — SYSTEM SETTINGS, AUDIO, GRAPHICS &amp; KEYBINDS</div>
+          <div class="sm-sub">Configure WoW Sound Engine, WebGL2 Post-Processing Graphics, Mount Behavior &amp; Controls</div>
+        </div>
+        <button class="sleek-close" id="btn-close-settings">✕</button>
+      </div>
+
+      <div class="settings-grid">
+        <!-- Audio Column -->
+        <div class="settings-card">
+          <div class="sc-title">🔊 Sound &amp; Orchestral Audio</div>
+          <label class="sc-row">
+            <span>Enable WoW Sound Engine</span>
+            <input type="checkbox" id="opt-sound-enable" checked />
+          </label>
+          <label class="sc-row">
+            <span>Master Volume (<strong id="lbl-vol-master">75%</strong>)</span>
+            <input type="range" id="opt-vol-master" min="0" max="100" value="75" />
+          </label>
+          <label class="sc-row">
+            <span>Ambient Reverb &amp; Music</span>
+            <input type="checkbox" id="opt-music-enable" checked />
+          </label>
+        </div>
+
+        <!-- Graphics & Weather Column -->
+        <div class="settings-card">
+          <div class="sc-title">✨ Graphics, Bloom &amp; Weather</div>
+          <label class="sc-row">
+            <span>UnrealBloom Intensity (<strong id="lbl-bloom">0.38</strong>)</span>
+            <input type="range" id="opt-bloom" min="0" max="100" value="38" />
+          </label>
+          <label class="sc-row">
+            <span>3D Weather Particles (Rain/Snow/Leaves)</span>
+            <input type="checkbox" id="opt-weather-enable" checked />
+          </label>
+          <label class="sc-row">
+            <span>Dynamic Soft Shadows (2048px)</span>
+            <input type="checkbox" id="opt-shadows-enable" checked />
+          </label>
+        </div>
+
+        <!-- Mounts & Controls Column -->
+        <div class="settings-card">
+          <div class="sc-title">🐎 WoW Mount &amp; Gameplay Options</div>
+          <label class="sc-row">
+            <span>Instant Mount Summon (Skip 1.5s Cast)</span>
+            <input type="checkbox" id="opt-instant-mount" checked />
+          </label>
+          <label class="sc-row">
+            <span>Auto-Loot Summit Chests</span>
+            <input type="checkbox" id="opt-autoloot" />
+          </label>
+          <label class="sc-row">
+            <span>Sticky Targeting</span>
+            <input type="checkbox" id="opt-sticky-target" checked />
+          </label>
+          <button class="shop-buy-btn" id="btn-hearthstone" style="margin-top:6px;">
+            <span>🪨 Hearthstone to Region I Base Camp</span>
+            <span>Teleport</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Keybindings Quick Reference -->
+      <div class="keybinds-strip">
+        <span><strong>[WASD / QE]</strong> Move &amp; Strafe</span>
+        <span><strong>[Z]</strong> Mount / Dismount (Seated)</span>
+        <span><strong>[Space]</strong> Jump / Fly Up</span>
+        <span><strong>[X]</strong> Sit / Fly Down</span>
+        <span><strong>[~ / NumLock]</strong> Auto-Run</span>
+        <span><strong>[1–5, G]</strong> Spells &amp; Campfire</span>
+        <span><strong>[C / P / L / B / K / M]</strong> WoW Windows</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       8. UNIVERSAL WOW INSPECTOR MODAL (Character [C], Mounts [P], Quests [L], Bags [B])
+       ===================================================================== -->
+  <div id="inspector-modal" class="wow-modal-hidden">
+    <div class="sleek-modal">
+      <div class="sleek-modal-header">
+        <div>
+          <div class="sm-title" id="insp-title">👤 CHARACTER SHEET &amp; EQUIPMENT</div>
+          <div class="sm-sub" id="insp-sub">Inspect your equipped relics, active mounts, quests, and 16-slot backpack</div>
+        </div>
+        <button class="sleek-close" id="btn-close-insp">✕</button>
+      </div>
+      <div id="insp-body" class="shop-grid"></div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       9. KARMA FORGE MODAL [K]
        ===================================================================== -->
   <div id="shop-modal" class="wow-modal-hidden">
     <div class="sleek-modal">
       <div class="sleek-modal-header">
         <div>
-          <div class="sm-title">☸️ VISHWAKARMA'S EXPEDITION FORGE — DRAGON HARNESS, TREK BOOTS &amp; TOOLS</div>
-          <div class="sm-sub">Currency: <strong>☸️ <span id="shop-karma-balance">350</span> Karma Points</strong> (Earned by healing wildlife &amp; looting Summit Chests)</div>
+          <div class="sm-title">☸️ VISHWAKARMA'S KARMA FORGE — MOUNT HARNESS, CRAMPONS &amp; TOOLS</div>
+          <div class="sm-sub">Currency: <strong>☸️ <span id="shop-karma-balance">350</span> Karma Points</strong></div>
         </div>
         <button class="sleek-close" id="btn-close-shop">✕</button>
       </div>
@@ -230,14 +373,14 @@
   </div>
 
   <!-- =====================================================================
-       7. THE 7 SACRED MOUNTAINS OF THE WORLD EXPEDITION MAP [M]
+       10. 7 BIOME & WEATHER REGIONS WORLD MAP MODAL [M]
        ===================================================================== -->
   <div id="worldmap-modal" class="wow-modal-hidden">
     <div class="sleek-modal">
       <div class="sleek-modal-header">
         <div>
-          <div class="sm-title">🏔️ THE 7 GREAT MOUNTAINS — WESTERN GHATS, HIMALAYAS &amp; WORLD SUMMITS</div>
-          <div class="sm-sub">Some peaks allow <strong>🐉 Dragonflight Skyriding [F]</strong>, while Sacred Peaks enforce <strong>🥾 No-Fly Trekking &amp; Camping [C]</strong> along winding ridge trails!</div>
+          <div class="sm-title">🗺️ THE 7 WEATHER REGIONS &amp; GREAT MOUNTAINS OF THE WORLD</div>
+          <div class="sm-sub">Greenery, Monsoon Rain, Golden Autumn, Snowy Blizzard, Misty Bamboo, Glacial Ice &amp; Celestial Peak</div>
         </div>
         <button class="sleek-close" id="btn-close-map">✕</button>
       </div>
@@ -246,15 +389,15 @@
   </div>
 
   <!-- =====================================================================
-       8. SUMMIT CONQUERED / TREASURE CHEST LOOTED TOAST
+       11. REGION REBORN BANNER OVERLAY
        ===================================================================== -->
   <div id="gift-modal" class="wow-modal-hidden">
     <div class="sleek-boon-toast">
-      <div class="sbt-tag" id="gift-tier">🏔️ SUMMIT CONQUERED &amp; TREASURE LOOTED</div>
+      <div class="sbt-tag" id="gift-tier">🏔️ REGION REBORN &amp; SUMMIT CONQUERED</div>
       <div class="sbt-icon" id="gift-icon">🎁</div>
-      <div class="sbt-title" id="gift-title">Crown of the Sahyadris</div>
-      <div class="sbt-desc" id="gift-desc">You climbed to the summit and unlocked a permanent Virtuous Boon!</div>
-      <button class="sbt-btn" id="btn-claim-gift">Continue Expedition [Enter]</button>
+      <div class="sbt-title" id="gift-title">Boon of the Sahyadris</div>
+      <div class="sbt-desc" id="gift-desc">You conquered the summit and unlocked a permanent Virtuous Boon!</div>
+      <button class="sbt-btn" id="btn-claim-gift">Continue [Enter]</button>
     </div>
   </div>
 

@@ -13,23 +13,23 @@ async def take_screenshot():
         page.on("pageerror", lambda err: print(f"[PAGE ERROR] {err}"))
         print("Opening http://localhost:8080...")
         await page.goto("http://localhost:8080", wait_until="networkidle")
-        # Wait 5 seconds for all rigged GLB models, Western Ghats/Himalayas peak shaders, and Dragon companion to render
+        # Wait 5 seconds for all rigged GLB models, Seated Rider Pose, and Colossal Mountain Range to render
         await asyncio.sleep(5)
-        # Pitch a Mountain Campfire [C] and cast [2] Ganga Nova so the screenshot shows the 3D Tent, Campfire, Sky-Dragon Companion, and towering Mountain Peak!
-        await page.keyboard.press("c")
-        await asyncio.sleep(0.6)
+        # Pitch a Mountain Campfire [G] and cast [1] Sanjeevani Bolt so screenshot_proof.png shows the Seated Rider on Mount, Campfire, and Colossal Mountain Range!
+        await page.keyboard.press("g")
+        await asyncio.sleep(0.5)
         await page.keyboard.press("1")
-        await asyncio.sleep(0.22)
+        await asyncio.sleep(0.25)
         screenshot_path = r"g:\My Drive\GitHub\RobloxGames\screenshot_proof.png"
         await page.screenshot(path=screenshot_path, full_page=False)
         print(f"Screenshot successfully captured to {screenshot_path}")
 
-        # Also capture a second screenshot with the 7 World Mountains Expedition Map [M] open!
-        await page.keyboard.press("m")
+        # Also capture a second screenshot with the WoW System Settings Menu [Esc] open!
+        await page.keyboard.press("Escape")
         await asyncio.sleep(0.4)
         map_path = r"g:\My Drive\GitHub\RobloxGames\shop_proof.png"
         await page.screenshot(path=map_path, full_page=False)
-        print(f"7 Peaks Map screenshot successfully captured to {map_path}")
+        print(f"Settings menu screenshot successfully captured to {map_path}")
         await browser.close()
 
 if __name__ == "__main__":
