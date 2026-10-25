@@ -1,31 +1,27 @@
 import * as THREE from 'three';
-import { Sky } from 'three/addons/objects/Sky.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 // ============================================================================
-// AUDIO SYNTHESIZER (Spatial ambience, zone fanfares, spell audio)
+// AUDIO SYNTHESIZER (Web Audio API)
 // ============================================================================
 class SoundEngine {
   constructor() {
     this.ctx = null;
     this.initOnFirstInteraction();
   }
-
   initOnFirstInteraction() {
     const unlock = () => {
       if (!this.ctx) {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         this.ctx = new AudioContext();
       }
-      if (this.ctx.state === 'suspended') {
-        this.ctx.resume();
-      }
+      if (this.ctx.state === 'suspended') this.ctx.resume();
       window.removeEventListener('keydown', unlock);
       window.removeEventListener('mousedown', unlock);
     };
     window.addEventListener('keydown', unlock);
     window.addEventListener('mousedown', unlock);
   }
-
   playChime(freq = 528, duration = 0.8) {
     if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
@@ -33,489 +29,441 @@ class SoundEngine {
     osc.type = 'sine';
     osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(freq * 1.4, this.ctx.currentTime + duration);
-
     gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
-
     osc.connect(gain);
     gain.connect(this.ctx.destination);
     osc.start();
     osc.stop(this.ctx.currentTime + duration);
   }
-
   playZoneFanfare() {
     if (!this.ctx) return;
-    const notes = [261.63, 329.63, 392.00, 523.25]; // C4, E4, G4, C5
-    notes.forEach((freq, idx) => {
-      setTimeout(() => this.playChime(freq, 1.2), idx * 160);
-    });
+    [261.63, 329.63, 392.0, 523.25].forEach((f, i) => setTimeout(() => this.playChime(f, 1.2), i * 160));
   }
-
   playHeal() {
     if (!this.ctx) return;
     [432, 540, 648, 864].forEach((f, i) => setTimeout(() => this.playChime(f, 0.6), i * 80));
   }
 }
-
 const audio = new SoundEngine();
 
 // ============================================================================
-// 1. WOW-CLASSIC 4 LARGE PROGRESSION ZONES DEFINITION
+// 1. TEXTURE GENERATORS (Authentic Hand-Painted Stylized MMO Textures)
 // ============================================================================
-const ZONES = [
-  {
-    id: 'ashram',
-    name: 'Vrindavan Sacred Grove & Ashram (वृन्दावन आश्रम)',
-    sub: 'Level 1-10 Starting Zone • The Meadow of Compassion',
-    levelReq: 1,
-    bounds: { minX: -100, maxX: 100, minZ: -100, maxZ: 100 },
-    fogColor: 0x181326,
-    sunIntensity: 2.8
-  },
-  {
-    id: 'ghats',
-    name: 'Varanasi Ancient Ghats & Sacred Ganga (महातीर्थ काशी)',
-    sub: 'Level 10-25 Water & Spiritual Cleansing Zone',
-    levelReq: 10,
-    bounds: { minX: -450, maxX: -100, minZ: -300, maxZ: 300 },
-    fogColor: 0x112233,
-    sunIntensity: 2.2
-  },
-  {
-    id: 'gurukul',
-    name: 'Takshashila Ancient Academy & Fortress (तक्षशिला दुर्ग)',
-    sub: 'Level 25-45 Fortified Knowledge & Martial Testing Grounds',
-    levelReq: 25,
-    bounds: { minX: 100, maxX: 450, minZ: -300, maxZ: 300 },
-    fogColor: 0x241d1a,
-    sunIntensity: 3.2
-  },
-  {
-    id: 'himalaya',
-    name: 'Himalayan Mount Kailash Peak (कैलाश शिखर)',
-    sub: 'Level 45-60 Endgame Celestial Transcendence Realm',
-    levelReq: 45,
-    bounds: { minX: -300, maxX: 300, minZ: -650, maxZ: -200 },
-    fogColor: 0x1a2d42,
-    sunIntensity: 3.8
+function generateGrassTexture() {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 512;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#2f5726';
+  ctx.fillRect(0, 0, 512, 512);
+
+  // Layered soft painted patches
+  for (let i = 0; i < 3000; i++) {
+    const x = Math.random() * 512;
+    const y = Math.random() * 512;
+    const r = Math.random() * 6 + 2;
+    ctx.fillStyle = Math.random() > 0.5 ? '#3b6e30' : (Math.random() > 0.5 ? '#24451d' : '#4b853d');
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
   }
-];
 
-const GRADES = [
-  { level: 1, name: 'Sadhak (Seeker)', title: 'The Compassionate Seeker', req: 0, mult: 1.0 },
-  { level: 5, name: 'Sevak (Guardian)', title: 'Protector of the Groves', req: 150, mult: 1.3 },
-  { level: 10, name: 'Dharmik (Pilgrim of Kashi)', title: 'Purifier of the Ghats', req: 400, mult: 1.6 },
-  { level: 25, name: 'Veer (Scholar-Warrior)', title: 'Master of Takshashila', req: 1200, mult: 2.2 },
-  { level: 45, name: 'Rishi (Ascetic of Kailash)', title: 'Voice of Higher Truth', req: 3000, mult: 3.0 },
-  { level: 60, name: 'Paramahamsa (Supreme Sovereign)', title: 'Guardian of Ancient & Future Bharat', req: 6000, mult: 4.5 }
-];
+  // Soft clover / wildflower specks
+  for (let i = 0; i < 200; i++) {
+    const x = Math.random() * 512;
+    const y = Math.random() * 512;
+    ctx.fillStyle = Math.random() > 0.6 ? '#fcd34d' : '#f472b6';
+    ctx.beginPath();
+    ctx.arc(x, y, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
-const CELESTIAL_GIFTS = [
-  { id: 'lotus_leap', name: 'Padma Siddhi (Lotus Leap)', tier: 'MYTHIC BOON', icon: '🪷', desc: 'Allows triple-jump soaring over cliffs and temple parapets.', unlockedKey: 'jump' },
-  { id: 'surya_sprint', name: 'Surya Tejas (Solar Sprint)', tier: 'EPIC BOON', icon: '☀️', desc: 'Sprint at 3x speed across massive zones with radiant footsteps.', unlockedKey: 'sprint' },
-  { id: 'garuda_wings', name: 'Garuda Paksha (Flight of Kailash)', tier: 'DIVINE ENDGAME MOUNT', icon: '🦅', desc: 'Full flight across the 1200-meter Himalayan skyway! Press [F].', unlockedKey: 'fly' },
-  { id: 'akash_blink', name: 'Akash Gamana (Astral Teleport)', tier: 'TRANSCENDENT SIDDHI', icon: '✨', desc: 'Instantly warp 40 meters forward across chasm bridges. Press [T].', unlockedKey: 'teleport' }
-];
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(60, 60);
+  return tex;
+}
+
+function generateBarkTexture() {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 256;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#3a271d';
+  ctx.fillRect(0, 0, 256, 256);
+  ctx.strokeStyle = '#221610';
+  ctx.lineWidth = 3;
+  for (let x = 0; x < 256; x += 12) {
+    ctx.beginPath();
+    ctx.moveTo(x + Math.sin(x) * 4, 0);
+    ctx.bezierCurveTo(x + 10, 80, x - 10, 160, x, 256);
+    ctx.stroke();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(2, 6);
+  return tex;
+}
+
+function generateStoneTexture() {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 256;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#78716c';
+  ctx.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 1500; i++) {
+    ctx.fillStyle = Math.random() > 0.5 ? '#57534e' : '#a8a29e';
+    ctx.fillRect(Math.random() * 256, Math.random() * 256, 4, 4);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(8, 8);
+  return tex;
+}
 
 // ============================================================================
-// 2. STATE MANAGER
-// ============================================================================
-const state = {
-  punya: 0,
-  gold: 2400,
-  fame: 150,
-  annadanaCount: 0,
-  prana: 100,
-  level: 1,
-  currentZone: ZONES[0],
-  selectedTarget: null,
-  isFlying: false,
-  boons: {
-    sprint: false,
-    jump: false,
-    fly: false,
-    teleport: false
-  },
-  quests: {
-    ashram: { till: 0, sow: 0, heal: 0, completed: false },
-    ghats: { clean: 0, lamp: 0, feed: 0, completed: false },
-    takshashila: { sparring: 0, scroll: 0, bell: 0, completed: false },
-    kailash: { meditate: 0, flame: 0, completed: false }
-  },
-  discoveredZones: { ashram: true }
-};
-
-// ============================================================================
-// 3. THREE.JS ENGINE SETUP (Massive Draw Distance for WoW-Scale Landscapes)
+// 2. SCENE, ATMOSPHERIC LIGHTING, SKYBOX & FOG
 // ============================================================================
 const container = document.getElementById('canvas-container');
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x181326, 0.0018);
+scene.background = new THREE.Color(0xb6d5ec); // WoW Elwynn / Nagrand sky blue
+scene.fog = new THREE.FogExp2(0xb6d5ec, 0.0018);
 
-const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.5, 2400);
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.5, 3000);
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.15;
+renderer.toneMappingExposure = 1.05;
 container.appendChild(renderer.domElement);
 
-// Atmospheric Preetham Sky Shader
-const sky = new Sky();
-sky.scale.setScalar(5000);
-scene.add(sky);
-const skyUniforms = sky.material.uniforms;
-skyUniforms['turbidity'].value = 6;
-skyUniforms['rayleigh'].value = 2.0;
-skyUniforms['mieCoefficient'].value = 0.004;
-skyUniforms['mieDirectionalG'].value = 0.8;
+// Warm Sunlight & Atmospheric Ambient
+const sunLight = new THREE.DirectionalLight(0xfff3d6, 2.4);
+sunLight.position.set(180, 260, 140);
+sunLight.castShadow = true;
+sunLight.shadow.mapSize.set(2048, 2048);
+sunLight.shadow.camera.near = 10;
+sunLight.shadow.camera.far = 800;
+const d = 220;
+sunLight.shadow.camera.left = -d; sunLight.shadow.camera.right = d;
+sunLight.shadow.camera.top = d; sunLight.shadow.camera.bottom = -d;
+sunLight.shadow.bias = -0.0003;
+scene.add(sunLight);
 
-const sunVec = new THREE.Vector3();
-const phi = THREE.MathUtils.degToRad(72);
-const theta = THREE.MathUtils.degToRad(205);
-sunVec.setFromSphericalCoords(1, phi, theta);
-skyUniforms['sunPosition'].value.copy(sunVec);
-
-const dirLight = new THREE.DirectionalLight(0xffdfa0, 2.8);
-dirLight.position.copy(sunVec).multiplyScalar(400);
-dirLight.castShadow = true;
-dirLight.shadow.mapSize.set(2048, 2048);
-dirLight.shadow.camera.near = 10;
-dirLight.shadow.camera.far = 1200;
-const d = 300;
-dirLight.shadow.camera.left = -d; dirLight.shadow.camera.right = d;
-dirLight.shadow.camera.top = d; dirLight.shadow.camera.bottom = -d;
-scene.add(dirLight);
-
-const hemiLight = new THREE.HemisphereLight(0xffecc7, 0x1b1928, 1.25);
-scene.add(hemiLight);
+const ambientLight = new THREE.HemisphereLight(0xdbeafe, 0x4d7c0f, 1.1);
+scene.add(ambientLight);
 
 // ============================================================================
-// 4. SHARED PBR MATERIALS
+// 3. CONTINUOUS TERRAIN & ROLLING HILLS (No Flat Green Sheet)
 // ============================================================================
-const matSandstone = new THREE.MeshStandardMaterial({ color: 0xd9a464, roughness: 0.85 });
-const matDarkStone = new THREE.MeshStandardMaterial({ color: 0x473c35, roughness: 0.9 });
-const matMarble = new THREE.MeshStandardMaterial({ color: 0xfdfaf2, roughness: 0.35 });
-const matGold = new THREE.MeshStandardMaterial({ color: 0xffd700, roughness: 0.25, metalness: 0.8 });
-const matGrass = new THREE.MeshStandardMaterial({ color: 0x3d7038, roughness: 0.9 });
-const matRiverWater = new THREE.MeshStandardMaterial({ color: 0x1b6ca8, roughness: 0.1, transparent: true, opacity: 0.85 });
-const matSnow = new THREE.MeshStandardMaterial({ color: 0xf0f6ff, roughness: 0.6 });
-const matIce = new THREE.MeshStandardMaterial({ color: 0x93c5fd, roughness: 0.2, transparent: true, opacity: 0.9 });
+const terrainGeo = new THREE.PlaneGeometry(1600, 1600, 128, 128);
+terrainGeo.rotateX(-Math.PI / 2);
 
-// Master World Terrain Plane (1400m x 1400m)
-const worldGround = new THREE.Mesh(new THREE.PlaneGeometry(1600, 1600), matGrass);
-worldGround.rotation.x = -Math.PI / 2;
-worldGround.receiveShadow = true;
-scene.add(worldGround);
+const posAttr = terrainGeo.attributes.position;
+function getTerrainHeight(x, z) {
+  // Flat sanctuary area in center (0, 0)
+  const distFromCenter = Math.sqrt(x * x + z * z);
+  if (distFromCenter < 50) return 0;
 
+  // Gentle rolling hills
+  let h = Math.sin(x * 0.012) * Math.cos(z * 0.012) * 8;
+  h += Math.sin(x * 0.025 + 1.2) * Math.sin(z * 0.025) * 4;
+
+  // Mountain ridges on north (Mount Kailash foothills)
+  if (z < -160) {
+    const northFactor = Math.min(1, (-z - 160) / 250);
+    h += (Math.sin(x * 0.02) * 20 + Math.cos(z * 0.02) * 25 + 40) * northFactor;
+  }
+  return h;
+}
+
+for (let i = 0; i < posAttr.count; i++) {
+  const vx = posAttr.getX(i);
+  const vz = posAttr.getZ(i);
+  posAttr.setY(i, getTerrainHeight(vx, vz));
+}
+terrainGeo.computeVertexNormals();
+
+const grassTex = generateGrassTexture();
+const barkTex = generateBarkTexture();
+const stoneTex = generateStoneTexture();
+
+const matTerrain = new THREE.MeshStandardMaterial({
+  map: grassTex,
+  roughness: 0.85,
+  metalness: 0.05
+});
+const terrainMesh = new THREE.Mesh(terrainGeo, matTerrain);
+terrainMesh.receiveShadow = true;
+scene.add(terrainMesh);
+
+// Sacred River Ganga on the West (Cuts naturally through terrain)
+const riverMesh = new THREE.Mesh(
+  new THREE.PlaneGeometry(140, 1200),
+  new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.1, transparent: true, opacity: 0.85 })
+);
+riverMesh.rotation.x = -Math.PI / 2;
+riverMesh.position.set(-240, 0.4, 0);
+scene.add(riverMesh);
+
+// ============================================================================
+// 4. STYLIZED HAND-CRAFTED FLORA (Complex Tree Foliage & Shrubbery)
+// ============================================================================
+const matFoliageDark = new THREE.MeshStandardMaterial({ color: 0x1e5a22, roughness: 0.8 });
+const matFoliageMid = new THREE.MeshStandardMaterial({ color: 0x2f7d34, roughness: 0.8 });
+const matFoliageLight = new THREE.MeshStandardMaterial({ color: 0x4ade80, roughness: 0.75 });
+const matBark = new THREE.MeshStandardMaterial({ map: barkTex, roughness: 0.9 });
+const matStone = new THREE.MeshStandardMaterial({ map: stoneTex, roughness: 0.85 });
+
+function createOrganicTree(x, z, scale = 1) {
+  const treeGroup = new THREE.Group();
+  const y = getTerrainHeight(x, z);
+  treeGroup.position.set(x, y, z);
+
+  // Twisted Trunk (Compound cylinders for natural taper)
+  const trunk1 = new THREE.Mesh(new THREE.CylinderGeometry(0.8 * scale, 1.4 * scale, 6 * scale, 10), matBark);
+  trunk1.position.y = 3 * scale;
+  trunk1.castShadow = true;
+  treeGroup.add(trunk1);
+
+  const trunk2 = new THREE.Mesh(new THREE.CylinderGeometry(0.5 * scale, 0.8 * scale, 5 * scale, 8), matBark);
+  trunk2.position.set(0.2 * scale, 7 * scale, 0.1 * scale);
+  trunk2.rotation.z = 0.08;
+  trunk2.castShadow = true;
+  treeGroup.add(trunk2);
+
+  // Multi-cluster WoW-style foliage puffs (Layered spheres)
+  const puffGeo = new THREE.DodecahedronGeometry(2.8 * scale, 1);
+  const puffOffsets = [
+    { x: 0, y: 9.5 * scale, z: 0, s: 1.3, mat: matFoliageDark },
+    { x: -1.6 * scale, y: 8.5 * scale, z: 0.8 * scale, s: 1.0, mat: matFoliageMid },
+    { x: 1.6 * scale, y: 8.8 * scale, z: -0.6 * scale, s: 1.1, mat: matFoliageMid },
+    { x: 0.8 * scale, y: 11.2 * scale, z: 0.8 * scale, s: 0.9, mat: matFoliageLight },
+    { x: -0.8 * scale, y: 11.5 * scale, z: -0.8 * scale, s: 0.85, mat: matFoliageLight }
+  ];
+
+  puffOffsets.forEach((p) => {
+    const puff = new THREE.Mesh(puffGeo, p.mat);
+    puff.position.set(p.x, p.y, p.z);
+    puff.scale.setScalar(p.s);
+    puff.castShadow = true;
+    treeGroup.add(puff);
+  });
+
+  scene.add(treeGroup);
+}
+
+// Populate Grove with 45 Organic Trees
+for (let i = 0; i < 45; i++) {
+  const angle = Math.random() * Math.PI * 2;
+  const dist = 35 + Math.random() * 120;
+  const tx = Math.cos(angle) * dist;
+  const tz = Math.sin(angle) * dist;
+  if (tx > -220 && tx < -260) continue; // Keep river clear
+  createOrganicTree(tx, tz, 0.85 + Math.random() * 0.5);
+}
+
+// Giant Ancient Banyan Tree at Sanctuary Center (0, 0)
+const grandBanyan = new THREE.Group();
+grandBanyan.position.set(0, 0, 0);
+
+const banyanTrunk = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 4.2, 14, 16), matBark);
+banyanTrunk.position.y = 7;
+banyanTrunk.castShadow = true;
+grandBanyan.add(banyanTrunk);
+
+// Giant foliage canopy (4 massive intersecting volumes)
+const banyanCanopyGeo = new THREE.DodecahedronGeometry(8.5, 2);
+[
+  { x: 0, y: 16, z: 0, s: 1.3, m: matFoliageDark },
+  { x: -4, y: 14.5, z: 3, s: 1.1, m: matFoliageMid },
+  { x: 4, y: 15, z: -2.5, s: 1.15, m: matFoliageMid },
+  { x: 0, y: 19.5, z: 0, s: 0.95, m: matFoliageLight }
+].forEach(c => {
+  const canopy = new THREE.Mesh(banyanCanopyGeo, c.m);
+  canopy.position.set(c.x, c.y, c.z);
+  canopy.scale.setScalar(c.s);
+  canopy.castShadow = true;
+  grandBanyan.add(canopy);
+});
+
+// Stone circular meditation plinth under the Banyan
+const stonePlinth = new THREE.Mesh(new THREE.CylinderGeometry(14, 15, 0.8, 32), matStone);
+stonePlinth.position.y = 0.4;
+stonePlinth.receiveShadow = true;
+grandBanyan.add(stonePlinth);
+
+scene.add(grandBanyan);
+
+// ============================================================================
+// 5. INTERACTIVE SACRED FLORA & LIVING FOREST CREATURES
+// ============================================================================
 const interactables = [];
 
 // Selection Reticle on Active Target
 const targetRing = new THREE.Mesh(
-  new THREE.RingGeometry(2.0, 2.4, 32),
+  new THREE.RingGeometry(2.2, 2.7, 32),
   new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide })
 );
 targetRing.rotation.x = -Math.PI / 2;
 targetRing.visible = false;
 scene.add(targetRing);
 
-// ============================================================================
-// 5. ZONE BUILDER: 4 DISTINCT WOW-CLASSIC BIOMES
-// ============================================================================
+// 6 Sacred Soil Beds (Tilled mandala plots around central grove)
+for (let r = 0; r < 2; r++) {
+  for (let c = 0; c < 3; c++) {
+    const px = (c - 1) * 11;
+    const pz = 24 + r * 11;
 
-// ----------------------------------------------------------------------------
-// ZONE 1: VRINDAVAN ASHRAM & SACRED GROVE (Center: 0, 0)
-// ----------------------------------------------------------------------------
-function buildVrindavanAshram() {
-  // Sacred Banyan Centerpiece
-  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 4.2, 14, 16), matDarkStone);
-  trunk.position.set(0, 7, 0);
-  trunk.castShadow = true;
-  scene.add(trunk);
+    const stoneFrame = new THREE.Mesh(new THREE.BoxGeometry(7.5, 0.5, 7.5), matStone);
+    stoneFrame.position.set(px, 0.25, pz);
+    stoneFrame.castShadow = true;
+    scene.add(stoneFrame);
 
-  const foliage = new THREE.Mesh(
-    new THREE.DodecahedronGeometry(12, 1),
-    new THREE.MeshStandardMaterial({ color: 0x2d8a38, roughness: 0.8 })
-  );
-  foliage.position.set(0, 18, 0);
-  foliage.castShadow = true;
-  scene.add(foliage);
+    const soilMat = new THREE.MeshStandardMaterial({ color: 0x3d2516, roughness: 0.95 });
+    const soil = new THREE.Mesh(new THREE.BoxGeometry(6.6, 0.6, 6.6), soilMat);
+    soil.position.set(px, 0.32, pz);
+    soil.receiveShadow = true;
+    scene.add(soil);
 
-  // Meditation Plinth & Chhatra around the tree
-  const plinth = new THREE.Mesh(new THREE.CylinderGeometry(16, 17, 1.2, 24), matMarble);
-  plinth.position.y = 0.6;
-  plinth.receiveShadow = true;
-  scene.add(plinth);
+    const plantGroup = new THREE.Group();
+    plantGroup.position.set(px, 0.6, pz);
+    scene.add(plantGroup);
 
-  // 6 Sacred Soil Beds for Healing Blooms
-  for (let r = 0; r < 2; r++) {
-    for (let c = 0; c < 3; c++) {
-      const px = (c - 1) * 12;
-      const pz = 28 + r * 12;
-
-      const bed = new THREE.Mesh(new THREE.BoxGeometry(8, 0.6, 8), matSandstone);
-      bed.position.set(px, 0.3, pz);
-      scene.add(bed);
-
-      const soilMat = new THREE.MeshStandardMaterial({ color: 0x4a3220, roughness: 0.95 });
-      const soil = new THREE.Mesh(new THREE.BoxGeometry(7.2, 0.7, 7.2), soilMat);
-      soil.position.set(px, 0.35, pz);
-      scene.add(soil);
-
-      const plantGroup = new THREE.Group();
-      plantGroup.position.set(px, 0.7, pz);
-      scene.add(plantGroup);
-
-      const plot = {
-        id: `plot_${r}_${c}`,
-        type: 'garden_plot',
-        name: `Ashram Tulsi Bed #${r * 3 + c + 1}`,
-        subtitle: '[Needs Tilling & Ganga Water]',
-        icon: '🌿',
-        pos: new THREE.Vector3(px, 0.5, pz),
-        stage: 'untilled',
-        health: 20,
-        soilMat,
-        plantGroup
-      };
-      interactables.push(plot);
-    }
+    const plot = {
+      id: `tulsi_bed_${r}_${c}`,
+      type: 'garden_plot',
+      name: `Sacred Tulsi Soil Bed #${r * 3 + c + 1}`,
+      subtitle: '[Needs Tilling & Ganga Water]',
+      icon: '🌿',
+      pos: new THREE.Vector3(px, 0.5, pz),
+      stage: 'untilled',
+      health: 20,
+      soilMat,
+      plantGroup
+    };
+    interactables.push(plot);
   }
+}
 
-  // Wounded Ashram Fawns
-  const fawnGroup = new THREE.Group();
-  fawnGroup.position.set(22, 0, -18);
-  const fawnBody = new THREE.Mesh(new THREE.BoxGeometry(2, 1.2, 2.6), new THREE.MeshStandardMaterial({ color: 0xba7638 }));
-  fawnBody.position.y = 1.1;
-  fawnGroup.add(fawnBody);
-  const fawnHead = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1.3), new THREE.MeshStandardMaterial({ color: 0xba7638 }));
-  fawnHead.position.set(0, 2.2, 1.3);
-  fawnGroup.add(fawnHead);
-  scene.add(fawnGroup);
+// Animated 3D Living Forest Creatures (Fox/Fawn Model via GLTF)
+const gltfLoader = new GLTFLoader();
+const livingCreatures = [];
 
-  interactables.push({
-    id: 'ashram_fawn',
+function spawnAnimatedCreature(x, z, name) {
+  const y = getTerrainHeight(x, z);
+  const creatureObj = {
+    id: `creature_${x}_${z}`,
     type: 'creature',
-    name: 'Wounded Ashram Fawn',
-    subtitle: '[Needs Sanjeevani Herbs (1)]',
-    icon: '🦌',
-    pos: new THREE.Vector3(22, 0, -18),
+    name,
+    subtitle: '[Wounded • Needs Sanjeevani Herbs (1)]',
+    icon: '🦊',
+    pos: new THREE.Vector3(x, y, z),
     health: 35,
     maxHealth: 100,
-    healed: false
-  });
-}
+    healed: false,
+    group: new THREE.Group(),
+    mixer: null
+  };
+  creatureObj.group.position.set(x, y, z);
+  scene.add(creatureObj.group);
+  interactables.push(creatureObj);
 
-// ----------------------------------------------------------------------------
-// ZONE 2: VARANASI SACRED GHATS & RIVER GANGA (West: X: -280 to -120)
-// ----------------------------------------------------------------------------
-function buildVaranasiGhats() {
-  const riverX = -260;
+  gltfLoader.load(
+    'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Fox/glTF-Binary/Fox.glb',
+    (gltf) => {
+      const model = gltf.scene;
+      model.scale.set(0.024, 0.024, 0.024);
+      model.traverse(node => {
+        if (node.isMesh) {
+          node.castShadow = true;
+          node.receiveShadow = true;
+        }
+      });
+      creatureObj.group.add(model);
 
-  // The Grand River Ganga Plane
-  const ganga = new THREE.Mesh(new THREE.PlaneGeometry(160, 900), matRiverWater);
-  ganga.rotation.x = -Math.PI / 2;
-  ganga.position.set(riverX, 0.5, 0);
-  scene.add(ganga);
-
-  // Tiered Sandstone Ghats leading down to the water
-  for (let s = 0; s < 12; s++) {
-    const step = new THREE.Mesh(new THREE.BoxGeometry(6, 0.6, 500), matSandstone);
-    step.position.set(-140 - s * 5.5, (11 - s) * 0.6, 0);
-    step.receiveShadow = true;
-    step.castShadow = true;
-    scene.add(step);
-  }
-
-  // 4 Grand Riverside Temple Pavilions
-  [-160, -60, 60, 160].forEach((pz, idx) => {
-    const temple = new THREE.Group();
-    temple.position.set(-145, 7.2, pz);
-
-    const base = new THREE.Mesh(new THREE.BoxGeometry(16, 2, 16), matSandstone);
-    temple.add(base);
-
-    for (let c = 0; c < 4; c++) {
-      const spire = new THREE.Mesh(new THREE.ConeGeometry(3.5, 14, 8), matSandstone);
-      spire.position.set(c === 0 || c === 1 ? -5 : 5, 8, c === 0 || c === 2 ? -5 : 5);
-      temple.add(spire);
+      if (gltf.animations && gltf.animations.length > 0) {
+        creatureObj.mixer = new THREE.AnimationMixer(model);
+        const action = creatureObj.mixer.clipAction(gltf.animations[0]); // Idle / Survey
+        action.play();
+      }
+      livingCreatures.push(creatureObj);
+    },
+    undefined,
+    () => {
+      // Fallback stylized procedural mesh if offline
+      const body = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.2, 2.4), new THREE.MeshStandardMaterial({ color: 0xc27136 }));
+      body.position.y = 1.0;
+      creatureObj.group.add(body);
     }
-
-    const mainDome = new THREE.Mesh(new THREE.SphereGeometry(4.5, 16, 16), matGold);
-    mainDome.position.y = 10;
-    temple.add(mainDome);
-
-    scene.add(temple);
-
-    // Deepa / Ganga Aarti Fire Stand
-    const deepa = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 0.8, 2.2, 12), matGold);
-    deepa.position.set(-170, 4.2, pz);
-    scene.add(deepa);
-
-    interactables.push({
-      id: `ghat_deepa_${idx}`,
-      type: 'deepa',
-      name: `Ganga Aarti Sacred Flame #${idx + 1}`,
-      subtitle: '[Offer Holy Flowers & Prayers]',
-      icon: '🪔',
-      pos: new THREE.Vector3(-170, 4.2, pz),
-      health: 100
-    });
-  });
-
-  // Pilgrim Annadana Chhatra at the Ghat Entrance
-  const foodStall = new THREE.Mesh(new THREE.BoxGeometry(18, 5, 10), matSandstone);
-  foodStall.position.set(-120, 8, 0);
-  scene.add(foodStall);
-
-  interactables.push({
-    id: 'kashi_annadana',
-    type: 'annadana',
-    name: 'Kashi Vishwanath Annadana Hall',
-    subtitle: '[Serve 100 Free Sacred Meals]',
-    icon: '🍲',
-    pos: new THREE.Vector3(-120, 8, 0),
-    health: 100
-  });
-}
-
-// ----------------------------------------------------------------------------
-// ZONE 3: TAKSHASHILA ANCIENT ACADEMY & FORTRESS (East: X: 140 to 380)
-// ----------------------------------------------------------------------------
-function buildTakshashilaFortress() {
-  const fortX = 260;
-
-  // Massive Sandstone Perimeter Walls & Battlements
-  const northWall = new THREE.Mesh(new THREE.BoxGeometry(220, 16, 8), matDarkStone);
-  northWall.position.set(fortX, 8, -140);
-  const southWall = new THREE.Mesh(new THREE.BoxGeometry(220, 16, 8), matDarkStone);
-  southWall.position.set(fortX, 8, 140);
-  const eastWall = new THREE.Mesh(new THREE.BoxGeometry(8, 16, 280), matDarkStone);
-  eastWall.position.set(fortX + 110, 8, 0);
-
-  scene.add(northWall, southWall, eastWall);
-
-  // Grand Entrance Gate Towers
-  const gateTower1 = new THREE.Mesh(new THREE.CylinderGeometry(7, 8, 24, 16), matDarkStone);
-  gateTower1.position.set(fortX - 110, 12, -25);
-  const gateTower2 = gateTower1.clone();
-  gateTower2.position.set(fortX - 110, 12, 25);
-  scene.add(gateTower1, gateTower2);
-
-  // Central Great Library of Vedic Scrolls
-  const library = new THREE.Mesh(new THREE.BoxGeometry(60, 20, 70), matSandstone);
-  library.position.set(fortX, 10, 0);
-  library.castShadow = true;
-  scene.add(library);
-
-  // Martial Sparring Terracotta Ring (Veer Bhumi)
-  const ring = new THREE.Mesh(new THREE.CylinderGeometry(20, 21, 1, 32), new THREE.MeshStandardMaterial({ color: 0xa84a2a }));
-  ring.position.set(fortX, 0.6, -70);
-  scene.add(ring);
-
-  interactables.push({
-    id: 'takshashila_arena',
-    type: 'arena_spar',
-    name: 'Malla-Yuddha Martial Sparring Ring',
-    subtitle: '[Discipline & Agility Training]',
-    icon: '⚔️',
-    pos: new THREE.Vector3(fortX, 1, -70),
-    health: 100
-  });
-
-  interactables.push({
-    id: 'takshashila_library',
-    type: 'ancient_scroll',
-    name: 'Ancient Palm-Leaf Archives',
-    subtitle: '[Transcribe Sacred Texts of Bharat]',
-    icon: '📜',
-    pos: new THREE.Vector3(fortX, 2, 0),
-    health: 100
-  });
-}
-
-// ----------------------------------------------------------------------------
-// ZONE 4: HIMALAYAN MOUNT KAILASH PEAK (North: Z: -600 to -240)
-// ----------------------------------------------------------------------------
-function buildHimalayanKailash() {
-  const kailashZ = -440;
-
-  // Towering Snow-Capped Mountain Range
-  const peakGeo = new THREE.ConeGeometry(120, 260, 8);
-  const peak = new THREE.Mesh(peakGeo, matSnow);
-  peak.position.set(0, 130, kailashZ);
-  peak.castShadow = true;
-  scene.add(peak);
-
-  // Flanking Mountain Ridges
-  const leftRidge = new THREE.Mesh(new THREE.ConeGeometry(80, 180, 6), matDarkStone);
-  leftRidge.position.set(-140, 90, kailashZ + 40);
-  const rightRidge = new THREE.Mesh(new THREE.ConeGeometry(90, 200, 6), matDarkStone);
-  rightRidge.position.set(150, 100, kailashZ + 30);
-  scene.add(leftRidge, rightRidge);
-
-  // Frozen Sacred Lake Manasarovar
-  const lake = new THREE.Mesh(new THREE.CircleGeometry(65, 32), matIce);
-  lake.rotation.x = -Math.PI / 2;
-  lake.position.set(0, 1.2, kailashZ + 160);
-  scene.add(lake);
-
-  // Eternal Yogic Flame of Mahadeva Shiva
-  const flamePedestal = new THREE.Mesh(new THREE.CylinderGeometry(4, 5, 3, 16), matMarble);
-  flamePedestal.position.set(0, 2.5, kailashZ + 160);
-  scene.add(flamePedestal);
-
-  const flameAura = new THREE.Mesh(
-    new THREE.OctahedronGeometry(2.4, 2),
-    new THREE.MeshBasicMaterial({ color: 0x38bdf8, wireframe: true })
   );
-  flameAura.position.set(0, 6.5, kailashZ + 160);
-  scene.add(flameAura);
-
-  interactables.push({
-    id: 'kailash_flame',
-    type: 'eternal_flame',
-    name: 'Eternal Yogic Flame of Mount Kailash',
-    subtitle: '[Highest Seat of Dhyana & Moksha]',
-    icon: '❄️',
-    pos: new THREE.Vector3(0, 3, kailashZ + 160),
-    health: 100
-  });
 }
 
-// Build all 4 zones
-buildVrindavanAshram();
-buildVaranasiGhats();
-buildTakshashilaFortress();
-buildHimalayanKailash();
+spawnAnimatedCreature(18, -14, 'Injured Vrindavan Fox');
+spawnAnimatedCreature(-22, 18, 'Wounded Forest Fawn');
+spawnAnimatedCreature(26, 26, 'Gentle Grove Deer');
 
 // ============================================================================
-// 6. PLAYER AVATAR & 3RD PERSON ENGINE
+// 6. WOW PLAYER AVATAR & 3D ANIMATION RIG (Soldier / Seeker Rig)
 // ============================================================================
 const playerGroup = new THREE.Group();
 playerGroup.position.set(0, 0, 14);
 scene.add(playerGroup);
 
-const charMat = new THREE.MeshStandardMaterial({ color: 0xff7700, roughness: 0.4 });
-const skinMat = new THREE.MeshStandardMaterial({ color: 0xf5c6a5, roughness: 0.5 });
-const charBody = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.9, 2.4, 16), charMat);
-charBody.position.y = 1.6;
-charBody.castShadow = true;
-playerGroup.add(charBody);
+let playerMixer = null;
+const playerActions = {};
+let currentAction = null;
 
-const charHead = new THREE.Mesh(new THREE.SphereGeometry(0.58, 16, 16), skinMat);
-charHead.position.y = 3.2;
-charHead.castShadow = true;
-playerGroup.add(charHead);
-
+// Saffron Halo behind avatar
 const charHalo = new THREE.Mesh(
-  new THREE.RingGeometry(0.75, 1.0, 32),
+  new THREE.RingGeometry(0.7, 0.95, 32),
   new THREE.MeshBasicMaterial({ color: 0xffe066, side: THREE.DoubleSide })
 );
-charHalo.position.set(0, 3.3, -0.4);
+charHalo.position.set(0, 3.2, -0.4);
 playerGroup.add(charHalo);
+
+gltfLoader.load(
+  'https://threejs.org/examples/models/gltf/Soldier.glb',
+  (gltf) => {
+    const model = gltf.scene;
+    model.scale.set(1.3, 1.3, 1.3);
+    model.traverse(node => {
+      if (node.isMesh) {
+        node.castShadow = true;
+        node.receiveShadow = true;
+      }
+    });
+    playerGroup.add(model);
+
+    playerMixer = new THREE.AnimationMixer(model);
+    gltf.animations.forEach(clip => {
+      playerActions[clip.name] = playerMixer.clipAction(clip);
+    });
+    if (playerActions['Idle']) {
+      currentAction = playerActions['Idle'];
+      currentAction.play();
+    }
+  },
+  undefined,
+  () => {
+    // Fallback mesh
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.85, 2.2, 16), new THREE.MeshStandardMaterial({ color: 0xff7700 }));
+    body.position.y = 1.6;
+    playerGroup.add(body);
+  }
+);
+
+function fadePlayerAction(name) {
+  if (!playerMixer || !playerActions[name] || currentAction === playerActions[name]) return;
+  const prev = currentAction;
+  currentAction = playerActions[name];
+  if (prev) prev.fadeOut(0.2);
+  currentAction.reset().fadeIn(0.2).play();
+}
 
 // Controls & Camera Orbit
 const keys = {};
@@ -548,7 +496,6 @@ window.addEventListener('keyup', (e) => {
 
 renderer.domElement.addEventListener('mousedown', (e) => {
   if (e.button === 0) {
-    // Left click targeting
     const mouse = new THREE.Vector2(
       (e.clientX / window.innerWidth) * 2 - 1,
       -(e.clientY / window.innerHeight) * 2 + 1
@@ -558,7 +505,7 @@ renderer.domElement.addEventListener('mousedown', (e) => {
     interactables.forEach((item) => {
       const screenPos = item.pos.clone().project(camera);
       const d = new THREE.Vector2(screenPos.x, screenPos.y).distanceTo(mouse);
-      if (d < 0.15 && d < nearestDist) {
+      if (d < 0.16 && d < nearestDist) {
         nearestDist = d;
         nearest = item;
       }
@@ -579,8 +526,20 @@ window.addEventListener('wheel', (e) => {
 });
 
 // ============================================================================
-// 7. TARGETING, ZONE DISCOVERY & SPELLCASTING
+// 7. TARGETING, ZONE DETECTION & VIRTUOUS PROGRESSION
 // ============================================================================
+const state = {
+  punya: 0,
+  gold: 2400,
+  fame: 150,
+  annadanaCount: 0,
+  prana: 100,
+  level: 1,
+  selectedTarget: null,
+  isFlying: false,
+  boons: { sprint: false, jump: false, fly: false, teleport: false }
+};
+
 function selectTarget(item) {
   state.selectedTarget = item;
   targetRing.visible = true;
@@ -623,7 +582,7 @@ function interactWithTargetOrNearest() {
     });
   }
   if (!tgt) {
-    showFloatingText(playerGroup.position, 'No target selected! Approach an object and press [E]', 'float-healing');
+    showFloatingText(playerGroup.position, 'No target nearby! Left-click or press [Tab] to select', 'float-healing');
     return;
   }
 
@@ -631,34 +590,35 @@ function interactWithTargetOrNearest() {
 
   if (tgt.type === 'garden_plot') handleGardenPlot(tgt);
   else if (tgt.type === 'creature') castSpell(1);
-  else if (tgt.type === 'deepa') lightDeepa(tgt);
-  else if (tgt.type === 'annadana') castSpell(3);
-  else if (tgt.type === 'arena_spar') martialTraining(tgt);
-  else if (tgt.type === 'ancient_scroll') studyScroll(tgt);
-  else if (tgt.type === 'eternal_flame') meditateAtKailash(tgt);
 }
 
 function castSpell(key) {
   const tgt = state.selectedTarget;
   const dist = tgt ? playerGroup.position.distanceTo(tgt.pos) : 999;
 
-  // Spell 1: Sanjeevani Herbs (Healing)
+  // Spell 1: Sanjeevani Herbs (Heal Creature)
   if (key === 1 || key === '1') {
     triggerCooldown('1', 1.2);
-    if (tgt && tgt.type === 'creature' && dist < 16) {
+    if (tgt && tgt.type === 'creature' && dist < 18) {
       tgt.health = Math.min(100, tgt.health + 35);
       document.getElementById('target-health-val').textContent = Math.round(tgt.health);
       document.getElementById('target-health-fill').style.width = `${tgt.health}%`;
 
       audio.playHeal();
       showFloatingText(tgt.pos, '+35 Vitality', 'float-healing');
-      awardPunya(45, 'Healed Injured Creature');
+      awardPunya(45, 'Healed Wounded Wildlife');
 
       if (tgt.health >= 100 && !tgt.healed) {
         tgt.healed = true;
-        tgt.subtitle = '[Fully Healed & Grateful]';
+        tgt.subtitle = '[Fully Healed & Joyful]';
         document.getElementById('target-subtitle').textContent = tgt.subtitle;
-        showSurpriseGift(CELESTIAL_GIFTS[1]); // Surya Sprint
+        showSurpriseGift({
+          name: 'Surya Tejas (Solar Sprint)',
+          tier: 'EPIC BOON',
+          icon: '☀️',
+          desc: 'Blessed by the grateful forest spirits! Hold [Shift] or press [4] to sprint at 3x speed.',
+          unlockedKey: 'sprint'
+        });
       }
     } else {
       audio.playChime(380, 0.4);
@@ -668,78 +628,78 @@ function castSpell(key) {
     }
   }
 
-  // Spell 2: Ganga Jal (Watering & Sanctifying)
+  // Spell 2: Ganga Jal (Purify / Water)
   if (key === 2 || key === '2') {
     triggerCooldown('2', 1.5);
     audio.playChime(640, 0.5);
-    if (tgt && tgt.type === 'garden_plot' && dist < 16) {
+    if (tgt && tgt.type === 'garden_plot' && dist < 18) {
       handleGardenPlot(tgt);
     } else {
-      showFloatingText(playerGroup.position, 'Sanctified Ground with Ganga Jal', 'float-healing');
-      awardPunya(15, 'Sanctification Deed');
+      showFloatingText(playerGroup.position, 'Sanctified Sacred Ground', 'float-healing');
+      awardPunya(15, 'Purification');
     }
   }
 
-  // Spell 3: Annadana (Feeding Pilgrims)
+  // Spell 3: Annadana (Feed Pilgrims)
   if (key === 3 || key === '3') {
     triggerCooldown('3', 2.0);
     state.annadanaCount += 5;
     audio.playChime(720, 0.7);
-    showFloatingText(playerGroup.position, 'Distributed 5 Annadana Meals (+65 Punya)', 'float-punya');
-    awardPunya(65, 'Shared Food with Weary Travelers');
+    showFloatingText(playerGroup.position, 'Served 5 Annadana Meals (+65 Punya)', 'float-punya');
+    awardPunya(65, 'Annadana Distribution');
   }
 
   // Spell 4: Solar Sprint
   if (key === 4 || key === '4') {
     if (!state.boons.sprint) {
-      showFloatingText(playerGroup.position, 'Locked! Heal creatures to unlock Surya Tejas.', 'float-punya');
+      showFloatingText(playerGroup.position, 'Locked! Heal forest creatures to awaken Surya Tejas.', 'float-punya');
       return;
     }
     triggerCooldown('4', 8.0);
     audio.playChime(880, 0.5);
-    showFloatingText(playerGroup.position, '☀️ Surya Sprint Active!', 'float-punya');
+    showFloatingText(playerGroup.position, '☀️ Surya Tejas Sprint Active!', 'float-punya');
   }
 
   // Spell 5: Lotus Leap
   if (key === 5 || key === '5') {
     if (!state.boons.jump) {
-      showFloatingText(playerGroup.position, 'Locked! Nurture sacred blooms to unlock Lotus Leap.', 'float-punya');
+      showFloatingText(playerGroup.position, 'Locked! Harvest sacred blooms to unlock Lotus Leap.', 'float-punya');
       return;
     }
     velY = 28;
     audio.playChime(760, 0.6);
-    showFloatingText(playerGroup.position, '🪷 Lotus Leap Soaring!', 'float-punya');
+    showFloatingText(playerGroup.position, '🪷 Lotus Sky Leap!', 'float-punya');
   }
 
   // Spell F: Garuda Flight
   if (key === 'F' || key === 'f') {
     if (!state.boons.fly) {
-      showFloatingText(playerGroup.position, 'Locked! Reach Level 45 or Mount Kailash to unlock Garuda Flight.', 'float-punya');
+      showFloatingText(playerGroup.position, 'Locked! Reach Level 10 or Shiva shrine to unlock flight.', 'float-punya');
       return;
     }
     state.isFlying = !state.isFlying;
     audio.playChime(950, 0.8);
-    showFloatingText(playerGroup.position, state.isFlying ? '🦅 Ascended into Free Flight!' : 'Descended to Earth', 'float-punya');
+    showFloatingText(playerGroup.position, state.isFlying ? '🦅 Garuda Flight Ascended!' : 'Landed Safely', 'float-punya');
   }
 
-  // Spell T: Akash Blink (Teleport)
+  // Spell T: Akash Blink
   if (key === 'T' || key === 't') {
     if (!state.boons.teleport) {
-      showFloatingText(playerGroup.position, 'Locked! Attain Level 25 or Takshashila Mastery to unlock Blink.', 'float-punya');
+      showFloatingText(playerGroup.position, 'Locked! Attain Level 5 to blink across space.', 'float-punya');
       return;
     }
     const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), playerGroup.rotation.y);
-    playerGroup.position.addScaledVector(forward, 40);
+    playerGroup.position.addScaledVector(forward, 36);
     audio.playChime(1100, 0.8);
-    showFloatingText(playerGroup.position, '✨ Akash Blink (40m Forward)!', 'float-punya');
+    showFloatingText(playerGroup.position, '✨ Akash Blink Teleport (36m)!', 'float-punya');
   }
 }
 
 function handleGardenPlot(plot) {
   if (plot.stage === 'untilled') {
     plot.stage = 'tilled';
-    plot.soilMat.color.setHex(0x2d1a0d);
-    plot.subtitle = '[Tilled • Sowing Sacred Tulsi Seeds]';
+    plot.soilMat.color.setHex(0x24150c);
+    plot.subtitle = '[Tilled • Sowing Celestial Seeds]';
     audio.playChime(520, 0.5);
     showFloatingText(plot.pos, 'Tilled Sacred Soil Bed', 'float-punya');
     awardPunya(25, 'Soil Preparation');
@@ -748,93 +708,81 @@ function handleGardenPlot(plot) {
     plot.subtitle = '[Mature Bloom • Press E to Harvest]';
     rebuildPlant(plot);
     audio.playChime(640, 0.5);
-    showFloatingText(plot.pos, 'Sapling Bloomed with Radiance!', 'float-healing');
-    awardPunya(45, 'Nurtured Sacred Life');
+    showFloatingText(plot.pos, 'Sacred Sapling Bloomed Radiantly!', 'float-healing');
+    awardPunya(50, 'Nurtured Sacred Life');
   } else if (plot.stage === 'mature') {
     plot.stage = 'untilled';
     plot.subtitle = '[Harvested • Needs Tilling]';
     while (plot.plantGroup.children.length) plot.plantGroup.remove(plot.plantGroup.children[0]);
     audio.playChime(880, 0.9);
     showFloatingText(plot.pos, '✨ Harvested Sacred Bloom! (+100 Punya, +150 Gold)', 'float-punya');
-    awardPunya(100, 'Sacred Harvest');
+    awardPunya(100, 'Sacred Blossom Harvest');
     state.gold += 150;
-    if (!state.boons.jump) showSurpriseGift(CELESTIAL_GIFTS[0]); // Lotus Leap
+
+    if (!state.boons.jump) {
+      showSurpriseGift({
+        name: 'Padma Siddhi (Lotus Leap)',
+        tier: 'MYTHIC BOON',
+        icon: '🪷',
+        desc: 'Unlocked from nurturing sacred blooms! Press [Space] to leap sky-high over cliffs and trees.',
+        unlockedKey: 'jump'
+      });
+    }
   }
   updateHUD();
 }
 
 function rebuildPlant(plot) {
   while (plot.plantGroup.children.length) plot.plantGroup.remove(plot.plantGroup.children[0]);
-  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 2.6, 8), new THREE.MeshStandardMaterial({ color: 0x22c55e }));
-  stem.position.y = 1.3;
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, 2.8, 8), new THREE.MeshStandardMaterial({ color: 0x22c55e }));
+  stem.position.y = 1.4;
   plot.plantGroup.add(stem);
-  const flower = new THREE.Mesh(new THREE.DodecahedronGeometry(1.2), new THREE.MeshStandardMaterial({ color: 0xff69b4, emissive: 0xaa2266, emissiveIntensity: 0.5 }));
-  flower.position.y = 2.8;
+  const flower = new THREE.Mesh(new THREE.DodecahedronGeometry(1.3), new THREE.MeshStandardMaterial({ color: 0xff69b4, emissive: 0xaa2266, emissiveIntensity: 0.5 }));
+  flower.position.y = 3.0;
   plot.plantGroup.add(flower);
 }
 
-function lightDeepa(deepa) {
-  audio.playChime(780, 0.6);
-  showFloatingText(deepa.pos, 'Lit Holy Deepa Lamp on the Ghats (+50 Punya)', 'float-punya');
-  awardPunya(50, 'Ganga Aarti Light');
-}
-
-function martialTraining(arena) {
-  audio.playChime(820, 0.5);
-  showFloatingText(arena.pos, 'Practiced Malla Sparring Form (+60 Punya, +Agility)', 'float-punya');
-  awardPunya(60, 'Martial Self-Discipline');
-}
-
-function studyScroll(scroll) {
-  audio.playChime(920, 0.6);
-  showFloatingText(scroll.pos, 'Deciphered Ancient Sanskrit Wisdom (+80 Punya)', 'float-punya');
-  awardPunya(80, 'Takshashila Knowledge');
-}
-
-function meditateAtKailash(flame) {
-  audio.playChime(1050, 0.9);
-  showFloatingText(flame.pos, 'Attained Silent Dhyana at Mount Kailash (+200 Punya)', 'float-punya');
-  awardPunya(200, 'Kailash Transcendence');
-  if (!state.boons.fly) showSurpriseGift(CELESTIAL_GIFTS[2]); // Garuda Flight
-}
-
-// ============================================================================
-// 8. PROGRESSION, LEVELING & ZONE DETECTION
-// ============================================================================
 function awardPunya(amount, reason) {
-  const currentGrade = GRADES.slice().reverse().find(g => state.level >= g.level) || GRADES[0];
-  const gained = Math.round(amount * currentGrade.mult);
-  state.punya += gained;
-
-  // Level Up Check
-  const nextGrade = GRADES.find(g => g.level > state.level && state.punya >= g.req);
-  if (nextGrade) {
-    state.level = nextGrade.level;
-    triggerLevelUp(nextGrade);
+  state.punya += amount;
+  if (state.punya >= state.level * 120) {
+    state.level++;
+    triggerLevelUp();
   }
-
-  // Automatic Siddhi Unlocks
-  if (state.level >= 25 && !state.boons.teleport) showSurpriseGift(CELESTIAL_GIFTS[3]); // Akash Blink
-  if (state.level >= 45 && !state.boons.fly) showSurpriseGift(CELESTIAL_GIFTS[2]); // Garuda Flight
-
+  if (state.level >= 5 && !state.boons.teleport) {
+    showSurpriseGift({
+      name: 'Akash Gamana (Astral Teleport)',
+      tier: 'TRANSCENDENT SIDDHI',
+      icon: '✨',
+      desc: 'Mastery of Karma folds space! Press [T] to instantly blink 36m forward.',
+      unlockedKey: 'teleport'
+    });
+  }
+  if (state.level >= 10 && !state.boons.fly) {
+    showSurpriseGift({
+      name: 'Garuda Paksha (Divine Flight)',
+      tier: 'DIVINE LEGENDARY BOON',
+      icon: '🦅',
+      desc: 'Ascended to the heavens! Toggle free flight anytime with [F].',
+      unlockedKey: 'fly'
+    });
+  }
   updateHUD();
 }
 
-function triggerLevelUp(grade) {
+function triggerLevelUp() {
   audio.playZoneFanfare();
   const banner = document.getElementById('levelup-banner');
-  document.getElementById('levelup-title').textContent = `GRADE ${grade.level}: ${grade.name.toUpperCase()}`;
+  document.getElementById('levelup-title').textContent = `LEVEL ${state.level}: GUARDIAN OF BHARAT`;
   banner.classList.remove('levelup-hidden');
 
-  // Spawn golden ascension pillar
   const pillar = new THREE.Mesh(
     new THREE.CylinderGeometry(3.5, 3.5, 120, 24),
-    new THREE.MeshBasicMaterial({ color: 0xffe066, transparent: true, opacity: 0.8 })
+    new THREE.MeshBasicMaterial({ color: 0xffe066, transparent: true, opacity: 0.85 })
   );
   pillar.position.set(playerGroup.position.x, 60, playerGroup.position.z);
   scene.add(pillar);
 
-  let op = 0.8;
+  let op = 0.85;
   const fade = setInterval(() => {
     op -= 0.05;
     pillar.material.opacity = op;
@@ -845,30 +793,6 @@ function triggerLevelUp(grade) {
   }, 60);
 
   setTimeout(() => banner.classList.add('levelup-hidden'), 4500);
-}
-
-function checkZoneTriggers() {
-  const px = playerGroup.position.x;
-  const pz = playerGroup.position.z;
-
-  const foundZone = ZONES.find((z) => {
-    return px >= z.bounds.minX && px <= z.bounds.maxX && pz >= z.bounds.minZ && pz <= z.bounds.maxZ;
-  }) || ZONES[0];
-
-  if (foundZone !== state.currentZone) {
-    state.currentZone = foundZone;
-    audio.playZoneFanfare();
-
-    // Trigger WoW Zone Banner
-    const banner = document.getElementById('zone-banner');
-    document.getElementById('zone-name').textContent = foundZone.name;
-    document.getElementById('zone-sub').textContent = foundZone.sub;
-    banner.classList.remove('zone-text-hidden');
-
-    setTimeout(() => {
-      banner.classList.add('zone-text-hidden');
-    }, 4500);
-  }
 }
 
 function showSurpriseGift(gift) {
@@ -936,26 +860,15 @@ function toggleDeitiesModal() {
 }
 document.getElementById('close-modal-btn').addEventListener('click', toggleDeitiesModal);
 
-// ============================================================================
-// 9. UI SYNCHRONIZATION
-// ============================================================================
 function updateHUD() {
-  const currentGrade = GRADES.slice().reverse().find(g => state.level >= g.level) || GRADES[0];
-  const nextGrade = GRADES.find(g => g.level > state.level) || currentGrade;
-
   document.getElementById('player-level-badge').textContent = state.level;
-  document.getElementById('player-char-name').textContent = `${currentGrade.name}`;
-  document.getElementById('player-char-title').textContent = `[${currentGrade.title}]`;
-
   document.getElementById('prana-val').textContent = Math.round(state.prana);
   document.getElementById('prana-fill').style.width = `${state.prana}%`;
 
   document.getElementById('punya-val').textContent = state.punya.toLocaleString();
-  document.getElementById('punya-max').textContent = nextGrade.req.toLocaleString();
-
-  const pct = nextGrade === currentGrade
-    ? 100
-    : Math.min(100, Math.round(((state.punya - currentGrade.req) / (nextGrade.req - currentGrade.req)) * 100));
+  const maxPunya = state.level * 120;
+  document.getElementById('punya-max').textContent = maxPunya.toLocaleString();
+  const pct = Math.min(100, Math.round((state.punya / maxPunya) * 100));
   document.getElementById('punya-fill').style.width = `${Math.max(4, pct)}%`;
 
   document.getElementById('cur-gold').textContent = state.gold.toLocaleString();
@@ -964,7 +877,7 @@ function updateHUD() {
 }
 
 // ============================================================================
-// 10. 60-FPS ANIMATION & RENDER LOOP
+// 8. 60-FPS ANIMATION & RENDER LOOP
 // ============================================================================
 const clock = new THREE.Clock();
 
@@ -975,7 +888,12 @@ function animate() {
 
   charHalo.rotation.z = elapsed * 1.5;
 
-  // WASD Locomotion
+  if (playerMixer) playerMixer.update(dt);
+  livingCreatures.forEach(c => {
+    if (c.mixer) c.mixer.update(dt);
+  });
+
+  // Movement
   let moveX = 0;
   let moveZ = 0;
   if (keys['KeyW'] || keys['ArrowUp']) moveZ -= 1;
@@ -986,38 +904,39 @@ function animate() {
   const isMoving = moveX !== 0 || moveZ !== 0;
   let speed = 14;
   if (state.boons.sprint || keys['ShiftLeft']) speed = 28;
-  if (state.isFlying) speed = 40;
+  if (state.isFlying) speed = 38;
 
   if (isMoving) {
     const moveAngle = Math.atan2(moveX, moveZ) + camYaw;
     playerGroup.rotation.y = moveAngle + Math.PI;
     playerGroup.position.x += Math.sin(moveAngle) * speed * dt;
     playerGroup.position.z += Math.cos(moveAngle) * speed * dt;
+    fadePlayerAction(speed > 20 ? 'Run' : 'Walk');
+  } else {
+    fadePlayerAction('Idle');
   }
 
-  // Vertical Movement (Jump & Garuda Flight)
+  // Terrain clamping & Jump
+  const groundY = getTerrainHeight(playerGroup.position.x, playerGroup.position.z);
   if (state.isFlying) {
     if (keys['Space']) playerGroup.position.y += 24 * dt;
-    if (keys['ControlLeft'] || keys['KeyC']) playerGroup.position.y = Math.max(0.2, playerGroup.position.y - 24 * dt);
+    if (keys['ControlLeft'] || keys['KeyC']) playerGroup.position.y = Math.max(groundY + 1, playerGroup.position.y - 24 * dt);
   } else {
-    if (keys['Space'] && playerGroup.position.y <= 0.05) {
+    if (keys['Space'] && playerGroup.position.y <= groundY + 0.1) {
       velY = state.boons.jump ? 26 : 14;
       audio.playChime(640, 0.3);
     }
     velY -= 36 * dt;
-    playerGroup.position.y = Math.max(0, playerGroup.position.y + velY * dt);
-    if (playerGroup.position.y <= 0) velY = 0;
+    playerGroup.position.y = Math.max(groundY, playerGroup.position.y + velY * dt);
+    if (playerGroup.position.y <= groundY) velY = 0;
   }
 
-  // Camera Follow
-  const targetPos = playerGroup.position.clone().add(new THREE.Vector3(0, 2.2, 0));
+  // Camera Orbit
+  const targetPos = playerGroup.position.clone().add(new THREE.Vector3(0, 2.4, 0));
   camera.position.x = targetPos.x + Math.sin(camYaw) * Math.cos(camPitch) * camDist;
   camera.position.z = targetPos.z + Math.cos(camYaw) * Math.cos(camPitch) * camDist;
-  camera.position.y = Math.max(1.5, targetPos.y + Math.sin(camPitch) * camDist);
+  camera.position.y = Math.max(groundY + 1.8, targetPos.y + Math.sin(camPitch) * camDist);
   camera.lookAt(targetPos);
-
-  // Check Zone boundaries
-  checkZoneTriggers();
 
   // Compass Objective Guidance
   let nearest = interactables[0];
@@ -1029,7 +948,6 @@ function animate() {
       nearest = item;
     }
   });
-
   if (nearest) {
     const d = Math.round(minDist);
     document.getElementById('compass-zone-text').textContent =
