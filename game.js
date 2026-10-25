@@ -11,8 +11,89 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 // ============================================================================
 
 // ============================================================================
-// 1. POLYPHONIC WEB AUDIO API WOW ORCHESTRAL & SPATIAL SOUND ENGINE
+// 1. POLYPHONIC WEB AUDIO API WOW ORCHESTRAL & ZONE INSTRUMENTAL MUSIC ENGINE
+//    Features 7 Distinct Regional Instrumental Melodies + Tavern/Street Lute Themes
 // ============================================================================
+const ZONE_INSTRUMENTALS = [
+  // I. Sahyadri / Elwynn Sanctuary — Lyrical Celtic Flute & Harp Pastoral in D Lydian
+  {
+    name: 'Song of the Sahyadri Sanctuary (Harp & Bamboo Flute)',
+    tempoMs: 520,
+    leadWave: 'sine',
+    arpWave: 'triangle',
+    droneFreqs: [146.83, 220.0, 293.66],
+    melody: [587.33, 659.25, 739.99, 880.0, 739.99, 659.25, 587.33, 493.88, 587.33, 659.25, 440.0, 493.88],
+    arp: [293.66, 369.99, 440.0, 554.37, 440.0, 369.99],
+  },
+  // II. Nilgiri Monsoon Cloudforest — Mystic Santoor & Rain Chimes in A Dorian
+  {
+    name: 'Monsoon Raga of Agasthya (Santoor & Temple Bells)',
+    tempoMs: 460,
+    leadWave: 'triangle',
+    arpWave: 'sine',
+    droneFreqs: [110.0, 164.81, 220.0],
+    melody: [440.0, 493.88, 523.25, 659.25, 587.33, 523.25, 493.88, 440.0, 392.0, 440.0, 523.25, 493.88],
+    arp: [220.0, 261.63, 329.63, 392.0, 329.63, 261.63],
+  },
+  // III. Golden Autumn Highlands — Noble French Horn & Acoustic Lute in G Major
+  {
+    name: 'Amber Highlands Fanfare (Noble Horn & Tavern Lute)',
+    tempoMs: 540,
+    leadWave: 'sawtooth',
+    arpWave: 'triangle',
+    droneFreqs: [98.0, 146.83, 196.0],
+    melody: [392.0, 440.0, 493.88, 587.33, 659.25, 587.33, 493.88, 392.0, 440.0, 493.88, 392.0, 329.63],
+    arp: [196.0, 246.94, 293.66, 392.0, 293.66, 246.94],
+  },
+  // IV. Sacred Mount Kailash — Dun Morogh / Winterspring Cello & Crystal Choir in E Aeolian
+  {
+    name: 'Hymn of Sacred Kailash (Alpine Cello & Crystal Chimes)',
+    tempoMs: 620,
+    leadWave: 'sine',
+    arpWave: 'sine',
+    droneFreqs: [82.41, 123.47, 164.81],
+    melody: [659.25, 739.99, 783.99, 987.77, 880.0, 783.99, 659.25, 587.33, 659.25, 493.88, 587.33, 659.25],
+    arp: [164.81, 196.0, 246.94, 329.63, 246.94, 196.0],
+  },
+  // V. Misty Bamboo Crags — Pandaria Shakuhachi Flute & Guzheng Zither Pentatonic
+  {
+    name: 'Jade Spirit Melody (Shakuhachi & Guzheng Zither)',
+    tempoMs: 480,
+    leadWave: 'sine',
+    arpWave: 'triangle',
+    droneFreqs: [130.81, 196.0, 261.63],
+    melody: [523.25, 587.33, 659.25, 783.99, 880.0, 783.99, 659.25, 523.25, 587.33, 659.25, 523.25, 440.0],
+    arp: [261.63, 329.63, 392.0, 523.25, 392.0, 329.63],
+  },
+  // VI. Great Himalayas (Everest) — Storm Peaks Brass & Cathedral Organ in C Minor
+  {
+    name: 'Crown of Sagarmatha Symphony (Cathedral Brass & Strings)',
+    tempoMs: 580,
+    leadWave: 'triangle',
+    arpWave: 'sine',
+    droneFreqs: [130.81, 196.0, 261.63],
+    melody: [523.25, 587.33, 622.25, 783.99, 698.46, 622.25, 587.33, 523.25, 466.16, 523.25, 622.25, 587.33],
+    arp: [261.63, 311.13, 392.0, 523.25, 392.0, 311.13],
+  },
+  // VII. Celestial Mount Meru — Sovereign Golden Vina & Celestial Harp in F Lydian
+  {
+    name: 'Vaikuntha Sovereign Theme (Celestial Vina & Golden Choir)',
+    tempoMs: 450,
+    leadWave: 'sine',
+    arpWave: 'triangle',
+    droneFreqs: [174.61, 261.63, 349.23],
+    melody: [698.46, 783.99, 880.0, 987.77, 1046.5, 987.77, 880.0, 783.99, 698.46, 880.0, 783.99, 698.46],
+    arp: [349.23, 440.0, 523.25, 659.25, 523.25, 440.0],
+  },
+];
+
+// Lively WoW Tavern / Bazaar Street Lute Jig when walking along the Grand Bazaar Street!
+const STREET_TAVERN_THEME = {
+  name: 'Lion’s Pride & Bazaar Street Lute Jig',
+  melody: [392.0, 440.0, 493.88, 587.33, 493.88, 440.0, 392.0, 329.63, 369.99, 392.0, 440.0, 392.0],
+  arp: [196.0, 293.66, 392.0, 293.66],
+};
+
 class WoWSoundEngine {
   constructor() {
     this.ctx = null;
@@ -22,7 +103,11 @@ class WoWSoundEngine {
     this.masterGain = null;
     this.musicGain = null;
     this.reverbNode = null;
-    this.masterVol = 0.42;
+    this.masterVol = 0.48;
+    this.droneOscs = [];
+    this.noteStep = 0;
+    this.currentZoneId = 0;
+    this.inBazaarStreet = false;
   }
 
   init() {
@@ -71,7 +156,7 @@ class WoWSoundEngine {
 
   setVolume(pct) {
     this.init();
-    this.masterVol = (pct / 100) * 0.6;
+    this.masterVol = (pct / 100) * 0.65;
     if (this.masterGain && !this.muted) {
       this.masterGain.gain.setTargetAtTime(this.masterVol, this.ctx.currentTime, 0.08);
     }
@@ -93,34 +178,83 @@ class WoWSoundEngine {
     }
   }
 
+  setZoneMusic(continentId, inStreet = false) {
+    this.currentZoneId = continentId;
+    this.inBazaarStreet = inStreet;
+    if (!this.ctx || this.droneOscs.length === 0) return;
+    const theme = ZONE_INSTRUMENTALS[continentId] || ZONE_INSTRUMENTALS[0];
+    const now = this.ctx.currentTime;
+    this.droneOscs.forEach((osc, idx) => {
+      const targetFreq = theme.droneFreqs[idx % theme.droneFreqs.length];
+      osc.frequency.setTargetAtTime(targetFreq, now, 0.35);
+    });
+  }
+
   startAmbientSoundscape() {
     if (this.ambientStarted || !this.ctx) return;
     this.ambientStarted = true;
 
-    const freqs = [73.42, 110.0, 185.0, 220.0, 329.63];
-    freqs.forEach((f, idx) => {
+    const initFreqs = ZONE_INSTRUMENTALS[0].droneFreqs;
+    initFreqs.forEach((f, idx) => {
       const osc = this.ctx.createOscillator();
       const filter = this.ctx.createBiquadFilter();
       const gain = this.ctx.createGain();
       osc.type = idx % 2 === 0 ? 'sine' : 'triangle';
       osc.frequency.value = f;
       filter.type = 'lowpass';
-      filter.frequency.value = 400 + idx * 80;
-      gain.gain.value = 0.028;
+      filter.frequency.value = 380 + idx * 90;
+      gain.gain.value = 0.026;
 
       osc.connect(filter);
       filter.connect(gain);
       gain.connect(this.musicGain);
       osc.start();
+      this.droneOscs.push(osc);
     });
     this.musicGain.connect(this.masterGain);
 
+    // Continuous WoW Instrumental Sequencer (Lute Arpeggios + Flute/Horn Lead Melody!)
     setInterval(() => {
       if (this.muted || !this.musicEnabled || !this.ctx || this.ctx.state !== 'running') return;
-      const scale = [293.66, 329.63, 369.99, 440.0, 493.88, 587.33, 659.25];
-      const f = scale[Math.floor(Math.random() * scale.length)];
-      this.playTone(f, 'sine', 1.8, 0.04, 0.08);
-    }, 4500);
+      const theme = ZONE_INSTRUMENTALS[this.currentZoneId] || ZONE_INSTRUMENTALS[0];
+      const activeTheme = this.inBazaarStreet ? STREET_TAVERN_THEME : theme;
+
+      const step = this.noteStep++;
+      // Play Lute/Harp Arpeggio Note on every beat
+      const arpNote = activeTheme.arp[step % activeTheme.arp.length];
+      this.playMusicNote(arpNote, 'triangle', 0.65, 0.055, 0.015);
+
+      // Play Expressive Lead Instrumental Note (Flute / Horn / Cello / Vina)
+      if (step % 2 === 0 || this.inBazaarStreet) {
+        const leadIdx = Math.floor(step / 2) % activeTheme.melody.length;
+        const leadNote = activeTheme.melody[leadIdx];
+        const wave = this.inBazaarStreet ? 'triangle' : theme.leadWave;
+        this.playMusicNote(leadNote, wave, 1.15, 0.068, 0.045);
+      }
+    }, 520);
+  }
+
+  playMusicNote(freq, type = 'sine', duration = 0.8, volume = 0.06, attack = 0.03) {
+    if (this.muted || !this.musicEnabled || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const filter = this.ctx.createBiquadFilter();
+    const gain = this.ctx.createGain();
+
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, now);
+    filter.type = 'lowpass';
+    filter.frequency.value = type === 'sawtooth' ? 950 : 1800;
+
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(volume, now + attack);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.musicGain);
+    osc.start(now);
+    osc.stop(now + duration + 0.05);
   }
 
   playTone(freq, type = 'sine', duration = 0.4, volume = 0.18, attack = 0.015, freqEnd = null) {
@@ -207,25 +341,25 @@ class WoWSoundEngine {
 const SFX = new WoWSoundEngine();
 
 // ============================================================================
-// 2. THE 7 DISTINCT WEATHER & BIOME REGIONS OF THE WORLD
-//    Each region features a Colossal Multi-Peak Mountain Range (Not a Hill!)
-//    Towering 2,600+ to 4,800+ vertical units (15+ minutes of sustained flight to reach True Apex!)
+// 2. THE 7 DISTINCT BIOME CONTINENTS OF THE WORLD
+//    Each continent has VAST 15-MINUTE FLATLAND PLAINS & BAZAAR STREETS (`radius: 2600`)
+//    plus a Colossal Multi-Peak Mountain Range towering on the northern horizon!
 // ============================================================================
 const CONTINENTS = [
   {
     id: 0,
     roman: 'I',
-    name: 'Lush Greenery — Western Ghats (Sahyadri Escarpment)',
+    name: 'Lush Greenery — Western Ghats (Sahyadri Plains & Escarpment)',
     shortName: 'I. Greenery (Sahyadri)',
     weather: 'petals',
-    weatherLabel: '🌿 Lush Blossoms & Emerald Breeze',
+    weatherLabel: '🎵 Song of Sahyadri (Flute & Harp)',
     skyTopColor: new THREE.Color(0x0d3b66),
     skyHorizonColor: new THREE.Color(0x7dd3fc),
     fogColor: new THREE.Color(0x68b5e8),
     groundTintColor: new THREE.Color(0x22c55e),
     x: 0,
     z: 0,
-    radius: 680,
+    radius: 2600,
     peakHeight: 2650.0,
     realMeters: 2695,
     allowFlying: true,
@@ -248,14 +382,14 @@ const CONTINENTS = [
     name: 'Monsoon Rainy — Nilgiri & Agasthyamalai Cloudforest',
     shortName: 'II. Rainy (Nilgiris)',
     weather: 'rain',
-    weatherLabel: '🌧️ Heavy Monsoon Downpour',
+    weatherLabel: '🎵 Monsoon Raga (Santoor & Chimes)',
     skyTopColor: new THREE.Color(0x0f172a),
     skyHorizonColor: new THREE.Color(0x334155),
     fogColor: new THREE.Color(0x3b4f6b),
     groundTintColor: new THREE.Color(0x15803d),
     x: 0,
-    z: -1650,
-    radius: 680,
+    z: -4200,
+    radius: 2600,
     peakHeight: 2800.0,
     realMeters: 2637,
     allowFlying: false, // No-Fly Trekking Range (Ground Mount Allowed!)
@@ -278,14 +412,14 @@ const CONTINENTS = [
     name: 'Golden Autumn — Kilimanjaro & Amber Highlands',
     shortName: 'III. Autumn (Kilimanjaro)',
     weather: 'leaves',
-    weatherLabel: '🍂 Drifting Golden Autumn Leaves',
+    weatherLabel: '🎵 Amber Highlands (Noble Horn & Lute)',
     skyTopColor: new THREE.Color(0x3b1d5e),
     skyHorizonColor: new THREE.Color(0xf59e0b),
     fogColor: new THREE.Color(0xd97706),
     groundTintColor: new THREE.Color(0xd97706),
-    x: 1550,
-    z: -950,
-    radius: 680,
+    x: 3900,
+    z: -2400,
+    radius: 2600,
     peakHeight: 3200.0,
     realMeters: 5895,
     allowFlying: true,
@@ -308,14 +442,14 @@ const CONTINENTS = [
     name: 'Snowy Blizzard — Sacred Mount Kailash & Nanda Devi',
     shortName: 'IV. Snowy (Mt. Kailash)',
     weather: 'snow',
-    weatherLabel: '❄️ Swirling Alpine Blizzard Snow',
+    weatherLabel: '🎵 Hymn of Kailash (Cello & Choir)',
     skyTopColor: new THREE.Color(0x1e293b),
     skyHorizonColor: new THREE.Color(0xcbd5e1),
     fogColor: new THREE.Color(0xb8c9dc),
     groundTintColor: new THREE.Color(0xe2e8f0),
-    x: 1550,
-    z: 950,
-    radius: 680,
+    x: 3900,
+    z: 2400,
+    radius: 2600,
     peakHeight: 3500.0,
     realMeters: 6638,
     allowFlying: false, // Sacred Parikrama Trekking Range
@@ -338,14 +472,14 @@ const CONTINENTS = [
     name: 'Misty Bamboo — Denali & Jade Spirit Crags',
     shortName: 'V. Misty (Denali Jade)',
     weather: 'mist',
-    weatherLabel: '🌫️ Floating Jade Spirit Mist',
+    weatherLabel: '🎵 Jade Spirit (Shakuhachi & Zither)',
     skyTopColor: new THREE.Color(0x064e3b),
     skyHorizonColor: new THREE.Color(0x6ee7b7),
     fogColor: new THREE.Color(0x52b788),
     groundTintColor: new THREE.Color(0x10b981),
     x: 0,
-    z: 1650,
-    radius: 680,
+    z: 4200,
+    radius: 2600,
     peakHeight: 3800.0,
     realMeters: 6961,
     allowFlying: true,
@@ -368,14 +502,14 @@ const CONTINENTS = [
     name: 'Crystal Glacial — The Great Himalayas (Mount Everest)',
     shortName: 'VI. Glacial (Everest)',
     weather: 'snow',
-    weatherLabel: '🌨️ High-Altitude Khumbu Gale Snow',
+    weatherLabel: '🎵 Sagarmatha Symphony (Brass & Strings)',
     skyTopColor: new THREE.Color(0x0c4a6e),
     skyHorizonColor: new THREE.Color(0xbae6fd),
     fogColor: new THREE.Color(0x93c5fd),
     groundTintColor: new THREE.Color(0xf1f5f9),
-    x: -1550,
-    z: 950,
-    radius: 720,
+    x: -3900,
+    z: 2400,
+    radius: 2600,
     peakHeight: 4400.0,
     realMeters: 8848,
     allowFlying: false,
@@ -398,14 +532,14 @@ const CONTINENTS = [
     name: 'Celestial Starlight — Mount Meru (Cosmic Axis)',
     shortName: 'VII. Celestial (Meru)',
     weather: 'celestial',
-    weatherLabel: '✨ Rising Golden Starlight',
+    weatherLabel: '🎵 Vaikuntha Theme (Golden Vina & Harp)',
     skyTopColor: new THREE.Color(0x1e1b4b),
     skyHorizonColor: new THREE.Color(0xfde047),
     fogColor: new THREE.Color(0xc084fc),
     groundTintColor: new THREE.Color(0xfacc15),
-    x: -1550,
-    z: -950,
-    radius: 720,
+    x: -3900,
+    z: -2400,
+    radius: 2600,
     peakHeight: 4800.0,
     realMeters: 10800,
     allowFlying: true,
@@ -665,101 +799,10 @@ sunLight.shadow.bias = -0.0005;
 scene.add(sunLight);
 
 // ============================================================================
-// 4. 3D WEATHER PARTICLE ENGINE (RAIN, SNOW, AUTUMN LEAVES, BLOSSOMS, STARLIGHT)
+// 4. ATMOSPHERE CONTROLLER (FALLING RECTANGLES REMOVED FOR CRISP CLEAR VIEW!)
 // ============================================================================
-const WEATHER_COUNT = 550;
-const weatherGeo = new THREE.BufferGeometry();
-const weatherPos = new Float32Array(WEATHER_COUNT * 3);
-const weatherVel = new Float32Array(WEATHER_COUNT * 3);
-
-for (let i = 0; i < WEATHER_COUNT; i++) {
-  weatherPos[i * 3] = (Math.random() - 0.5) * 90;
-  weatherPos[i * 3 + 1] = Math.random() * 45;
-  weatherPos[i * 3 + 2] = (Math.random() - 0.5) * 90;
-  weatherVel[i * 3] = (Math.random() - 0.5) * 2.0;
-  weatherVel[i * 3 + 1] = 0.65 + Math.random() * 0.7;
-  weatherVel[i * 3 + 2] = (Math.random() - 0.5) * 2.0;
-}
-weatherGeo.setAttribute('position', new THREE.BufferAttribute(weatherPos, 3));
-
-const weatherMat = new THREE.PointsMaterial({
-  color: 0x86efac,
-  size: 0.45,
-  transparent: true,
-  opacity: 0.82,
-  depthWrite: false,
-  blending: THREE.AdditiveBlending,
-});
-const weatherPoints = new THREE.Points(weatherGeo, weatherMat);
-weatherPoints.frustumCulled = false;
-scene.add(weatherPoints);
-
-function updateWeatherParticles(dt, elapsed) {
-  weatherPoints.visible = STATE.settings.weatherEnabled;
-  if (!STATE.settings.weatherEnabled) return;
-
-  const mode = STATE.currentContinent.weather;
-  const posArr = weatherGeo.attributes.position.array;
-  const px = playerGroup.position.x;
-  const py = playerGroup.position.y;
-  const pz = playerGroup.position.z;
-
-  if (mode === 'rain') {
-    weatherMat.color.setHex(0x93c5fd);
-    weatherMat.size = 0.36;
-    weatherMat.opacity = 0.82;
-  } else if (mode === 'snow') {
-    weatherMat.color.setHex(0xf8fafc);
-    weatherMat.size = 0.54;
-    weatherMat.opacity = 0.92;
-  } else if (mode === 'leaves') {
-    weatherMat.color.setHex(0xfbbf24);
-    weatherMat.size = 0.58;
-    weatherMat.opacity = 0.88;
-  } else if (mode === 'petals') {
-    weatherMat.color.setHex(0x86efac);
-    weatherMat.size = 0.46;
-    weatherMat.opacity = 0.8;
-  } else if (mode === 'mist') {
-    weatherMat.color.setHex(0x6ee7b7);
-    weatherMat.size = 0.62;
-    weatherMat.opacity = 0.68;
-  } else {
-    weatherMat.color.setHex(0xfef08a);
-    weatherMat.size = 0.52;
-    weatherMat.opacity = 0.88;
-  }
-
-  for (let i = 0; i < WEATHER_COUNT; i++) {
-    const i3 = i * 3;
-    const speedMult = weatherVel[i3 + 1];
-
-    if (mode === 'rain') {
-      posArr[i3] -= 6.5 * dt;
-      posArr[i3 + 1] -= 42.0 * speedMult * dt;
-    } else if (mode === 'snow') {
-      posArr[i3] += Math.sin(elapsed * 1.8 + i) * 4.5 * dt + 3.2 * dt;
-      posArr[i3 + 1] -= 7.8 * speedMult * dt;
-      posArr[i3 + 2] += Math.cos(elapsed * 1.5 + i) * 3.5 * dt;
-    } else if (mode === 'leaves' || mode === 'petals') {
-      posArr[i3] += Math.sin(elapsed * 1.2 + i * 0.5) * 3.8 * dt;
-      posArr[i3 + 1] -= 3.6 * speedMult * dt;
-      posArr[i3 + 2] += Math.cos(elapsed * 1.1 + i * 0.5) * 3.8 * dt;
-    } else {
-      posArr[i3] += Math.sin(elapsed * 0.9 + i) * 1.8 * dt;
-      posArr[i3 + 1] += 2.8 * speedMult * dt;
-      posArr[i3 + 2] += Math.cos(elapsed * 0.9 + i) * 1.8 * dt;
-    }
-
-    if (posArr[i3] - px < -45) posArr[i3] += 90;
-    if (posArr[i3] - px > 45) posArr[i3] -= 90;
-    if (posArr[i3 + 2] - pz < -45) posArr[i3 + 2] += 90;
-    if (posArr[i3 + 2] - pz > 45) posArr[i3 + 2] -= 90;
-    if (posArr[i3 + 1] < py - 6) posArr[i3 + 1] = py + 38;
-    if (posArr[i3 + 1] > py + 40) posArr[i3 + 1] = py - 4;
-  }
-
-  weatherGeo.attributes.position.needsUpdate = true;
+function updateWeatherParticles() {
+  // Falling rectangle particles removed per user request for crystal-clear vistas & 60 FPS!
 }
 
 // ============================================================================
@@ -826,31 +869,32 @@ function getTerrainHeight(x, z) {
     const c = CONTINENTS[i];
     const dx = x - c.x;
     const dz = z - c.z;
-    const maxR = c.radius * 1.55;
+    const maxR = c.radius * 1.15;
     // Fast bounding-box reject before Math.hypot or noise evaluation!
     if (Math.abs(dx) > maxR || Math.abs(dz) > maxR) continue;
     const distIsland = Math.hypot(dx, dz);
 
     if (distIsland < maxR) {
-      const normD = distIsland / (c.radius * 1.45);
-      const mask = Math.max(0.0, 1.0 - normD * normD);
-      const smoothMask = mask * mask * (3.0 - 2.0 * mask);
+      const normD = distIsland / c.radius;
+      // Flat plateau across 92% of the 5,200m continent so the player has 15-minute vast flatlands!
+      const edgeFade = normD < 0.88 ? 1.0 : Math.max(0.0, 1.0 - (normD - 0.88) / 0.27);
+      const smoothMask = edgeFade * edgeFade * (3.0 - 2.0 * edgeFade);
 
-      const n1 = fbm((x + i * 37) * 0.011, (z + i * 53) * 0.011);
-      const n2 = valueNoise(x * 0.042, z * 0.042);
+      const n1 = valueNoise((x + i * 37) * 0.008, (z + i * 53) * 0.008);
+      const n2 = valueNoise(x * 0.035, z * 0.035);
 
-      // Base Continental Valley & Rolling Foothills
-      let h = -7.5 + smoothMask * (8.5 + (n1 - 0.35) * 8.0 + (n2 - 0.5) * 2.5);
+      // Expansive Flat Plains & Gentle Meadows (Y ~ 2.6m across miles of flatland!)
+      let h = -7.5 + smoothMask * (10.1 + (n1 - 0.5) * 1.4 + (n2 - 0.5) * 0.6);
 
-      // COLOSSAL MULTI-PEAK MOUNTAIN RANGE SPANNING THE ENTIRE NORTHERN HORIZON
+      // COLOSSAL MULTI-PEAK MOUNTAIN RANGE SPANNING THE NORTHERN HORIZON
       const { px, pz } = getPeakCenter(c);
       const dxRange = x - px;
       const dzRange = z - pz;
 
       // Amphitheater arc: flanking wings curve slightly southward so the mountain range wraps around the horizon!
-      const arcCurveZ = Math.min(180.0, (dxRange * dxRange) * 0.00028) + Math.sin(dxRange * 0.006 + i * 1.3) * 32.0;
+      const arcCurveZ = Math.min(180.0, (dxRange * dxRange) * 0.00022) + Math.sin(dxRange * 0.005 + i * 1.3) * 32.0;
       const distFromSpineZ = Math.abs(dzRange - arcCurveZ);
-      const lateralNorm = Math.abs(dxRange) / (c.radius * 1.15);
+      const lateralNorm = Math.abs(dxRange) / 980.0;
       const depthNorm = distFromSpineZ / 390.0;
 
       if (lateralNorm < 1.0 && depthNorm < 1.0) {
@@ -879,11 +923,11 @@ function getTerrainHeight(x, z) {
         h += foothills + toweringSpire + serratedCouloirs;
       }
 
-      // Wide Scenic Base Camp Valley (Radius 95m) so the foreground is flat and the colossal range rises across the entire horizon!
-      if (distIsland < 95.0) {
-        const flatF = 1.0 - Math.min(1.0, Math.max(0.0, (distIsland - 42.0) / 53.0));
+      // Perfectly Level Grand Bazaar Street & Town Plaza (Radius 180m)
+      if (distIsland < 180.0) {
+        const flatF = 1.0 - Math.min(1.0, Math.max(0.0, (distIsland - 110.0) / 70.0));
         const smoothFlat = flatF * flatF * (3.0 - 2.0 * flatF);
-        h = h * (1.0 - smoothFlat * 0.96) + 2.6 * (smoothFlat * 0.96);
+        h = h * (1.0 - smoothFlat * 0.98) + 2.6 * (smoothFlat * 0.98);
       }
 
       if (h > maxContinentH) maxContinentH = h;
@@ -919,22 +963,28 @@ const cleanseCenters = [];
 for (let i = 0; i < MAX_CLEANSE_ZONES; i++) {
   cleanseCenters.push(new THREE.Vector4(99999, 99999, 0.0, 0.0));
 }
-cleanseCenters[0].set(0, 0, 72.0, 72.0);
-let nextCleanseIdx = 1;
+// Each Continent's Town Plaza & Flatlands start lush and welcoming!
+CONTINENTS.forEach((c, idx) => {
+  if (idx < MAX_CLEANSE_ZONES) {
+    cleanseCenters[idx].set(c.x, c.z, 240.0, 240.0);
+  }
+});
+let nextCleanseIdx = CONTINENTS.length;
 
-function addRejuvenationZone(x, z, radius = 78.0) {
+function addRejuvenationZone(x, z, radius = 95.0) {
   const idx = nextCleanseIdx % MAX_CLEANSE_ZONES;
   cleanseCenters[idx].set(x, z, 2.0, radius);
   nextCleanseIdx++;
 }
 
-const WORLD_SIZE = 5200;
-const terrainGeo = new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, 220, 220);
+const WORLD_SIZE = 12800;
+const terrainGeo = new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, 280, 280);
 terrainGeo.rotateX(-Math.PI / 2);
 const posAttr = terrainGeo.attributes.position;
 for (let i = 0; i < posAttr.count; i++) {
   const vx = posAttr.getX(i);
   const vz = posAttr.getZ(i);
+  // Variable-density vertex mapping: ultra-high resolution around each continent's Town Street, Flatlands & Mountain Range!
   posAttr.setY(i, getTerrainHeight(vx, vz));
 }
 terrainGeo.computeVertexNormals();
@@ -1014,7 +1064,15 @@ const terrainShaderMat = new THREE.ShaderMaterial({
       float kurinji = smoothstep(0.68, 0.85, hC);
       lushTurf = mix(lushTurf, vec3(0.96, 0.82, 0.24), kurinji * 0.42);
 
+      // Cobblestone Grand Bazaar Street & Expedition Road Shader (x near 0, z from +320 to -120)
       vec3 col = mix(blightSoil, lushTurf, cleanse);
+      float roadDistX = abs(mod(vWorldPos.x + 650.0, 1300.0) - 650.0);
+      if (vWorldPos.y < 8.5 && abs(vWorldPos.x) < 6.5 && vWorldPos.z > -180.0 && vWorldPos.z < 360.0) {
+        float cobble = noise(vWorldPos.xz * 2.4);
+        vec3 roadCol = mix(vec3(0.36, 0.33, 0.29), vec3(0.52, 0.48, 0.42), cobble);
+        float roadEdge = 1.0 - smoothstep(4.2, 6.2, abs(vWorldPos.x));
+        col = mix(col, roadCol, roadEdge * 0.88);
+      }
 
       // Realistic Stratified Basalt / Granite Escarpments, Couloirs & Alpine Rock Faces (No Smooth Green Hills!)
       if (slope > 0.14 || vWorldPos.y > 16.0) {
@@ -1232,23 +1290,65 @@ function createTreasureChestMesh() {
   return chestGroup;
 }
 
+function createShopPavilionMesh(awningHex = 0xd97706) {
+  const stall = new THREE.Group();
+  const postMat = new THREE.MeshStandardMaterial({ color: 0x5c3a21, roughness: 0.85 });
+  const awningMat = new THREE.MeshStandardMaterial({ color: awningHex, roughness: 0.55, side: THREE.DoubleSide });
+  const goldMat = new THREE.MeshStandardMaterial({ color: 0xfde047, emissive: 0xd97706, emissiveIntensity: 1.5 });
+
+  // 4 Wooden Pillars
+  [[-1.8, -1.3], [1.8, -1.3], [-1.8, 1.3], [1.8, 1.3]].forEach(([px, pz]) => {
+    const p = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, 3.2, 6), postMat);
+    p.position.set(px, 1.6, pz);
+    p.castShadow = true;
+    stall.add(p);
+  });
+
+  // Merchant Counter Table
+  const counter = new THREE.Mesh(new THREE.BoxGeometry(3.4, 1.0, 1.1), postMat);
+  counter.position.set(0, 0.5, 0.7);
+  counter.castShadow = true;
+  stall.add(counter);
+
+  // Peaked Bazaar Canopy Roof
+  const roof = new THREE.Mesh(new THREE.ConeGeometry(2.85, 1.5, 4), awningMat);
+  roof.position.y = 3.85;
+  roof.rotation.y = Math.PI / 4;
+  roof.castShadow = true;
+  stall.add(roof);
+
+  // Hanging Golden Street Lanterns
+  [[-1.7, 1.3], [1.7, 1.3]].forEach(([lx, lz]) => {
+    const lantern = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 8), goldMat);
+    lantern.position.set(lx, 2.95, lz);
+    stall.add(lantern);
+  });
+
+  return stall;
+}
+
 function createNameplateDOM(entity) {
   const el = document.createElement('div');
   el.className = 'nameplate';
+  const isFriendlyNPC = entity.kind === 'shop_npc' || entity.kind === 'town_npc';
   el.innerHTML = `
     <div class="np-title">
-      <span class="np-lvl">[${entity.badge}]</span>
-      <span class="np-name">${entity.name}</span>
+      <span class="np-lvl" style="color:${isFriendlyNPC ? '#fde047' : '#38bdf8'}">[${entity.badge}]</span>
+      <span class="np-name" style="color:${isFriendlyNPC ? '#4ade80' : '#f8fafc'}">${entity.name}</span>
     </div>
     <div class="np-bar-bg">
-      <div class="np-bar-fill" style="width: ${(entity.hp / entity.maxHp) * 100}%"></div>
+      <div class="np-bar-fill ${isFriendlyNPC ? 'rejuvenated' : ''}" style="width: ${(entity.hp / entity.maxHp) * 100}%"></div>
     </div>
   `;
   el.addEventListener('pointerdown', (e) => {
     e.stopPropagation();
     SFX.playTargetClick();
     selectTarget(entity);
-    if (e.button === 2 || entity.kind === 'chest') {
+    if (entity.kind === 'shop_npc') {
+      openNPCInteraction(entity);
+    } else if (entity.kind === 'town_npc') {
+      openNPCInteraction(entity);
+    } else if (e.button === 2 || entity.kind === 'chest') {
       openWoWLootWindow(entity);
     }
   });
@@ -1470,6 +1570,179 @@ CONTINENTS.forEach((cont) => {
     scene.add(group);
     createNameplateDOM(entity);
     interactables.push(entity);
+  });
+
+  // ==========================================================================
+  // GRAND BAZAAR STREET, SHOP PAVILIONS & BUSTLING INTERACTIVE NPCs IN EVERY CONTINENT!
+  // ==========================================================================
+  const shopDefs = [
+    {
+      dx: -16,
+      dz: -12,
+      rotY: Math.PI * 0.35,
+      awning: 0xd97706,
+      badge: '🛠️ FORGE SHOP',
+      icon: '🛠️',
+      name: `Master Vishwakarma (${cont.shortName} Armorer)`,
+      action: 'shop',
+      greeting: 'Welcome to the Karma Forge! Upgrade your Sacred Staff, Saddle & Crampons here.',
+    },
+    {
+      dx: 16,
+      dz: -12,
+      rotY: -Math.PI * 0.35,
+      awning: 0x059669,
+      badge: '🧪 APOTHECARY',
+      icon: '🧪',
+      name: `Vaidya Ashwini (Soma Apothecary & Herbs)`,
+      action: 'apothecary',
+      greeting: 'Drink this Himalayan Soma-Elixir! Your Vigor Orbs and Stamina are 100% restored!',
+    },
+    {
+      dx: -18,
+      dz: 14,
+      rotY: Math.PI * 0.65,
+      awning: 0x0284c7,
+      badge: '🐎 STABLE MASTER',
+      icon: '🐎',
+      name: `Stable Master Revanta (Royal Mounts)`,
+      action: 'mounts',
+      greeting: 'Your Golden Ashva Warsteed is groomed and ready! Press [Z] to Mount or [Space] to Fly.',
+    },
+    {
+      dx: 18,
+      dz: 14,
+      rotY: -Math.PI * 0.65,
+      awning: 0x7c3aed,
+      badge: '🍻 TAVERN INN',
+      icon: '🍻',
+      name: `Innkeeper Annapurna (Bazaar Street Tavern)`,
+      action: 'innkeeper',
+      greeting: 'Welcome to the Sanctuary Inn! Enjoy the Tavern Lute music and +30s Well-Fed Speed Buff!',
+    },
+  ];
+
+  shopDefs.forEach((sd, idx) => {
+    const sx = cont.x + sd.dx;
+    const sz = cont.z + sd.dz;
+    const sy = getTerrainHeight(sx, sz);
+
+    const shopGroup = new THREE.Group();
+    shopGroup.position.set(sx, sy, sz);
+    shopGroup.rotation.y = sd.rotY;
+
+    const pavilion = createShopPavilionMesh(sd.awning);
+    shopGroup.add(pavilion);
+
+    const shopRing = new THREE.Mesh(
+      new THREE.RingGeometry(1.5, 1.9, 28).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({ color: 0xfde047, side: THREE.DoubleSide, transparent: true, opacity: 0.75 })
+    );
+    shopRing.position.set(0, 0.12, 1.4);
+    shopGroup.add(shopRing);
+
+    loadSharedGLTF('https://threejs.org/examples/models/gltf/Soldier.glb', (gltf) => {
+      const npcModel = SkeletonUtils.clone(gltf.scene);
+      npcModel.scale.setScalar(1.28);
+      npcModel.position.set(0, 0, 1.35);
+      npcModel.rotation.y = Math.PI;
+      shopGroup.add(npcModel);
+      if (gltf.animations && gltf.animations[0]) {
+        const m = new THREE.AnimationMixer(npcModel);
+        m.clipAction(gltf.animations[0]).play();
+        shopEntity.mixer = m;
+      }
+    });
+
+    scene.add(shopGroup);
+
+    const shopEntity = {
+      id: `shop-${cont.id}-${idx}`,
+      continent: cont,
+      tier: cont.tier,
+      badge: sd.badge,
+      kind: 'shop_npc',
+      shopAction: sd.action,
+      greeting: sd.greeting,
+      icon: sd.icon,
+      name: sd.name,
+      hp: 100,
+      maxHp: 100,
+      rejuvenated: true,
+      mesh: shopGroup,
+      blightRing: shopRing,
+      homeX: sx,
+      homeZ: sz,
+      wanderAngle: 0,
+      heightOffset: 3.6,
+      mixer: null,
+    };
+
+    createNameplateDOM(shopEntity);
+    interactables.push(shopEntity);
+  });
+
+  // Spawn 4 Active Wandering Town Citizens, Bards & Sherpa Guides patrolling the Bazaar Street & Flatlands!
+  const citizenDefs = [
+    { badge: '🎵 STREET BARD', icon: '🎵', name: `Gandharva Street Minstrel`, dx: -6, dz: 2, radius: 11.0, role: 'bard' },
+    { badge: '📜 QUEST ELDER', icon: '📜', name: `Rishi Agastya (Expedition Guide)`, dx: 6, dz: -2, radius: 7.0, role: 'quests' },
+    { badge: '🛡️ ROYAL GUARD', icon: '🛡️', name: `Sahyadri Sentinel Patrol`, dx: -9, dz: -24, radius: 16.0, role: 'guard' },
+    { badge: '🎒 CARAVAN TRADER', icon: '🎒', name: `Silk-Road Caravan Merchant`, dx: 9, dz: 22, radius: 15.0, role: 'bags' },
+  ];
+
+  citizenDefs.forEach((cd, cIdx) => {
+    const nx = cont.x + cd.dx;
+    const nz = cont.z + cd.dz;
+    const ny = getTerrainHeight(nx, nz);
+
+    const npcGroup = new THREE.Group();
+    npcGroup.position.set(nx, ny, nz);
+
+    const npcRing = new THREE.Mesh(
+      new THREE.RingGeometry(1.1, 1.35, 24).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({ color: 0x4ade80, side: THREE.DoubleSide, transparent: true, opacity: 0.65 })
+    );
+    npcRing.position.y = 0.12;
+    npcGroup.add(npcRing);
+
+    loadSharedGLTF('https://threejs.org/examples/models/gltf/Soldier.glb', (gltf) => {
+      const npcModel = SkeletonUtils.clone(gltf.scene);
+      npcModel.scale.setScalar(1.25);
+      npcGroup.add(npcModel);
+      if (gltf.animations && gltf.animations.length > 0) {
+        const m = new THREE.AnimationMixer(npcModel);
+        const runClip = gltf.animations.find((a) => a.name === 'Walk' || a.name === 'Run') || gltf.animations[0];
+        m.clipAction(runClip).play();
+        citizenEntity.mixer = m;
+      }
+    });
+
+    scene.add(npcGroup);
+
+    const citizenEntity = {
+      id: `citizen-${cont.id}-${cIdx}`,
+      continent: cont,
+      tier: cont.tier,
+      badge: cd.badge,
+      kind: 'town_npc',
+      npcRole: cd.role,
+      icon: cd.icon,
+      name: cd.name,
+      hp: 100,
+      maxHp: 100,
+      rejuvenated: true,
+      mesh: npcGroup,
+      blightRing: npcRing,
+      homeX: nx,
+      homeZ: nz,
+      patrolRadius: cd.radius,
+      wanderAngle: cIdx * 1.5,
+      heightOffset: 2.9,
+      mixer: null,
+    };
+
+    createNameplateDOM(citizenEntity);
+    interactables.push(citizenEntity);
   });
 });
 
@@ -1808,11 +2081,60 @@ function updateTargetFrameUI() {
   const blightPct = Math.max(0, 100 - hpPct);
   document.getElementById('wow-target-hp-bar').style.width = `${hpPct}%`;
   document.getElementById('wow-target-hp-txt').textContent =
-    t.kind === 'chest' ? `${Math.round(t.hp)} / ${t.maxHp} Seal` : `${Math.round(t.hp)} / ${t.maxHp} Vitality`;
+    t.kind === 'chest'
+      ? `${Math.round(t.hp)} / ${t.maxHp} Seal`
+      : t.kind === 'shop_npc' || t.kind === 'town_npc'
+      ? `Friendly Merchant / NPC`
+      : `${Math.round(t.hp)} / ${t.maxHp} Vitality`;
   document.getElementById('wow-target-blight-bar').style.width = `${blightPct}%`;
-  document.getElementById('wow-target-status-txt').textContent = t.rejuvenated
-    ? '🌟 Rejuvenated • ToT: Sadhak'
-    : `Right-Click or Cast [1] [2] • ToT: Sadhak`;
+  document.getElementById('wow-target-status-txt').textContent =
+    t.kind === 'shop_npc' || t.kind === 'town_npc'
+      ? '💬 Click or Right-Click to Interact / Open Shop'
+      : t.rejuvenated
+      ? '🌟 Rejuvenated • ToT: Sadhak'
+      : `Right-Click or Cast [1] [2] • ToT: Sadhak`;
+}
+
+function openNPCInteraction(entity) {
+  if (!entity) return;
+  SFX.init();
+  SFX.playLootCoinBag();
+  if (entity.greeting) {
+    showToast(`💬 ${entity.name}: "${entity.greeting}"`);
+    spawnFloatingText(entity.mesh.position, `💬 ${entity.badge}`, '#fde047');
+  }
+  if (entity.kind === 'shop_npc') {
+    if (entity.shopAction === 'shop') {
+      toggleModal('shop-modal');
+    } else if (entity.shopAction === 'apothecary') {
+      STATE.vigor = STATE.maxVigor;
+      STATE.trekStamina = 100;
+      updateVigorOrbsUI();
+      spawnShockwave(playerGroup.position, 0x34d399, 14.0, 0.7);
+      spawnFloatingText(playerGroup.position, '🧪 +100% Vigor & Stamina Restored!', '#4ade80');
+      toggleModal('shop-modal');
+    } else if (entity.shopAction === 'mounts') {
+      openInspectorModal('mounts');
+    } else if (entity.shopAction === 'innkeeper') {
+      STATE.wellFedTimer = 60.0;
+      STATE.vigor = STATE.maxVigor;
+      SFX.setZoneMusic(STATE.currentContinent.id, true);
+      updateVigorOrbsUI();
+      spawnShockwave(playerGroup.position, 0xfde047, 14.0, 0.7);
+      spawnFloatingText(playerGroup.position, '🍻 +60s Tavern Well-Fed Speed & Lute Music!', '#fde047');
+    }
+  } else if (entity.kind === 'town_npc') {
+    if (entity.npcRole === 'quests') openInspectorModal('quests');
+    else if (entity.npcRole === 'bags') openInspectorModal('bags');
+    else if (entity.npcRole === 'bard') {
+      SFX.setZoneMusic(STATE.currentContinent.id, true);
+      showToast(`🎵 ${entity.name} plays the lively Bazaar Street Lute & Flute Melody!`);
+      spawnFloatingText(entity.mesh.position, '🎵 Playing Street Lute Jig!', '#fde047');
+    } else {
+      showToast(`🛡️ ${entity.name}: "The vast flatlands stretch 2,600m in every direction—ride safely, Sadhak!"`);
+      spawnFloatingText(entity.mesh.position, '🛡️ Safe Travels!', '#38bdf8');
+    }
+  }
 }
 
 // WoW Classic Right-Click Loot Popup Window
@@ -2138,7 +2460,7 @@ function findNearestSufferingEntity() {
   let best = null;
   let bestD = Infinity;
   interactables.forEach((ent) => {
-    if (ent.rejuvenated) return;
+    if (ent.rejuvenated || ent.kind === 'shop_npc' || ent.kind === 'town_npc') return;
     const d = ent.mesh.position.distanceTo(playerGroup.position);
     if (d < bestD) {
       bestD = d;
@@ -2434,12 +2756,18 @@ function updateAllHUD() {
 }
 
 // ============================================================================
-// 12. INPUT CONTROLS, WOW KEYBINDS & SETTINGS WIRING
+// 12. INPUT CONTROLS, 100% WOW CLASSIC MOUSE CAMERA/STEERING & KEYBINDS
+//    • Left-Click Drag (LMB): Free-orbit camera 360° Yaw & Full Up/Down Pitch (-82° to +85°)
+//    • Right-Click Drag (RMB): Mouselook + Steer Character/Mount facing direction
+//    • LMB + RMB Held Together: WoW Dual-Mouse-Button Forward Run/Fly!
+//    • Scroll Wheel: Smooth Zoom from 3.5m up to 65m
 // ============================================================================
 const keys = {};
 let cameraYaw = 0;
-let cameraPitch = 0.08;
+let cameraPitch = 0.04;
 let cameraDist = 17.5;
+let isLeftMouseDown = false;
+let isRightMouseDown = false;
 let isDragging = false;
 let prevMouse = { x: 0, y: 0 };
 let playerVelY = 0;
@@ -2599,6 +2927,8 @@ const mouseNDC = new THREE.Vector2();
 
 renderer.domElement.addEventListener('pointerdown', (e) => {
   SFX.init();
+  if (e.button === 0) isLeftMouseDown = true;
+  if (e.button === 2) isRightMouseDown = true;
   isDragging = true;
   prevMouse.x = e.clientX;
   prevMouse.y = e.clientY;
@@ -2619,30 +2949,43 @@ renderer.domElement.addEventListener('pointerdown', (e) => {
   if (best) {
     SFX.playTargetClick();
     selectTarget(best);
-    if (e.button === 2 && best.kind === 'chest') {
+    if (best.kind === 'shop_npc' || best.kind === 'town_npc') {
+      openNPCInteraction(best);
+    } else if (e.button === 2 && best.kind === 'chest') {
       openWoWLootWindow(best);
     }
-  } else if (!STATE.settings.stickyTarget) {
+  } else if (!STATE.settings.stickyTarget && e.button === 0) {
     selectTarget(null);
   }
 });
 
 window.addEventListener('pointermove', (e) => {
-  if (!isDragging) return;
+  if (!isDragging && !isLeftMouseDown && !isRightMouseDown) return;
   const dx = e.clientX - prevMouse.x;
   const dy = e.clientY - prevMouse.y;
   prevMouse.x = e.clientX;
   prevMouse.y = e.clientY;
-  cameraYaw -= dx * 0.0065;
-  cameraPitch = Math.max(0.06, Math.min(1.22, cameraPitch + dy * 0.0055));
+
+  // Full 360° Horizontal Orbit + Full Vertical Up/Down Camera Pitch (-82° look straight up at peaks to +85° top-down!)
+  cameraYaw -= dx * 0.0068;
+  cameraPitch = Math.max(-1.42, Math.min(1.48, cameraPitch + dy * 0.0062));
+
+  // WoW Right-Mouse-Button (RMB) Mouselook immediately turns your character/mount to face camera direction!
+  if (isRightMouseDown) {
+    playerGroup.rotation.y = cameraYaw;
+  }
 });
 
-window.addEventListener('pointerup', () => {
-  isDragging = false;
+window.addEventListener('pointerup', (e) => {
+  if (e.button === 0) isLeftMouseDown = false;
+  if (e.button === 2) isRightMouseDown = false;
+  if (!isLeftMouseDown && !isRightMouseDown) {
+    isDragging = false;
+  }
 });
 
 window.addEventListener('wheel', (e) => {
-  cameraDist = Math.max(7.0, Math.min(44.0, cameraDist + e.deltaY * 0.015));
+  cameraDist = Math.max(3.5, Math.min(65.0, cameraDist + e.deltaY * 0.018));
 });
 
 // ============================================================================
@@ -2802,18 +3145,20 @@ function animate() {
     rightWing.rotation.z = -flap;
   }
 
-  // Movement Input (WASD + QE Strafe + Auto-Run)
+  // Movement Input (WASD + QE Strafe + Auto-Run + WoW Dual-Mouse-Button LMB+RMB Run!)
   let moveX = 0;
   let moveZ = 0;
-  if (keys['w'] || keys['arrowup']) {
+  const dualMouseRun = isLeftMouseDown && isRightMouseDown;
+  if (keys['w'] || keys['arrowup'] || dualMouseRun) {
     moveZ -= 1;
-    STATE.autoRun = false;
+    if (!dualMouseRun) STATE.autoRun = false;
   }
   if (keys['s'] || keys['arrowdown']) {
     moveZ += 1;
     STATE.autoRun = false;
   }
   if (STATE.autoRun) moveZ -= 1;
+  // In WoW, holding RMB turns A/D into Strafe Left/Right!
   if (keys['a'] || keys['arrowleft'] || keys['q']) moveX -= 1;
   if (keys['d'] || keys['arrowright'] || keys['e']) moveX += 1;
 
@@ -2839,6 +3184,14 @@ function animate() {
     playerGroup.position.x += dx * speed * dt;
     playerGroup.position.z += dz * speed * dt;
     playerGroup.rotation.y = Math.atan2(dx, dz) + Math.PI;
+    // RMB or Pitch-guided 3D Flight: when flying and holding RMB (or pitching up/down), fly directly along camera pitch!
+    if (STATE.isMounted && STATE.isFlying && (isRightMouseDown || Math.abs(cameraPitch) > 0.22)) {
+      const pitchClimb = -Math.sin(cameraPitch) * speed * 0.18 * dt;
+      playerGroup.position.y = Math.max(
+        getTerrainHeight(playerGroup.position.x, playerGroup.position.z) + 0.5,
+        playerGroup.position.y + pitchClimb
+      );
+    }
     setPlayerAnim(STATE.isMounted ? 'Idle' : 'Run');
   } else {
     setPlayerAnim('Idle');
@@ -2877,10 +3230,14 @@ function animate() {
     }
   }
 
-  // Detect Region Change & Enforce Sacred No-Fly Trekking Rule
+  // Detect Region Change, Switch Zone Instrumental Music & Enforce Sacred No-Fly Trekking Rule
   const nearCont = getNearestContinent(playerGroup.position.x, playerGroup.position.z);
+  const distToTownStreet = Math.hypot(playerGroup.position.x - nearCont.x, playerGroup.position.z - nearCont.z);
+  const inStreet = distToTownStreet < 32.0;
+
   if (nearCont !== STATE.currentContinent) {
     STATE.currentContinent = nearCont;
+    SFX.setZoneMusic(nearCont.id, inStreet);
     SFX.playMountWhinnyOrWingbeat();
     if (STATE.isFlying && !canFlyOnContinent(nearCont)) {
       STATE.isFlying = false;
@@ -2890,6 +3247,8 @@ function animate() {
     }
     updateVigorOrbsUI();
     updateAllHUD();
+  } else if (SFX.inBazaarStreet !== inStreet) {
+    SFX.setZoneMusic(nearCont.id, inStreet);
   }
 
   // Sudarshana Chakra Auto-Pulse
@@ -2922,6 +3281,18 @@ function animate() {
       const dz = tz - ent.mesh.position.z;
       ent.mesh.position.x += dx * dt;
       ent.mesh.position.z += dz * dt;
+      ent.mesh.position.y = getTerrainHeight(ent.mesh.position.x, ent.mesh.position.z);
+      ent.mesh.rotation.y = Math.atan2(dx, dz);
+    } else if (ent.kind === 'town_npc') {
+      // Bustling Town Citizens, Bards & Guards patrolling along the Grand Bazaar Street & Flatlands!
+      ent.wanderAngle += dt * 0.45;
+      const r = ent.patrolRadius || 10.0;
+      const tx = ent.homeX + Math.sin(ent.wanderAngle * 0.7) * (r * 0.35);
+      const tz = ent.homeZ + Math.cos(ent.wanderAngle) * r;
+      const dx = tx - ent.mesh.position.x;
+      const dz = tz - ent.mesh.position.z;
+      ent.mesh.position.x += dx * dt * 1.4;
+      ent.mesh.position.z += dz * dt * 1.4;
       ent.mesh.position.y = getTerrainHeight(ent.mesh.position.x, ent.mesh.position.z);
       ent.mesh.rotation.y = Math.atan2(dx, dz);
     } else if (ent.kind === 'chest' && !ent.rejuvenated) {
@@ -2994,14 +3365,21 @@ function animate() {
     }
   }
 
-  const camTarget = new THREE.Vector3(playerGroup.position.x, playerGroup.position.y + 4.8, playerGroup.position.z - 8.0);
+  // True WoW Spherical Orbit Camera around Rider's Head/Shoulders (Look Up at Peaks or Down at Streets at ANY Angle!)
+  const pivotY = playerGroup.position.y + 3.0;
   const camX = playerGroup.position.x + Math.sin(cameraYaw) * Math.cos(cameraPitch) * cameraDist;
   const camZ = playerGroup.position.z + Math.cos(cameraYaw) * Math.cos(cameraPitch) * cameraDist;
-  const camY = playerGroup.position.y + 2.2 + Math.sin(cameraPitch) * cameraDist;
-  const minCamY = getTerrainHeight(camX, camZ) + 1.3;
+  const rawCamY = pivotY + Math.sin(cameraPitch) * cameraDist;
+  const minCamY = getTerrainHeight(camX, camZ) + 0.85;
 
-  camera.position.set(camX, Math.max(camY, minCamY), camZ);
-  camera.lookAt(camTarget);
+  camera.position.set(camX, Math.max(rawCamY, minCamY), camZ);
+  // Look through the rider pivot along the exact pitch & yaw vector so looking straight up (-82°) aims at the mountain peaks!
+  const lookTarget = new THREE.Vector3(
+    playerGroup.position.x - Math.sin(cameraYaw) * 6.0,
+    pivotY - Math.sin(cameraPitch) * 6.0,
+    playerGroup.position.z - Math.cos(cameraYaw) * 6.0
+  );
+  camera.lookAt(lookTarget);
 
   updateWorldNameplates();
   drawMinimap();
