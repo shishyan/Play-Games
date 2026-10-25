@@ -680,6 +680,7 @@ const STATE = {
   isFlying: false, // Press Space while mounted to lift off into 3D Flight!
   isBoating: false, // Automatically boards your Royal Canal & Harbor Sailboat Skiff on water!
   isSitting: false, // Toggled with [X] when unmounted
+  activeVehicle: 'none', // 'carriage' | 'galleon_ferry' | 'none'
   autoRun: false,   // Toggled with [~] or [NumLock]
   speedRunActive: true,
   vigor: 6.0,
@@ -726,13 +727,13 @@ function getKarmaMultiplier() {
 function getMountSpeedMult() {
   let mult = 1.0 + (SHOP_TOOLS[1].rank - 1) * 0.25;
   if (CONTINENTS[2].completed) mult *= 1.5;
-  return mult;
+  return mult * 0.42; // Realistic WoW scale: takes 10-15 minutes to run across vast 2,600m continent
 }
 function getTrekSpeedMult() {
   let mult = 1.0 + (SHOP_TOOLS[2].rank - 1) * 0.25;
   if (CONTINENTS[1].completed) mult += 0.4;
   if (STATE.wellFedTimer > 0) mult += 0.25;
-  return mult;
+  return mult * 0.45; // Realistic pedestrian pacing
 }
 function canFlyOnContinent(cont) {
   return cont.allowFlying || CONTINENTS[6].completed;
@@ -1104,21 +1105,129 @@ for (let i = 0; i < posAttr.count; i++) {
 }
 terrainGeo.computeVertexNormals();
 
+// Photorealistic Golf Turf & Fairway Canvas Textures (Like PGA Tour / EA Sports PGA)
+function createPgaGolfTurfTexture() {
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 256;
+  const ctx = c.getContext('2d');
+  const img = ctx.createImageData(256, 256);
+  for (let y = 0; y < 256; y++) {
+    // Subtle fairway mowing stripes (golf course pattern)
+    const stripe = Math.sin(y * 0.18) * 14.0;
+    for (let x = 0; x < 256; x++) {
+      const idx = (y * 256 + x) * 4;
+      const nFine = valueNoise(x * 0.45, y * 0.45);
+      const nMacro = valueNoise(x * 0.08, y * 0.08);
+      const blade = (hash2D(x * 3.1, y * 2.7) - 0.5) * 26.0;
+      
+      const r = Math.min(255, Math.max(20, 42 + stripe * 0.4 + (nFine - 0.5) * 24 + (nMacro - 0.5) * 30 + blade));
+      const g = Math.min(255, Math.max(65, 126 + stripe + (nFine - 0.5) * 45 + (nMacro - 0.5) * 40 + blade));
+      const b = Math.min(255, Math.max(15, 34 + stripe * 0.2 + (nFine - 0.5) * 18 + (nMacro - 0.5) * 20));
+
+      img.data[idx] = r;
+      img.data[idx + 1] = g;
+      img.data[idx + 2] = b;
+      img.data[idx + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(128, 128);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+// Photorealistic Sand Trap & Fairway Bunker Texture
+function createPgaSandTexture() {
+  const c = document.createElement('canvas');
+  c.width = 128;
+  c.height = 128;
+  const ctx = c.getContext('2d');
+  const img = ctx.createImageData(128, 128);
+  for (let y = 0; y < 128; y++) {
+    for (let x = 0; x < 128; x++) {
+      const idx = (y * 128 + x) * 4;
+      const grain = (hash2D(x * 7.1, y * 5.3) - 0.5) * 32.0;
+      const n = valueNoise(x * 0.2, y * 0.2);
+      img.data[idx] = Math.min(255, Math.max(140, 218 + grain + (n - 0.5) * 25));
+      img.data[idx + 1] = Math.min(255, Math.max(120, 195 + grain * 0.9 + (n - 0.5) * 25));
+      img.data[idx + 2] = Math.min(255, Math.max(90, 148 + grain * 0.7 + (n - 0.5) * 20));
+      img.data[idx + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(96, 96);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+// Photorealistic Weathered Cobblestone & Paved Roadway Texture
+function createPavedRoadwayTexture() {
+  const c = document.createElement('canvas');
+  c.width = 128;
+  c.height = 128;
+  const ctx = c.getContext('2d');
+  const img = ctx.createImageData(128, 128);
+  for (let y = 0; y < 128; y++) {
+    const isMortarY = (y % 16 === 0 || y % 16 === 1);
+    for (let x = 0; x < 128; x++) {
+      const rowOffset = Math.floor(y / 16) % 2 === 0 ? 0 : 8;
+      const isMortarX = ((x + rowOffset) % 16 === 0 || (x + rowOffset) % 16 === 1);
+      const isMortar = isMortarX || isMortarY;
+      const idx = (y * 128 + x) * 4;
+      const n = valueNoise(x * 0.35, y * 0.35);
+      const pebble = (hash2D(x * 4.3, y * 3.9) - 0.5) * 36;
+      if (isMortar) {
+        img.data[idx] = 78 + pebble * 0.3;
+        img.data[idx + 1] = 72 + pebble * 0.3;
+        img.data[idx + 2] = 65 + pebble * 0.3;
+      } else {
+        img.data[idx] = Math.min(255, Math.max(60, 142 + (n - 0.5) * 40 + pebble));
+        img.data[idx + 1] = Math.min(255, Math.max(55, 134 + (n - 0.5) * 38 + pebble));
+        img.data[idx + 2] = Math.min(255, Math.max(50, 122 + (n - 0.5) * 34 + pebble));
+      }
+      img.data[idx + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(160, 160);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+const pgaTurfTex = createPgaGolfTurfTexture();
+const pgaSandTex = createPgaSandTexture();
+const pavedRoadTex = createPavedRoadwayTexture();
+
 const terrainShaderMat = new THREE.ShaderMaterial({
   uniforms: {
     uCleanseZones: { value: cleanseCenters },
     uSunDir: { value: new THREE.Vector3(0.54, 0.38, -0.75).normalize() },
     uFogColor: { value: CONTINENTS[0].fogColor.clone() },
     uGroundTint: { value: CONTINENTS[0].groundTintColor.clone() },
+    uTurfTex: { value: pgaTurfTex },
+    uSandTex: { value: pgaSandTex },
+    uPavedTex: { value: pavedRoadTex },
     uTime: { value: 0 },
   },
   vertexShader: `
     varying vec3 vWorldPos;
     varying vec3 vNormal;
+    varying vec2 vUv;
     void main() {
       vec4 wp = modelMatrix * vec4(position, 1.0);
       vWorldPos = wp.xyz;
       vNormal = normalize(normalMatrix * normal);
+      vUv = uv;
       gl_Position = projectionMatrix * viewMatrix * wp;
     }
   `,
@@ -1127,9 +1236,13 @@ const terrainShaderMat = new THREE.ShaderMaterial({
     uniform vec3 uSunDir;
     uniform vec3 uFogColor;
     uniform vec3 uGroundTint;
+    uniform sampler2D uTurfTex;
+    uniform sampler2D uSandTex;
+    uniform sampler2D uPavedTex;
     uniform float uTime;
     varying vec3 vWorldPos;
     varying vec3 vNormal;
+    varying vec2 vUv;
 
     float hash(vec2 p) {
       return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
@@ -1174,20 +1287,35 @@ const terrainShaderMat = new THREE.ShaderMaterial({
         }
       }
 
-      vec3 blightSoil = mix(vec3(0.18, 0.22, 0.20), vec3(0.26, 0.30, 0.25), macro);
-      vec3 lushTurf = mix(uGroundTint * 0.55, uGroundTint * 0.95, macro);
-      float kurinji = smoothstep(0.68, 0.85, hC);
-      lushTurf = mix(lushTurf, vec3(0.96, 0.82, 0.24), kurinji * 0.42);
+      // PHOTOREALISTIC GOLF GAME IMAGE-BASED TERRAIN BLENDING (Like PGA Tour / EA Sports Golf)
+      // Sample high-resolution photo-sampled textures across micro and macro UV scales
+      vec2 turfUv = vWorldPos.xz * 0.085;
+      vec3 turfSample = texture2D(uTurfTex, turfUv).rgb;
+      vec3 sandSample = texture2D(uSandTex, vWorldPos.xz * 0.065).rgb;
+      vec3 pavedSample = texture2D(uPavedTex, vWorldPos.xz * 0.12).rgb;
 
-      // Cobblestone Grand Bazaar Street & Expedition Road Shader (x near 0, z from +320 to -120)
+      // Realistic fairways, greens, roughs & sandy bunkers
+      vec3 blightSoil = mix(vec3(0.18, 0.22, 0.20), vec3(0.26, 0.30, 0.25), macro);
+      vec3 lushTurf = turfSample * uGroundTint * 1.35;
+      float kurinji = smoothstep(0.68, 0.85, hC);
+      lushTurf = mix(lushTurf, turfSample * vec3(1.15, 0.95, 0.35), kurinji * 0.45);
+
+      // Sand traps & fairway bunkers nestled along gentle rolls (golf game style)
+      float sandTrap = smoothstep(0.72, 0.88, noise(vWorldPos.xz * 0.042));
+      if (slope < 0.08 && vWorldPos.y < 12.0 && vWorldPos.y > 1.2) {
+        lushTurf = mix(lushTurf, sandSample * 1.05, sandTrap * 0.75);
+      }
+
+      // Cobblestone & Paved Roadways, Avenues & Pathways
       vec3 col = mix(blightSoil, lushTurf, cleanse);
-      float cobble = noise(vWorldPos.xz * 2.2);
-      vec3 roadCol = mix(vec3(0.42, 0.37, 0.31), vec3(0.62, 0.56, 0.46), cobble);
-      if (vWorldPos.y < 14.0) {
-        float ewRoad = 1.0 - smoothstep(4.2, 6.8, abs(vWorldPos.z));
-        float nsRoad = (vWorldPos.z > -220.0 && vWorldPos.z < 240.0) ? (1.0 - smoothstep(4.5, 7.2, abs(vWorldPos.x))) : 0.0;
+      vec3 roadCol = pavedSample;
+      if (vWorldPos.y < 16.0) {
+        // Grand North-South Highway & City Street
+        float nsRoad = (vWorldPos.z > -280.0 && vWorldPos.z < 320.0) ? (1.0 - smoothstep(4.8, 8.2, abs(vWorldPos.x))) : 0.0;
+        // East-West Boulevard & Harbor Approach Avenue
+        float ewRoad = 1.0 - smoothstep(4.5, 7.8, abs(vWorldPos.z));
         float townRoad = max(ewRoad, nsRoad);
-        col = mix(col, roadCol, townRoad * 0.9);
+        col = mix(col, roadCol, townRoad * 0.95);
       }
 
       // Realistic Stratified Basalt / Granite Escarpments, Couloirs & Alpine Rock Faces (No Smooth Green Hills!)
@@ -1197,9 +1325,9 @@ const terrainShaderMat = new THREE.ShaderMaterial({
         vec3 darkBasalt = vec3(0.19, 0.20, 0.22);
         vec3 lightGranite = vec3(0.46, 0.44, 0.42);
         vec3 cliff = mix(darkBasalt, lightGranite, strata * 0.68 + hC * 0.32);
-        // Highlight flatter terraced switchback roadways cut into the mountain slopes with warm cobblestone!
+        // Highlight flatter terraced switchback roadways cut into the mountain slopes with paved roadway texture!
         float mountainTerraceRoad = (vWorldPos.y > 14.0 && slope < 0.36) ? (1.0 - smoothstep(0.18, 0.36, slope)) : 0.0;
-        cliff = mix(cliff, roadCol * 1.12, mountainTerraceRoad * 0.78);
+        cliff = mix(cliff, roadCol * 1.15, mountainTerraceRoad * 0.88);
         col = mix(col, cliff, rk * 0.92);
       }
 
@@ -1322,6 +1450,159 @@ const goldenCrownMat = new THREE.MeshStandardMaterial({ map: goldenLeafTex, bump
 const snowCrownMat = new THREE.MeshStandardMaterial({ map: snowLeafTex, bumpMap: snowLeafTex, bumpScale: 0.08, roughness: 0.65 });
 const stoneMat = new THREE.MeshStandardMaterial({ map: stoneTex, bumpMap: stoneTex, bumpScale: 0.06, roughness: 0.75 });
 
+// ============================================================================
+// 6-INSTANCED. HIGH-DENSITY BIOME ECOSYSTEM (TREES, BUSHES, FLORA, ROCK BOULDERS & STREETLAMPS)
+// ============================================================================
+function spawnHighDensityBiomeObjects() {
+  const dummy = new THREE.Object3D();
+
+  // 1. Instanced Pine & Deciduous Trees (3,500 trees across the 7 Continents)
+  const treeCount = 3500;
+  const instTrunkGeo = new THREE.CylinderGeometry(0.24, 0.48, 4.2, 6);
+  instTrunkGeo.translate(0, 2.1, 0);
+  const instCanopyGeo = new THREE.ConeGeometry(2.4, 5.2, 6);
+  instCanopyGeo.translate(0, 5.8, 0);
+  const instTrunkMesh = new THREE.InstancedMesh(instTrunkGeo, barkMat, treeCount);
+  const instCanopyMesh = new THREE.InstancedMesh(instCanopyGeo, lushCrownMat, treeCount);
+
+  let tIdx = 0;
+  CONTINENTS.forEach((cont) => {
+    const treesPerCont = Math.floor(treeCount / CONTINENTS.length);
+    for (let i = 0; i < treesPerCont; i++) {
+      const angle = hash2D(i, cont.id * 17) * Math.PI * 2.0;
+      const dist = 32.0 + Math.pow(hash2D(i * 3, cont.id * 23), 0.7) * 2100.0;
+      const x = cont.x + Math.cos(angle) * dist;
+      const z = cont.z + Math.sin(angle) * dist;
+      if (getRoadwayMask(cont, x, z) > 0.08) continue;
+      const y = getTerrainHeight(x, z);
+      if (y < 0.2 || y > 180.0) continue;
+
+      const scale = 0.75 + hash2D(i * 7, cont.id) * 0.7;
+      dummy.position.set(x, y, z);
+      dummy.rotation.set(0, hash2D(i, cont.id) * Math.PI * 2, 0);
+      dummy.scale.set(scale, scale, scale);
+      dummy.updateMatrix();
+
+      instTrunkMesh.setMatrixAt(tIdx, dummy.matrix);
+      instCanopyMesh.setMatrixAt(tIdx, dummy.matrix);
+      tIdx++;
+    }
+  });
+  instTrunkMesh.count = tIdx;
+  instCanopyMesh.count = tIdx;
+  instTrunkMesh.instanceMatrix.needsUpdate = true;
+  instCanopyMesh.instanceMatrix.needsUpdate = true;
+  scene.add(instTrunkMesh, instCanopyMesh);
+
+  // 2. Instanced Wildflower & Grass Clumps (14,000 flora tufts)
+  const grassCount = 14000;
+  const grassBladeGeo = new THREE.ConeGeometry(0.35, 1.25, 4);
+  grassBladeGeo.translate(0, 0.6, 0);
+  const instGrassMat = new THREE.MeshStandardMaterial({
+    color: 0x4ade80,
+    roughness: 0.8,
+    side: THREE.DoubleSide,
+  });
+  const instGrassMesh = new THREE.InstancedMesh(grassBladeGeo, instGrassMat, grassCount);
+
+  let gIdx = 0;
+  CONTINENTS.forEach((cont) => {
+    const gPerCont = Math.floor(grassCount / CONTINENTS.length);
+    for (let i = 0; i < gPerCont; i++) {
+      const angle = hash2D(i * 5, cont.id * 31) * Math.PI * 2.0;
+      const dist = 14.0 + Math.pow(hash2D(i * 11, cont.id * 41), 0.6) * 1900.0;
+      const x = cont.x + Math.cos(angle) * dist;
+      const z = cont.z + Math.sin(angle) * dist;
+      const y = getTerrainHeight(x, z);
+      if (y < 0.2 || y > 350.0) continue;
+
+      const scale = 0.5 + hash2D(i, 83) * 0.8;
+      dummy.position.set(x, y, z);
+      dummy.rotation.set(0, hash2D(i, 97) * Math.PI * 2, 0);
+      dummy.scale.set(scale, scale * (0.8 + hash2D(i, 47) * 0.6), scale);
+      dummy.updateMatrix();
+
+      instGrassMesh.setMatrixAt(gIdx, dummy.matrix);
+      gIdx++;
+    }
+  });
+  instGrassMesh.count = gIdx;
+  instGrassMesh.instanceMatrix.needsUpdate = true;
+  scene.add(instGrassMesh);
+
+  // 3. Instanced Granite Boulders & Mountain Crags (2,800 rocky outcrops)
+  const rockCount = 2800;
+  const rockGeo = new THREE.DodecahedronGeometry(1.6, 1);
+  const instRockMesh = new THREE.InstancedMesh(rockGeo, stoneMat, rockCount);
+
+  let rIdx = 0;
+  CONTINENTS.forEach((cont) => {
+    const rPerCont = Math.floor(rockCount / CONTINENTS.length);
+    for (let i = 0; i < rPerCont; i++) {
+      const angle = hash2D(i * 7, cont.id * 59) * Math.PI * 2.0;
+      const dist = 45.0 + Math.pow(hash2D(i * 13, cont.id * 67), 0.8) * 2300.0;
+      const x = cont.x + Math.cos(angle) * dist;
+      const z = cont.z + Math.sin(angle) * dist;
+      const y = getTerrainHeight(x, z);
+      if (y < 0.2) continue;
+
+      const scale = 0.8 + hash2D(i, 113) * 1.8;
+      dummy.position.set(x, y + scale * 0.4, z);
+      dummy.rotation.set(hash2D(i, 131) * Math.PI, hash2D(i, 149) * Math.PI, 0);
+      dummy.scale.set(scale, scale * 0.75, scale * 1.2);
+      dummy.updateMatrix();
+
+      instRockMesh.setMatrixAt(rIdx, dummy.matrix);
+      rIdx++;
+    }
+  });
+  instRockMesh.count = rIdx;
+  instRockMesh.instanceMatrix.needsUpdate = true;
+  scene.add(instRockMesh);
+
+  // 4. Instanced Streetlamps lining City Avenues & Mountain Ghat Roadways (1,200 Lanterns)
+  const lampCount = 1200;
+  const lampGeo = new THREE.CylinderGeometry(0.12, 0.16, 3.6, 6);
+  lampGeo.translate(0, 1.8, 0);
+  const instLampMesh = new THREE.InstancedMesh(lampGeo, stoneMat, lampCount);
+
+  let lIdx = 0;
+  CONTINENTS.forEach((cont) => {
+    // 60 Lamps along the North-South Highway & City Streets
+    for (let sz = -220.0; sz <= 240.0; sz += 18.0) {
+      [-8.5, 8.5].forEach((sx) => {
+        if (lIdx >= lampCount) return;
+        const x = cont.x + sx;
+        const z = cont.z + sz;
+        const y = getTerrainHeight(x, z);
+        dummy.position.set(x, y, z);
+        dummy.rotation.set(0, 0, 0);
+        dummy.scale.set(1, 1, 1);
+        dummy.updateMatrix();
+        instLampMesh.setMatrixAt(lIdx, dummy.matrix);
+        lIdx++;
+      });
+    }
+    // 80 Lamps along the 3.5-Turn Spiral Mountain Roadway to the Summit
+    for (let s = 0.05; s <= 0.98; s += 0.015) {
+      if (lIdx >= lampCount) return;
+      const { rx, rz } = getSpiralRoadPoint(cont, s);
+      const y = getTerrainHeight(rx, rz);
+      dummy.position.set(rx + 4.2, y, rz);
+      dummy.rotation.set(0, 0, 0);
+      dummy.scale.set(1, 1, 1);
+      dummy.updateMatrix();
+      instLampMesh.setMatrixAt(lIdx, dummy.matrix);
+      lIdx++;
+    }
+  });
+  instLampMesh.count = lIdx;
+  instLampMesh.instanceMatrix.needsUpdate = true;
+  scene.add(instLampMesh);
+}
+
+// Spawn all high-density instanced biome objects
+spawnHighDensityBiomeObjects();
 function createSculptedCanopyGeometry(radius) {
   const geo = new THREE.IcosahedronGeometry(radius, 2);
   const p = geo.attributes.position;
@@ -1335,6 +1616,7 @@ function createSculptedCanopyGeometry(radius) {
   geo.computeVertexNormals();
   return geo;
 }
+
 const canopyGeoMain = createSculptedCanopyGeometry(3.1);
 const canopyGeoSub = createSculptedCanopyGeometry(2.1);
 
@@ -1523,6 +1805,7 @@ const kRoofMats = [
 
 const animatedShips = [];
 const animatedWindmills = [];
+const animatedTransitVehicles = [];
 
 // Shared Geometries for Proper City Buildings, Townhouses, Warehouses, Bridges, Aqueducts, Ships & Boats
 const houseBodyGeo = new THREE.BoxGeometry(5.6, 3.4, 4.8);
@@ -2113,6 +2396,59 @@ function spawnContinentKingdomAndVillages(cont) {
     campMesh.position.set(cx, campY, cz);
     scene.add(campMesh);
   }
+
+  // 9. REAL WORKING CITY TRANSPORTATION: Royal Horse-Drawn Carriage & Harbor Ferry Service!
+  // A. Royal Stagecoach Carriage on the Grand Highway (Rideable Transportation!)
+  const carriageGroup = new THREE.Group();
+  const coachBody = new THREE.Mesh(new THREE.BoxGeometry(3.6, 2.2, 5.4), kWallMat);
+  coachBody.position.y = 2.1;
+  const coachRoof = new THREE.Mesh(new THREE.ConeGeometry(3.2, 1.4, 4), kRoofMats[cont.id % kRoofMats.length]);
+  coachRoof.position.y = 3.8;
+  coachRoof.rotation.y = Math.PI / 4;
+  coachRoof.scale.set(1.1, 0.8, 1.4);
+  const wheelGeo = new THREE.CylinderGeometry(0.85, 0.85, 0.35, 12).rotateZ(Math.PI / 2);
+  [[-1.9, 0.85, -1.8], [1.9, 0.85, -1.8], [-1.9, 0.85, 1.8], [1.9, 0.85, 1.8]].forEach(([wx, wy, wz]) => {
+    const wh = new THREE.Mesh(wheelGeo, postMatShared);
+    wh.position.set(wx, wy, wz);
+    carriageGroup.add(wh);
+  });
+  carriageGroup.add(coachBody, coachRoof);
+  carriageGroup.position.set(cont.x + 2.5, getTerrainHeight(cont.x + 2.5, cont.z - 120.0), cont.z - 120.0);
+  scene.add(carriageGroup);
+
+  const carriageEntity = {
+    id: `carriage-${cont.id}`,
+    continent: cont,
+    tier: cont.tier,
+    badge: `🚖 CITY STAGECOACH #${cont.id + 1}`,
+    kind: 'shop_npc',
+    shopAction: 'stagecoach',
+    questMarker: '🚖',
+    greeting: 'Hop in! The Royal Stagecoach runs the full North-South Highway from the City Gates to the Grand Mountain Roadway!',
+    icon: '🚖',
+    name: `Royal City Stagecoach (Working Transit)`,
+    hp: 100,
+    maxHp: 100,
+    rejuvenated: true,
+    mesh: carriageGroup,
+    homeX: cont.x + 2.5,
+    homeZ: cont.z - 120.0,
+    wanderAngle: 0,
+    heightOffset: 3.8,
+    mixer: null,
+  };
+  createNameplateDOM(carriageEntity);
+  interactables.push(carriageEntity);
+
+  animatedTransitVehicles.push({
+    mesh: carriageGroup,
+    continent: cont,
+    type: 'carriage',
+    zMin: cont.z - 220.0,
+    zMax: cont.z + 50.0,
+    speed: 14.5,
+    progress: (cont.id * 0.25) % 1.0,
+  });
 }
 
 const gltfLoader = new GLTFLoader();
@@ -2209,9 +2545,10 @@ CONTINENTS.forEach((cont) => {
     scene.add(cairn);
   }
 
-  for (let t = 0; t < 26; t++) {
-    const angle = (t / 26) * Math.PI * 2 + hash2D(cont.id, t) * 0.4;
-    const rad = 24 + hash2D(t, cont.id * 7) * 95;
+  // DENSE HIGH-DENSITY BIOME FORESTRY & FLORA (140 Organic Trees per Continent = ~1,000 Major Trees across the World!)
+  for (let t = 0; t < 140; t++) {
+    const angle = (t / 140) * Math.PI * 2 + hash2D(cont.id, t) * 0.8;
+    const rad = 28 + hash2D(t, cont.id * 11) * 380;
     const tx = cont.x + Math.cos(angle) * rad;
     const tz = cont.z + Math.sin(angle) * rad;
     if (getRoadwayMask(cont, tx, tz) > 0.1) continue;
@@ -3100,10 +3437,23 @@ function openNPCInteraction(entity) {
       playerGroup.position.set(c.x + 12.0, -1.45, c.z + 78.0);
       STATE.isBoating = true;
       STATE.isFlying = false;
+      STATE.activeVehicle = 'none';
       updateVigorOrbsUI();
       spawnShockwave(playerGroup.position, 0x38bdf8, 14.0, 0.75);
       spawnFloatingText(playerGroup.position, '⛵ BOARDED ROYAL SAILBOAT SKIFF! Sail with [WASD]!', '#38bdf8');
       showToast('⛵ Boarded Royal Sailboat Skiff in the Harbor! Sail across the Canal & Sea with [WASD] or press [M] to Fast-Sail!');
+    } else if (entity.shopAction === 'stagecoach') {
+      // Board the Royal Stagecoach Carriage!
+      if (STATE.activeVehicle === entity.id) {
+        STATE.activeVehicle = 'none';
+        showToast('🚖 Stepped off the Stagecoach onto the Highway.');
+      } else {
+        STATE.activeVehicle = entity.id;
+        STATE.isFlying = false;
+        STATE.isBoating = false;
+        showToast('🚖 Boarded the Royal Stagecoach! Relax as it carries you along the Grand Highway!');
+        spawnShockwave(playerGroup.position, 0xfde047, 8.0, 0.5);
+      }
     }
   } else if (entity.kind === 'town_npc') {
     if (entity.questMarker && !entity.questCompleted) {
@@ -4399,6 +4749,33 @@ function animate() {
       sh.mesh.position.set(nx, -1.5 + bob, nz);
       if (Math.abs(dxS) + Math.abs(dzS) > 0.001) {
         sh.mesh.rotation.y = Math.atan2(dxS, dzS);
+      }
+    }
+  }
+
+  // Animate Working City Transportation (Horse-Drawn Stagecoaches patrolling the Grand Highway!)
+  for (let v = 0; v < animatedTransitVehicles.length; v++) {
+    const veh = animatedTransitVehicles[v];
+    if (veh.continent !== STATE.currentContinent) continue;
+    if (veh.type === 'carriage') {
+      const zRange = veh.zMax - veh.zMin;
+      veh.progress = (veh.progress + (veh.speed / zRange) * dt) % 2.0;
+      // Ping-pong travel back and forth along the highway
+      const forward = veh.progress <= 1.0;
+      const t = forward ? veh.progress : 2.0 - veh.progress;
+      const curZ = veh.zMin + t * zRange;
+      const curX = veh.mesh.position.x;
+      const curY = getTerrainHeight(curX, curZ);
+      veh.mesh.position.set(curX, curY, curZ);
+      veh.mesh.rotation.y = forward ? 0 : Math.PI;
+
+      // If player is currently riding this carriage, carry them seamlessly along the highway!
+      if (STATE.activeVehicle === `carriage-${veh.continent.id}`) {
+        playerGroup.position.set(curX, curY + 1.25, curZ);
+        playerGroup.rotation.y = veh.mesh.rotation.y;
+        if (!isLeftMouseDown && !isRightMouseDown) {
+          cameraYaw = veh.mesh.rotation.y;
+        }
       }
     }
   }
