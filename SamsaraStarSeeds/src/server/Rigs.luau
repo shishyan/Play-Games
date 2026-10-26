@@ -235,12 +235,14 @@ function Rigs.animate(model: Model)
 	}
 end
 
--- Four-legged animal built from parts (cow / deer). Has a Humanoid so it can walk and take damage.
+-- Four-legged animal built from parts (cow / deer / horse / stag). Has a Humanoid so it can walk and take damage.
 function Rigs.animal(kind: string, skin: Color3, name: string): Model
 	local m = Instance.new("Model")
 	m.Name = name
 	local isCow = kind == "cow"
-	local bodySize = isCow and Vector3.new(2.6, 2.4, 5) or Vector3.new(1.6, 1.8, 3.6)
+	local isHorse = kind == "horse"
+	local isStag = kind == "stag"
+	local bodySize = isCow and Vector3.new(2.6, 2.4, 5) or (isHorse and Vector3.new(2.2, 2.2, 5.2) or Vector3.new(1.8, 1.9, 4.0))
 	local legH = isCow and 2.2 or 2.8
 	local hrp = part(Vector3.new(2, 1, 3), skin)
 	hrp.Name = "HumanoidRootPart"
@@ -256,17 +258,22 @@ function Rigs.animal(kind: string, skin: Color3, name: string): Model
 	weld(hrp, head, CFrame.new(0, 1.4, -bodySize.Z / 2 - 0.5))
 	local snout = part(Vector3.new(0.8, 0.7, 0.8), Color3.fromRGB(230, 200, 190))
 	weld(hrp, snout, CFrame.new(0, 1.1, -bodySize.Z / 2 - 1.3))
-	local hornColor = isCow and Color3.fromRGB(240, 230, 210) or Color3.fromRGB(120, 90, 50)
-	for _, x in ipairs({ -0.45, 0.45 }) do
-		local h = part(Vector3.new(0.15, isCow and 0.6 or 1.2, 0.15), hornColor)
-		weld(hrp, h, CFrame.new(x, 2.3, -bodySize.Z / 2 - 0.5))
+	if not isHorse then
+		local hornColor = isCow and Color3.fromRGB(240, 230, 210) or (isStag and Color3.fromRGB(255, 225, 130) or Color3.fromRGB(120, 90, 50))
+		for _, x in ipairs({ -0.45, 0.45 }) do
+			local h = part(Vector3.new(0.15, isCow and 0.6 or (isStag and 1.6 or 1.2), 0.15), hornColor, isStag and Enum.Material.Neon or Enum.Material.SmoothPlastic)
+			weld(hrp, h, CFrame.new(x, 2.3, -bodySize.Z / 2 - 0.5))
+		end
+	else
+		local mane = part(Vector3.new(0.3, 1.1, 1.8), Color3.fromRGB(255, 235, 175), Enum.Material.Fabric)
+		weld(hrp, mane, CFrame.new(0, 1.8, -bodySize.Z / 2 + 0.3))
 	end
 	for _, x in ipairs({ -0.8, 0.8 }) do
 		for _, z in ipairs({ -bodySize.Z / 2 + 0.6, bodySize.Z / 2 - 0.6 }) do
 			weld(hrp, part(Vector3.new(0.5, legH, 0.5), skin), CFrame.new(x, 0.6 - bodySize.Y / 2 - legH / 2, z))
 		end
 	end
-	if not isCow then
+	if kind == "deer" then
 		for i = 1, 6 do
 			local spot = part(Vector3.new(0.35, 0.05, 0.35), Color3.fromRGB(255, 245, 230), Enum.Material.Fabric, Enum.PartType.Cylinder)
 			weld(hrp, spot, CFrame.new(((i % 2) - 0.5) * 1.1, 0.6 + bodySize.Y / 2, (i - 3.5) * 0.45))

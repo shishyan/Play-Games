@@ -194,6 +194,107 @@ local function makeField(pos: Vector3)
 	setFieldState(m, "dry")
 end
 
+local function setEstateState(m: Model, state: string, builder: string?, verse: string?)
+	m:SetAttribute("State", state)
+	local base = m.PrimaryPart :: BasePart
+	local prompt = base:FindFirstChildWhichIsA("ProximityPrompt") :: ProximityPrompt
+	local builtFolder = m:FindFirstChild("BuiltParts") :: Folder
+	for _, p in ipairs(builtFolder:GetChildren()) do
+		if p:IsA("BasePart") then
+			p.Transparency = state == "plot" and 1 or 0
+			p.CanCollide = state ~= "plot"
+		end
+	end
+	local plaque = m:FindFirstChild("Plaque") :: BasePart?
+	local gui = plaque and plaque:FindFirstChildOfClass("BillboardGui") :: BillboardGui?
+	local lbl = gui and gui:FindFirstChildOfClass("TextLabel") :: TextLabel?
+	if state == "plot" then
+		prompt.ObjectText = "Vastu Estate Plot"
+		prompt.ActionText = "Develop Mandapa Pavilion (Craft T2, 4 copper, 2 iron)"
+		if gui then
+			gui.Enabled = false
+		end
+	elseif state == "built" then
+		prompt.ObjectText = ("Mandapa of %s"):format(builder or "the Village")
+		prompt.ActionText = "Compose & Inscribe Architectural Poetry"
+		if gui and lbl then
+			gui.Enabled = true
+			lbl.Text = ("🏛 Mandapa of %s"):format(builder or "the Village")
+		end
+	else
+		prompt.ObjectText = ("Inscribed Mandapa of %s"):format(builder or "the Village")
+		prompt.ActionText = "Contemplate the Vastu Verse"
+		if gui and lbl then
+			gui.Enabled = true
+			lbl.Text = ("🏛 %s\n%s"):format(builder or "Mandapa", verse or "")
+		end
+	end
+end
+
+local function makeEstate(pos: Vector3)
+	local m = Instance.new("Model")
+	m.Name = "EstatePlot"
+	m:SetAttribute("Interact", "estate")
+	local base = part(m, Vector3.new(12, 1, 12), CFrame.new(pos + Vector3.new(0, 0.5, 0)), Color3.fromRGB(185, 175, 155), Enum.Material.Slate)
+	local builtFolder = Instance.new("Folder")
+	builtFolder.Name = "BuiltParts"
+	builtFolder.Parent = m
+	for _, x in ipairs({ -4.5, 4.5 }) do
+		for _, z in ipairs({ -4.5, 4.5 }) do
+			part(builtFolder, Vector3.new(1.2, 8, 1.2), CFrame.new(pos + Vector3.new(x, 5, z)), Color3.fromRGB(225, 210, 185), Enum.Material.Marble)
+		end
+	end
+	part(builtFolder, Vector3.new(13, 1.2, 13), CFrame.new(pos + Vector3.new(0, 9.6, 0)), Color3.fromRGB(215, 125, 65), Enum.Material.Slate)
+	local kalasha = part(builtFolder, Vector3.new(2, 2, 2), CFrame.new(pos + Vector3.new(0, 11.2, 0)), Color3.fromRGB(255, 210, 80), Enum.Material.Metal, Enum.PartType.Ball)
+	local plaque = part(m, Vector3.new(1, 1, 1), CFrame.new(pos + Vector3.new(0, 12.8, 0)), Color3.new(1, 1, 1), Enum.Material.SmoothPlastic)
+	plaque.Name = "Plaque"
+	plaque.Transparency = 1
+	plaque.CanCollide = false
+	local gui = Instance.new("BillboardGui")
+	gui.Size = UDim2.fromOffset(240, 52)
+	gui.StudsOffset = Vector3.new(0, 2, 0)
+	gui.MaxDistance = 75
+	gui.AlwaysOnTop = false
+	gui.Adornee = plaque
+	gui.Parent = plaque
+	local lbl = Instance.new("TextLabel")
+	lbl.Size = UDim2.fromScale(1, 1)
+	lbl.BackgroundTransparency = 1
+	lbl.TextColor3 = Color3.fromRGB(255, 235, 180)
+	lbl.TextStrokeTransparency = 0.25
+	lbl.Font = Enum.Font.Antique
+	lbl.TextSize = 16
+	lbl.TextWrapped = true
+	lbl.Parent = gui
+	local l = Instance.new("PointLight")
+	l.Color = Color3.fromRGB(255, 220, 150)
+	l.Range = 22
+	l.Parent = kalasha
+	m.PrimaryPart = base
+	nodePrompt(base, "Vastu Estate Plot", "Develop Mandapa Pavilion (Craft T2, 4 copper, 2 iron)")
+	CollectionService:AddTag(m, "DLEstate")
+	m.Parent = features
+	setEstateState(m, "plot")
+end
+
+function InteractService.completePoetry(player: Player, node: Model?)
+	if not node or not node.Parent or node:GetAttribute("State") ~= "built" then
+		return
+	end
+	local verses = LokaDefs.ArchitecturalVerses
+	local verse = verses[rng:NextInteger(1, #verses)]
+	local builder = node:GetAttribute("Builder") or player.DisplayName
+	node:SetAttribute("Verse", verse)
+	setEstateState(node, "inscribed", builder, verse)
+	PlayerState.addPath(player, "kama", 4)
+	PlayerState.addPath(player, "dharma", 2)
+	PlayerState.addKarma(player, 2, "architectural poetry")
+	WorldState.addRta(2)
+	Services.Quest.event(player, { k = "inscribe_poetry" })
+	PlayerState.addBuff(player, { id = "vastu_grace", name = "Vastu Grace", icon = "🏛", dur = 240, regen = 3, speed = 0.08 })
+	PlayerState.toast(player, "You inscribe the verse upon the lintel: " .. verse, "karma_good")
+end
+
 ---------------------------------------------------------------- effects of completed actions
 -- Called by the mantra engine when a Yajna succeeds.
 function InteractService.completeBlight(player: Player, node: Model?)
@@ -232,7 +333,7 @@ end
 
 ---------------------------------------------------------------- handlers
 local function yieldCount(base: number): number
-	local y = WorldState.rules().yield
+	local y = WorldState.rules().yield * (WorldState.decree().yieldMult or 1)
 	local n = base * y
 	return math.max(1, math.floor(n + rng:NextNumber()))
 end
@@ -347,6 +448,34 @@ local function onPrompt(player: Player, node: Instance)
 			PlayerState.toast(player, ("Harvested %d x %s Grain"):format(n, ItemDefs.grain.icon), "loot")
 			setFieldState(model, "dry")
 		end
+	elseif kind == "estate" and model then
+		local state = model:GetAttribute("State")
+		if state == "plot" then
+			local stats = PlayerState.stats(player)
+			if stats.craftTier < 2 then
+				PlayerState.toast(player, "Developing real estate requires Artha craft tier 2 (Artha 10+).", "warn")
+				return
+			end
+			if (profile.inv.copper_ore or 0) < 4 or (profile.inv.iron_ore or 0) < 2 then
+				PlayerState.toast(player, "You need 4 copper ore and 2 iron ore to raise a Mandapa pavilion.", "info")
+				return
+			end
+			PlayerState.addItem(player, "copper_ore", -4)
+			PlayerState.addItem(player, "iron_ore", -2)
+			model:SetAttribute("Builder", player.DisplayName)
+			setEstateState(model, "built", player.DisplayName)
+			PlayerState.addPath(player, "artha", 5)
+			PlayerState.addKarma(player, 2, "built community architecture")
+			WorldState.addRta(2)
+			Services.Quest.event(player, { k = "build_estate" })
+			PlayerState.toast(player, "You raise a stone Mandapa pavilion! Interact again to compose architectural poetry.", "karma_good")
+		elseif state == "built" then
+			Services.Combat.beginMantra(player, "poetry", "flowing", "Compose Architectural Verse", { node = model })
+		else
+			local verse = model:GetAttribute("Verse") or LokaDefs.ArchitecturalVerses[1]
+			PlayerState.addBuff(player, { id = "vastu_grace", name = "Vastu Grace", icon = "🏛", dur = 240, regen = 3, speed = 0.08 })
+			PlayerState.toast(player, "The Mandapa's verse uplifts you: " .. verse, "karma_good")
+		end
 	elseif kind == "kalari_start" then
 		PlayerState.rt(player).kalariStart = os.clock()
 		PlayerState.toast(player, "Run! Climb the platforms to the golden one.", "info")
@@ -427,6 +556,8 @@ function InteractService.start()
 				makeGrove(pos)
 			elseif f.kind == "field" then
 				makeField(pos)
+			elseif f.kind == "estate" then
+				makeEstate(pos)
 			end
 		end
 	end

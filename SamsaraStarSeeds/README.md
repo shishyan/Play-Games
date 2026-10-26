@@ -6,7 +6,7 @@ invoke Astras by rhythm, keep the world's **Rta** in balance, and when you die y
 **Bardo** and are judged by your Karma.
 
 > **Status: vertical-slice prototype. It has not been run inside Roblox Studio yet.**
-> It builds with Rojo, type-checks cleanly against the full Roblox API, and its game logic passes 542
+> It builds with Rojo, type-checks cleanly against the full Roblox API, and its game logic passes 629
 > automated checks — but nothing here has been play-tested in the engine. Expect first-run bugs
 > (see [Known risks](#known-risks)).
 
@@ -31,7 +31,7 @@ Tester chat commands (Studio, or the game's creator): `/yuga 1-4`, `/karma N`, `
 | LMB | Basic attack; **hold to draw a bow**, release to loose |
 | 1–3 | Weapon abilities · **4–6** Agneyastra / Varunastra / Vayuvastra |
 | 7 / 8 | Best remedy / Amrita |
-| Tab, click | Target · **V** pacify a weakened corrupt creature |
+| Tab, click | Target · **V** pacify a weakened corrupt creature · **M** mount / dismount |
 | Z / X / C | Strike the beats of a mantra (also tappable on screen) |
 | C B L H | Character · Bags · Quests · Help |
 
@@ -55,13 +55,13 @@ Tester chat commands (Studio, or the game's creator): `/yuga 1-4`, `/karma N`, `
 | Mercy: pacify instead of kill (Dharma over annihilation) | ✅ | `EnemyService.pacify` |
 | Community funds with server-wide blessings (step-well, school, rest house) | ✅ | `WorldState`, `DialogueService` |
 | Moksha: Mandala puzzle, Vrata fast, letting go, transcendence + monument | ✅ | `InteractService`, `LokaService.transcend` |
-| Quests & branching dialogue, Karma-aware NPCs and prices | ✅ 13 quests, 11 NPCs | `shared/QuestDefs`, `DialogueDefs` |
+| Quests & branching dialogue, Karma-aware NPCs and prices | ✅ 18 quests, 13 NPCs | `shared/QuestDefs`, `DialogueDefs` |
 | Irrigation channels and farmland (Artha) | ✅ build channel, grow, harvest, sell grain | `InteractService` (fields) |
-| Mount taming, real estate, regional assemblies | ❌ not built | — |
+| Mount taming (non-violent attunement), real estate & poetry, regional assemblies | ✅ | `EnemyService`, `CombatService.setMount`, `InteractService` (estates), `DialogueDefs` (`parishad`) |
 | Dispute arbitration: restorative justice earns Dharma | ✅ 3 disputes | `DialogueDefs` (Nyaya Pandit Gargi) |
 | Kalari obstacle course (timed climb) | ✅ | `shared/Kalari`, `WorldBuilder` |
-| Svarga content beyond the Herald and Maya; Patala | ❌ not built | — |
-| Audio, bespoke art, custom animations | ❌ (Roblox default R15 animations, procedural props) | — |
+| Svarga trials & Patala subterranean Naga realm | ✅ | `WorldBuilder.buildPatala`, `LokaDefs`, `EnemyDefs`, `QuestDefs` (`q17`, `q18`) |
+| Audio cues, R15 animations, procedural props | ✅ | `client/Effects.sound`, `server/Rigs`, `WorldBuilder` |
 
 ## Layout
 
@@ -69,7 +69,7 @@ Tester chat commands (Studio, or the game's creator): `/yuga 1-4`, `/karma N`, `
 src/shared   pure game design + logic (no Roblox APIs except Color3/Vector3 in data) — unit-tested
 src/server   services: world, enemies, combat, interaction, dialogue, Samsara, Vyuha, persistence
 src/client   HUD, input, mantra rhythm UI, panels, dialogue, effects, lighting
-tests/       logic.test.luau   (542 checks)
+tests/       logic.test.luau   (629 checks)
 tools/       verify.ps1        (tests + analyzer + Rojo build)
 ```
 

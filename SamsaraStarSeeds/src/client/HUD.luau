@@ -214,7 +214,7 @@ function HUD.build()
 
 	buildHotbar()
 
-	els.hint = UI.label(UI.root, "WASD move · Space jump · LMB attack (hold to draw a bow) · 1-3 skills · 4-6 Astras · 7 remedy · 8 Amrita · V pacify · Tab target · C B L panels · H help", UDim2.new(1, -20, 0, 14), UDim2.new(0, 10, 1, -92), { textSize = 11, color = C.dim, stroke = 0.4 })
+	els.hint = UI.label(UI.root, "WASD move · Space jump · LMB attack (hold to draw a bow) · 1-3 skills · 4-6 Astras · 7 remedy · 8 Amrita · V pacify · M mount · Tab target · C B L panels · H help", UDim2.new(1, -20, 0, 14), UDim2.new(0, 10, 1, -92), { textSize = 11, color = C.dim, stroke = 0.4 })
 end
 
 ---------------------------------------------------------------- refresh

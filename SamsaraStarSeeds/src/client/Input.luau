@@ -174,6 +174,8 @@ function Input.start(openPanel: (string) -> ())
 				if t then
 					Remotes.get("Pacify"):FireServer(t)
 				end
+			elseif input.KeyCode == Enum.KeyCode.M then
+				Remotes.get("ToggleMount"):FireServer()
 			elseif input.KeyCode == Enum.KeyCode.C then
 				openPanel("character")
 			elseif input.KeyCode == Enum.KeyCode.B then

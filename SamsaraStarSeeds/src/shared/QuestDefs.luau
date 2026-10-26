@@ -97,6 +97,50 @@ local Q = {
 		obj = { { k = "kalari", n = 1, label = "Course completed" } },
 		reward = { paths = { kama = 6 }, gold = 15, karma = 1 },
 	},
+	q14 = {
+		name = "Attunement of the Steed", giver = "sabha_guru", turnIn = "sabha_guru", req = { kama = 5 },
+		text = "Wild Ashva steeds and Marut stags roam the plains beyond the village. Approach one gently, press E to attune through a rhythmic mantra, and summon your mount (press M).",
+		doneText = "You won its trust without a rope or whip. That is Kama in harmony with Rta.",
+		obj = { { k = "tame", n = 1, label = "Wild mount attuned" } },
+		reward = { paths = { kama = 9, dharma = 3 }, gold = 20, karma = 3 },
+	},
+	q15 = {
+		name = "Architecture and Verse", giver = "smith", turnIn = "smith", req = { artha = 10 },
+		text = "Stone foundations around the village await a builder with craft tier 2. Raise a Mandapa pavilion on a foundation (4 copper ore, 2 iron ore), then inscribe architectural poetry upon its lintel.",
+		doneText = "A pavilion that shelters all and carries a verse of Vastu — that is legacy.",
+		obj = {
+			{ k = "build_estate", n = 1, label = "Mandapa pavilion raised" },
+			{ k = "inscribe_poetry", n = 1, label = "Architectural verse inscribed" },
+		},
+		reward = { paths = { artha = 8, kama = 6 }, gold = 40, karma = 3 },
+	},
+	q16 = {
+		name = "Voice in the Sabha Parishad", giver = "parishad", turnIn = "parishad", req = { artha = 10 },
+		text = "Those who prosper and give Dana earn standing in the regional assembly. Speak with Adhyaksha Vidura in the Sabha and cast your vote on a regional decree.",
+		doneText = "When prosperity serves the assembly, the whole realm stands firmer.",
+		obj = { { k = "decree", n = 1, label = "Regional decree enacted" } },
+		reward = { paths = { artha = 7, dharma = 6 }, gold = 25, karma = 3 },
+	},
+	q17 = {
+		name = "Labyrinth of Patala", giver = "sheshan", turnIn = "sheshan", req = {},
+		text = "Corrupted Naga Sentinels and Vasuki's Shade disturb the glowing caverns of Patala. Overcome three Naga Sentinels (or pacify them) and defeat Vasuki's Shade to restore the underworld's calm.",
+		doneText = "The Naga Mani shines clear once more. Patala remembers your balance.",
+		obj = {
+			{ k = "kill", t = "naga_sentinel", n = 3, label = "Naga Sentinels" },
+			{ k = "kill", t = "vasuki_shade", n = 1, label = "Vasuki's Shade" },
+		},
+		reward = { paths = { dharma = 12, kama = 8 }, gold = 140, items = { naga_mani = 1 }, karma = 6 },
+	},
+	q18 = {
+		name = "Trials of the Cloud Guardians", giver = "herald", turnIn = "herald", req = { dharma = 35 },
+		text = "Before facing Maya, prove your poise against Svarga's Trial Guardians and Ahamkara Shades.",
+		doneText = "Neither pride nor illusion could shake your stance.",
+		obj = {
+			{ k = "kill", t = "svarga_guardian", n = 3, label = "Trial Guardians" },
+			{ k = "kill", t = "ahamkara_shade", n = 3, label = "Ahamkara Shades" },
+		},
+		reward = { paths = { dharma = 10, kama = 6 }, gold = 120, karma = 5 },
+	},
 }
 
 return Q

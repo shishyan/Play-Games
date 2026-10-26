@@ -11,6 +11,7 @@ local Dhanurveda = require(Shared.Dhanurveda)
 local Purusharthas = require(Shared.Purusharthas)
 local Samsara = require(Shared.Samsara)
 local Ayurveda = require(Shared.Ayurveda)
+local LokaDefs = require(Shared.LokaDefs)
 local Remotes = require(Shared.Remotes)
 local WorldState = require(script.Parent.WorldState)
 local PlayerState = require(script.Parent.PlayerState)
@@ -299,6 +300,7 @@ end
 ---------------------------------------------------------------- mantra sessions (Astras, Yajna, performances, pacify)
 local KIND_TITLES = {
 	astra = "Invoke the Astra", yajna = "Perform the Yajna", perform = "Take the Stage", pacify = "Chant the Shanti Mantra",
+	tame = "Attune with the Wild Mount", poetry = "Compose Architectural Verse",
 }
 
 -- Starts a rhythm session for `player`. data holds what to do on success.
@@ -451,6 +453,25 @@ local function finishMantra(session, accuracy: number, outcome: string, power: n
 		else
 			PlayerState.toast(player, "The mantra falters — the creature is still enraged.", "warn")
 		end
+	elseif session.kind == "tame" then
+		local mountId = session.data.mountId
+		if outcome ~= "backfire" and accuracy >= 0.55 and mountId and LokaDefs.Mounts[mountId] then
+			profile.mounts = profile.mounts or {}
+			profile.mounts[mountId] = true
+			PlayerState.addPath(player, "kama", 4)
+			PlayerState.addKarma(player, 2, "non-violent attunement")
+			Services.Quest.event(player, { k = "tame" })
+			CombatService.setMount(player, mountId)
+			PlayerState.toast(player, ("Attuned with %s! Press M anytime to mount or dismount."):format(LokaDefs.Mounts[mountId].name), "karma_good")
+		else
+			PlayerState.toast(player, "Your breath was uneven; the wild steed steps back.", "info")
+		end
+	elseif session.kind == "poetry" then
+		if outcome ~= "backfire" and accuracy >= 0.5 then
+			Services.Interact.completePoetry(player, session.data.node)
+		else
+			PlayerState.toast(player, "The metre faltered. Steady your thought and inscribe again.", "info")
+		end
 	end
 end
 
@@ -569,6 +590,93 @@ function CombatService.usePotion(player: Player)
 	PlayerState.toast(player, "+70 health", "info")
 end
 
+---------------------------------------------------------------- mounts (non-violent attunement)
+local function applyMountVisual(player: Player, mountId: string?)
+	local char = player.Character
+	local root = rootOf(player)
+	if not char or not root then
+		return
+	end
+	local old = char:FindFirstChild("EquippedMount")
+	if old then
+		old:Destroy()
+	end
+	if not mountId or not LokaDefs.Mounts[mountId] then
+		return
+	end
+	local def = LokaDefs.Mounts[mountId]
+	local m = Instance.new("Model")
+	m.Name = "EquippedMount"
+	m.Parent = char
+	local body = Instance.new("Part")
+	body.Name = "Body"
+	body.Size = Vector3.new(2.2, 1.8, 4.8)
+	body.Color = def.color
+	body.Material = Enum.Material.Fabric
+	body.CanCollide = false
+	body.CanQuery = false
+	body.Massless = true
+	body.CFrame = root.CFrame * CFrame.new(0, -1.8, 0)
+	body.Parent = m
+	local w = Instance.new("WeldConstraint")
+	w.Part0 = root
+	w.Part1 = body
+	w.Parent = body
+	local head = Instance.new("Part")
+	head.Size = Vector3.new(1.2, 1.4, 1.6)
+	head.Color = def.color
+	head.Material = Enum.Material.Fabric
+	head.CanCollide = false
+	head.CanQuery = false
+	head.Massless = true
+	head.CFrame = body.CFrame * CFrame.new(0, 1.1, -2.4)
+	head.Parent = m
+	local hw = Instance.new("WeldConstraint")
+	hw.Part0 = body
+	hw.Part1 = head
+	hw.Parent = head
+end
+
+function CombatService.setMount(player: Player, mountId: string?)
+	local profile = PlayerState.get(player)
+	if not profile then
+		return
+	end
+	if mountId and profile.debt and profile.debt.stage ~= "done" then
+		PlayerState.toast(player, "You cannot ride while carrying a Spiritual Debt.", "warn")
+		return
+	end
+	profile.mounted = mountId
+	applyMountVisual(player, mountId)
+	PlayerState.applyToCharacter(player, false)
+	PlayerState.markDirty(player)
+end
+
+function CombatService.toggleMount(player: Player)
+	if not Guard.ok(player, "mount", 0.6) or not alive(player) then
+		return
+	end
+	local profile = PlayerState.get(player)
+	if profile.mounted then
+		CombatService.setMount(player, nil)
+		PlayerState.toast(player, "Dismounted.", "info")
+		return
+	end
+	local chosen = nil
+	for _, id in ipairs({ "marut_stag", "ashva" }) do
+		if profile.mounts and profile.mounts[id] then
+			chosen = id
+			break
+		end
+	end
+	if not chosen then
+		PlayerState.toast(player, "You have not attuned with a wild mount yet. Find an Ashva or Marut Stag on the plains.", "info")
+		return
+	end
+	CombatService.setMount(player, chosen)
+	PlayerState.toast(player, ("Mounted %s."):format(LokaDefs.Mounts[chosen].name), "info")
+end
+
 ---------------------------------------------------------------- wiring
 local function wind()
 	local angle = rng:NextNumber(0, math.pi * 2)
@@ -584,6 +692,7 @@ function CombatService.start()
 	Remotes.get("UseAstra").OnServerEvent:Connect(CombatService.useAstra)
 	Remotes.get("AstraInputs").OnServerEvent:Connect(CombatService.submitMantra)
 	Remotes.get("Pacify").OnServerEvent:Connect(CombatService.pacify)
+	Remotes.get("ToggleMount").OnServerEvent:Connect(CombatService.toggleMount)
 	Remotes.get("UseRemedy").OnServerEvent:Connect(CombatService.useRemedy)
 	Remotes.get("UsePotion").OnServerEvent:Connect(CombatService.usePotion)
 	Remotes.get("CraftRemedy").OnServerEvent:Connect(CombatService.craftRemedy)

@@ -840,6 +840,61 @@ do
 	end
 	check("fields are placed in the world", fieldFeature)
 	check("kalari landmark exists", LokaDefs.Landmarks.kalari ~= nil)
+
+	-- Mounts, Real Estate, Regional Assembly Decrees, Patala & Svarga Trials
+	check("mounts defined in LokaDefs", LokaDefs.Mounts.ashva ~= nil and LokaDefs.Mounts.marut_stag ~= nil)
+	check("tameable wild creatures exist", EnemyDefs.ashva.tameable and EnemyDefs.marut_stag.tameable)
+	local rider = Profile.new("Mukta")
+	local unmountedSpeed = Profile.stats(rider).speedMult
+	rider.mounted = "ashva"
+	check("mounted rider moves faster", Profile.stats(rider).speedMult > unmountedSpeed)
+	rider.debt = { stage = "fetch", water = 0 }
+	check("debt overrides mount speed", Profile.stats(rider).speedMult < unmountedSpeed)
+
+	local estateFeature = false
+	for _, f in ipairs(LokaDefs.Features) do
+		if f.kind == "estate" then
+			estateFeature = true
+		end
+	end
+	check("estate plots are placed in the world", estateFeature)
+	check("architectural verses exist", #LokaDefs.ArchitecturalVerses >= 3)
+
+	check("regional decrees defined", LokaDefs.Decrees.aranya_raksha ~= nil and LokaDefs.Decrees.shulka_nyaya ~= nil and LokaDefs.Decrees.utsava_dana ~= nil)
+	local noStanding = Dialogue.build(ctx({ paths = { dharma = 0, artha = 2, kama = 0, moksha = 0 } }), "parishad", "decrees")
+	eq("no decrees without standing", #noStanding.choices, 1)
+	local withStanding = Dialogue.build(ctx({ paths = { dharma = 0, artha = 15, kama = 0, moksha = 0 } }), "parishad", "decrees")
+	check("decrees available with Artha standing", #withStanding.choices >= 4)
+	local hoarderStanding = Dialogue.build(ctx({ paths = { dharma = 0, artha = 25, kama = 0, moksha = 0 }, goldEarned = 500, danaGiven = 0 }), "parishad", "decrees")
+	eq("tamas blocks assembly voting", #hoarderStanding.choices, 1)
+
+	check("patala realm exists", LokaDefs.Lokas.patala ~= nil and LokaDefs.Lokas.patala.center.Y < 0)
+	check("patala boss and sentinels exist", EnemyDefs.naga_sentinel ~= nil and EnemyDefs.vasuki_shade.boss == true)
+	check("sheshan offers naga mani blessing", #Dialogue.build(ctx({ inv = { naga_mani = 1 } }), "sheshan", "root").choices >= 3)
+
+	for _, q in ipairs({ "q14", "q15", "q16", "q17", "q18" }) do
+		check(q .. " exists", Defs[q] ~= nil)
+	end
+	Quests.accept(qctx.quests, "q14", {})
+	Quests.event(qctx.quests, { k = "tame" })
+	eq("taming completes q14", qctx.quests.q14.state, "ready")
+
+	Quests.accept(qctx.quests, "q15", {})
+	Quests.event(qctx.quests, { k = "build_estate" })
+	eq("building estate alone is 1/2", qctx.quests.q15.state, "active")
+	Quests.event(qctx.quests, { k = "inscribe_poetry" })
+	eq("building + inscribing poetry completes q15", qctx.quests.q15.state, "ready")
+
+	Quests.accept(qctx.quests, "q16", {})
+	Quests.event(qctx.quests, { k = "decree" })
+	eq("enacting decree completes q16", qctx.quests.q16.state, "ready")
+
+	Quests.accept(qctx.quests, "q17", {})
+	for _ = 1, 3 do
+		Quests.event(qctx.quests, { k = "kill", t = "naga_sentinel" })
+	end
+	Quests.event(qctx.quests, { k = "kill", t = "vasuki_shade" })
+	eq("patala trials complete q17", qctx.quests.q17.state, "ready")
 end
 
 print(("Logic tests: %d passed, %d failed"):format(passed, failed))

@@ -6,7 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- server -> client
 local S2C = { "StateSync", "Toast", "Fx", "Dialogue", "SamsaraShow", "Panel", "AstraStart", "AstraResult", "Travel" }
 -- client -> server
-local C2S = { "UseAbility", "UseAstra", "AstraInputs", "Pacify", "UseRemedy", "UsePotion", "CraftRemedy", "ChooseClass", "DialogueChoice", "CloseDialogue", "SamsaraAnswer", "ClientReady" }
+local C2S = { "UseAbility", "UseAstra", "AstraInputs", "Pacify", "ToggleMount", "UseRemedy", "UsePotion", "CraftRemedy", "ChooseClass", "DialogueChoice", "CloseDialogue", "SamsaraAnswer", "ClientReady" }
 
 local folder: Folder
 if RunService:IsServer() then

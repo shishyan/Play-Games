@@ -11,6 +11,7 @@ local ItemDefs = require(Shared.ItemDefs)
 local QuestDefs = require(Shared.QuestDefs)
 local Quests = require(Shared.Quests)
 local Yuga = require(Shared.Yuga)
+local LokaDefs = require(Shared.LokaDefs)
 local Remotes = require(Shared.Remotes)
 local UI = require(script.Parent.UI)
 local State = require(script.Parent.State)
@@ -117,6 +118,18 @@ local function character()
 	local y = Yuga.EPOCHS[workspace:GetAttribute("YugaIndex") or 1]
 	gap(6)
 	line(("<b>%s</b> — %s"):format(y.name, y.blurb), C.goldBright, 16)
+	local decId = workspace:GetAttribute("Decree") or "aranya_raksha"
+	local dec = LokaDefs.Decrees[decId]
+	if dec then
+		line(("<b>Regional Decree:</b> %s — %s"):format(dec.name, dec.desc), C.artha, 15)
+	end
+	local mountList = {}
+	for mid in pairs(s.mounts or {}) do
+		if LokaDefs.Mounts[mid] then
+			table.insert(mountList, LokaDefs.Mounts[mid].name)
+		end
+	end
+	line(("<b>Attuned Mounts (press M):</b> %s"):format(#mountList > 0 and table.concat(mountList, ", ") or "None yet — approach a wild Ashva or Marut Stag on Bhumi"), C.kama, 15)
 end
 
 local function bags()
@@ -250,7 +263,8 @@ local function help()
 		"<b>Death is Samsara.</b> You wake in the Bardo and are judged by your Karma: a blessing, a plain rebirth, or a Spiritual Debt (carry water from the step-well to the hermitage without jumping or being hit).",
 		"<b>The Yugas.</b> The whole server cycles Satya → Treta → Dvapara → Kali, changing gravity, danger, yields and rewards.",
 		"<b>Vyuha.</b> Stand with 5+ friends in a lotus (fighters on the rim, supporters in the heart), or 4+ circling together as a wheel, for team buffs.",
-		"<b>Keys.</b> C character · B bags · L quests · H help · Tab target · V pacify · 7 remedy · 8 Amrita · Esc close.",
+		"<b>Mounts, Estates &amp; Sabha Parishad.</b> Attune to wild mounts with E and press M to ride. Develop Mandapa pavilions on stone plots (Artha T2) and inscribe poetry. Vote on server-wide decrees with Adhyaksha Vidura.",
+		"<b>Keys.</b> C character · B bags · L quests · H help · Tab target · V pacify · M mount · 7 remedy · 8 Amrita · Esc close.",
 	}
 	for _, t in ipairs(text) do
 		line(t, C.text, 16)

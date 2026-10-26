@@ -40,6 +40,17 @@ local Enemies = {
 		loot = { { "svarga_lotus", 1.0 } },
 		look = { skin = Color3.fromRGB(240, 235, 255), scale = 2.8, eyes = Color3.fromRGB(255, 80, 80), robe = Color3.fromRGB(80, 40, 140), halo = true, crown = true },
 	},
+	naga_sentinel = {
+		name = "Naga Sentinel", hp = 220, dmg = 14, speed = 15, aggro = 55, leash = 120, atkRange = 7, atkCd = 1.6,
+		gold = { 12, 24 }, corrupt = true, dosha = { "kapha", 12 }, kama = 1.1, loot = { { "naga_mani", 0.3 }, { "iron_ore", 0.35 } },
+		look = { skin = Color3.fromRGB(45, 175, 165), scale = 1.4, eyes = Color3.fromRGB(80, 255, 220), robe = Color3.fromRGB(20, 75, 85), hood = true, crown = true },
+	},
+	vasuki_shade = {
+		name = "Vasuki's Shade", hp = 1100, dmg = 26, speed = 15, aggro = 80, leash = 180, atkRange = 11, atkCd = 2.0,
+		gold = { 120, 180 }, corrupt = true, boss = true, shielded = true, respawn = 260, dosha = { "kapha", 20 }, kama = 6,
+		loot = { { "naga_mani", 1.0 }, { "amrita", 1.0 } },
+		look = { skin = Color3.fromRGB(30, 140, 130), scale = 2.5, eyes = Color3.fromRGB(0, 255, 210), robe = Color3.fromRGB(15, 45, 65), hood = true, crown = true, horns = true },
+	},
 
 	cow = {
 		name = "Gau (Sacred Cow)", hp = 40, peaceful = true, speed = 6, flee = 25, animal = "cow",
@@ -48,6 +59,14 @@ local Enemies = {
 	deer = {
 		name = "Spotted Deer", hp = 25, peaceful = true, speed = 22, flee = 45, animal = "deer",
 		look = { skin = Color3.fromRGB(180, 130, 80) },
+	},
+	ashva = {
+		name = "Ashva (Wild Steed)", hp = 60, peaceful = true, tameable = true, mountId = "ashva", speed = 20, flee = 18, animal = "horse",
+		look = { skin = Color3.fromRGB(235, 225, 205) },
+	},
+	marut_stag = {
+		name = "Marut Stag", hp = 50, peaceful = true, tameable = true, mountId = "marut_stag", speed = 24, flee = 22, animal = "stag",
+		look = { skin = Color3.fromRGB(215, 175, 105) },
 	},
 }
 

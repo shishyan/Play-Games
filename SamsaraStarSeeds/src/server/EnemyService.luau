@@ -119,20 +119,24 @@ function EnemyService.spawn(id: string, pos: Vector3, home: any)
 		if def.peaceful then
 			local prompt = Instance.new("ProximityPrompt")
 			prompt.ObjectText = def.name
-			prompt.ActionText = "Listen"
-			prompt.MaxActivationDistance = 10
+			prompt.ActionText = def.tameable and "Attune (Non-Violent Taming)" or "Listen"
+			prompt.MaxActivationDistance = 12
 			prompt.RequiresLineOfSight = false
-			prompt.Enabled = WorldState.rules().docile
+			prompt.Enabled = def.tameable == true or WorldState.rules().docile
 			prompt.Parent = hrp
 			data.prompt = prompt
 			prompt.Triggered:Connect(function(player)
-				local lines = {
-					"\"Every being is a thread in the same cloth,\" the creature seems to say.",
-					"\"The blight spreads where the Dharma is neglected. Seek the dark mounds beyond the village.\"",
-					"\"Herbs grow where the earth is cared for. The Vaidya will tell you which cure which.\"",
-					"\"Do not harm us. Even in the Kali Yuga, mercy is the only wealth that never decays.\"",
-				}
-				PlayerState.toast(player, lines[rng:NextInteger(1, #lines)], "info")
+				if def.tameable then
+					Services.Combat.beginMantra(player, "tame", "flowing", "Attune with " .. def.name, { mountId = def.mountId, model = model })
+				else
+					local lines = {
+						"\"Every being is a thread in the same cloth,\" the creature seems to say.",
+						"\"The blight spreads where the Dharma is neglected. Seek the dark mounds beyond the village.\"",
+						"\"Herbs grow where the earth is cared for. The Vaidya will tell you which cure which.\"",
+						"\"Do not harm us. Even in the Kali Yuga, mercy is the only wealth that never decays.\"",
+					}
+					PlayerState.toast(player, lines[rng:NextInteger(1, #lines)], "info")
+				end
 			end)
 		end
 	end)
@@ -301,7 +305,7 @@ local function think(data, players, now: number)
 			data.hum:MoveTo(data.homePos + Vector3.new(math.cos(a), 0, math.sin(a)) * rng:NextNumber(4, 24))
 		end
 		if data.prompt then
-			data.prompt.Enabled = WorldState.rules().docile
+			data.prompt.Enabled = def.tameable == true or WorldState.rules().docile
 		end
 		return
 	end

@@ -11,6 +11,7 @@ local ItemDefs = require(script.Parent.ItemDefs)
 local Dhanurveda = require(script.Parent.Dhanurveda)
 local Purusharthas = require(script.Parent.Purusharthas)
 local Profile = require(script.Parent.Profile)
+local LokaDefs = require(script.Parent.LokaDefs)
 
 local function hasGold(n)
 	return function(ctx)
@@ -159,7 +160,7 @@ NPCs.vyapari = {
 	},
 	topics = {
 		{ text = "Show me your wares.", next = "shop" },
-		{ text = "Sell my ore and grain.", cond = function(ctx) return (ctx.inv.copper_ore or 0) + (ctx.inv.iron_ore or 0) + (ctx.inv.grain or 0) > 0 end, fx = { { "sell_ore" } }, reply = "A fair price, paid in full." },
+		{ text = "Sell my ore, grain, and gems.", cond = function(ctx) return (ctx.inv.copper_ore or 0) + (ctx.inv.iron_ore or 0) + (ctx.inv.grain or 0) + (ctx.inv.naga_mani or 0) > 0 end, fx = { { "sell_ore" } }, reply = "A fair price, paid in full." },
 		{
 			text = "Give me a discount — or else.",
 			cond = function(ctx) return not ctx.flags.coerced end,
@@ -380,6 +381,66 @@ NPCs.nyayadhish = {
 			{ "Flog him as an example to others.", "Fear is taught; need remains. The theft will come again, from another door." },
 			{ "Let him go without consequence.", "The baker is wronged and the debt of the community is unpaid. Mercy without repair is incomplete." },
 			"The debt is repaid in labour, the family is fed, the baker is made whole. This is restorative justice."),
+	},
+}
+
+NPCs.parishad = {
+	name = "Adhyaksha Vidura", title = "Speaker of the Regional Assembly",
+	greeting = {
+		Deva = "An honoured voice of the Sabha Parishad! Which decree shall we enact for the realm?",
+		Madhyama = "The Sabha Parishad governs regional policy. Those with Artha and Dana standing may propose decrees.",
+		Asura = "Even in the assembly, Rta binds us. Speak if you have earned your seat.",
+	},
+	topics = {
+		{ text = "Propose or vote on a regional decree.", next = "decrees" },
+		{ text = "How is political standing earned?", next = "standing" },
+	},
+	nodes = {
+		standing = {
+			text = "Standing in the Sabha Parishad requires Artha of at least 10 and freedom from Tamas (honouring the Dana rule). When you enact a decree, its blessing shapes the entire server and strengthens Rta.",
+			choices = back(),
+		},
+		decrees = {
+			text = "Choose a regional decree to enact across the realm:",
+			dynamic = function(ctx)
+				local out: { any } = {}
+				local hasStanding = (ctx.paths.artha or 0) >= 10 and not Purusharthas.tamas(ctx)
+				for id, dec in pairs(LokaDefs.Decrees) do
+					table.insert(out, {
+						text = ("📜 %s — %s"):format(dec.name, dec.desc),
+						cond = function() return hasStanding end,
+						fx = { { "decree", id }, { "path", "artha", 2 }, { "path", "dharma", 2 }, { "karma", 2 }, { "event", "decree" } },
+						reply = ("The Sabha Parishad ratifies %s! %s"):format(dec.name, dec.desc),
+					})
+				end
+				table.insert(out, { text = "Step back.", next = "root" })
+				return out
+			end,
+		},
+	},
+}
+
+NPCs.sheshan = {
+	name = "Naga Raja Sheshan", title = "Guardian of Patala",
+	greeting = {
+		Deva = "Few surface-dwellers walk Patala with such serene light. The serpents bow to your Rta.",
+		Madhyama = "Welcome to Patala, the neon-lit underworld. Tread softly among the ancient treasures.",
+		Asura = "Your greed echoes through the caverns. Take care — Vasuki's Shade devours the reckless.",
+	},
+	topics = {
+		{ text = "What is this subterranean realm?", next = "patala_lore" },
+		{
+			text = "Offer a Naga Mani for the serpent's blessing.",
+			cond = function(ctx) return (ctx.inv.naga_mani or 0) > 0 end,
+			fx = { { "item", "naga_mani", -1 }, { "path", "dharma", 6 }, { "path", "artha", 6 }, { "karma", 4 }, { "heal" } },
+			reply = "You return the jewel to the earth rather than hoarding it. Receive the Naga's vigor.",
+		},
+	},
+	nodes = {
+		patala_lore = {
+			text = "Patala lies beneath Bhumi, illuminated by bioluminescent crystals and Naga Mani gems. Our sentinels guard the earth's deep wealth, but Anrita has twisted many into raging shades.",
+			choices = back(),
+		},
 	},
 }
 

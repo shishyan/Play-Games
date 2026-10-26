@@ -95,7 +95,7 @@ end
 local function sellOre(player: Player)
 	local profile = PlayerState.get(player)
 	local total = 0
-	for _, id in ipairs({ "copper_ore", "iron_ore", "grain" }) do
+	for _, id in ipairs({ "copper_ore", "iron_ore", "grain", "naga_mani" }) do
 		local n = profile.inv[id] or 0
 		if n > 0 then
 			-- fair trade: full price, no haggling down
@@ -212,6 +212,15 @@ local function applyFx(player: Player, fx)
 		PlayerState.addKarma(player, 2, "Vrata kept")
 	elseif kind == "transcend" then
 		Services.Loka.transcend(player)
+	elseif kind == "decree" then
+		if not WorldState.setDecree(fx[2]) then
+			return false
+		end
+		local dec = LokaDefs.Decrees[fx[2]]
+		for _, p in ipairs(Players:GetPlayers()) do
+			PlayerState.applyToCharacter(p, false)
+			PlayerState.toast(p, ("Sabha Parishad Decree enacted: %s — %s"):format(dec.name, dec.desc), "karma_good")
+		end
 	end
 	PlayerState.markDirty(player)
 	return true

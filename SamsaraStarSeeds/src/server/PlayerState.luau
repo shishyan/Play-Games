@@ -37,7 +37,7 @@ local function reconcile(data, fresh)
 			data[k] = if type(v) == "table" then table.clone(v) else v
 		end
 	end
-	for _, k in ipairs({ "paths", "inv", "quests", "flags", "remedies" }) do
+	for _, k in ipairs({ "paths", "inv", "quests", "flags", "remedies", "mounts" }) do
 		if type(data[k]) ~= "table" then
 			data[k] = table.clone(fresh[k])
 		end
@@ -158,18 +158,19 @@ function PlayerState.stats(player: Player)
 	local m = PlayerState.mods(player)
 	local fx = Ayurveda.effects(rt and rt.doshas or Ayurveda.newState())
 	local rules = WorldState.rules()
+	local dec = WorldState.decree()
 	local durabilityMult = (profile.durability or 100) <= 0 and 0.5 or 1
 	return {
 		maxHp = base.maxHp,
 		maxStamina = base.maxStamina,
-		staminaRegen = base.staminaRegen * fx.staminaRegenMult,
-		walkSpeed = 16 * base.speedMult * (1 + m.speed) * fx.speedMult,
+		staminaRegen = base.staminaRegen * fx.staminaRegenMult * (1 + (dec.staminaBonus or 0)),
+		walkSpeed = 16 * base.speedMult * (1 + m.speed + (dec.speedBonus or 0)) * fx.speedMult,
 		taken = (1 - base.kavacha) * m.taken * fx.takenMult,
-		corruptionResist = base.corruptionResist,
+		corruptionResist = math.min(0.9, base.corruptionResist + (dec.resistBonus or 0)),
 		dmgMult = (1 + m.dmg) * rules.damage * durabilityMult,
 		weaponDamage = base.weaponDamage,
 		craftTier = base.craftTier,
-		goldMult = base.goldMult,
+		goldMult = base.goldMult * (dec.goldMult or 1),
 		dodge = m.dodge,
 		aimWobble = fx.aimWobble,
 		steady = m.steady,
@@ -301,7 +302,8 @@ end
 
 function PlayerState.ctx(player: Player)
 	local profile = profiles[player]
-	local c = Profile.ctx(profile, Karma.priceMult(profile.karma))
+	local dec = WorldState.decree()
+	local c = Profile.ctx(profile, Karma.priceMult(profile.karma) * (dec.priceMult or 1))
 	c.vrata = profile.flags.vrata
 	return c
 end
@@ -346,6 +348,8 @@ function PlayerState.snapshot(player: Player)
 		maxHp = s.maxHp,
 		blur = s.blur,
 		legacy = profile.legacy,
+		mounts = profile.mounts or {},
+		mounted = profile.mounted,
 	}
 end
 

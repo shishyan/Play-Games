@@ -470,6 +470,33 @@ local function buildMahaloka(parent: Instance)
 	glade.CanCollide = false
 end
 
+local function buildPatala(parent: Instance)
+	local c = LokaDefs.Lokas.patala.center
+	local f = Instance.new("Folder")
+	f.Name = "Patala"
+	f.Parent = parent
+	disc(f, c - Vector3.new(0, 6, 0), 6, 370, Color3.fromRGB(18, 22, 34), Enum.Material.Slate, "PatalaFloor")
+	disc(f, c - Vector3.new(0, 0.4, 0), 0.5, 372, Color3.fromRGB(0, 230, 195), Enum.Material.Neon)
+	-- Cavern ceiling dome and glowing serpent-pillars
+	disc(f, c + Vector3.new(0, 82, 0), 6, 370, Color3.fromRGB(12, 16, 28), Enum.Material.Slate, "PatalaVault")
+	local rng = Random.new(23)
+	for i = 1, 18 do
+		local a = i * math.pi * 2 / 18
+		local pPos = c + Vector3.new(math.cos(a) * 155, 0, math.sin(a) * 155)
+		local p = pillar(f, pPos, 80, 5, Color3.fromRGB(28, 38, 52), Enum.Material.Slate)
+		local gem = mk(f, Vector3.new(2.6, 2.6, 2.6), CFrame.new(pPos + Vector3.new(0, 14, 0)), Color3.fromRGB(0, 255, 210), Enum.Material.Neon, Enum.PartType.Ball)
+		gem.CanCollide = false
+		light(gem, Color3.fromRGB(0, 245, 210), 32, 1.5)
+		p.Name = "NagaPillar_" .. i
+	end
+	for _ = 1, 32 do
+		local a = rng:NextNumber(0, math.pi * 2)
+		local r = rng:NextNumber(30, 145)
+		local crystal = mk(f, Vector3.new(1.8, rng:NextNumber(5, 14), 1.8), CFrame.new(c + Vector3.new(math.cos(a) * r, 3, math.sin(a) * r)) * CFrame.Angles(rng:NextNumber(-0.25, 0.25), rng:NextNumber(0, 6), rng:NextNumber(-0.25, 0.25)), Color3.fromRGB(60, 220, 255), Enum.Material.Neon)
+		crystal.CanCollide = false
+	end
+end
+
 ---------------------------------------------------------------- portals and markers
 local function buildPortals(parent: Instance)
 	for _, def in ipairs(LokaDefs.Portals) do
@@ -540,6 +567,7 @@ function WorldBuilder.build()
 	buildSvarga(world)
 	buildBardo(world)
 	buildMahaloka(world)
+	buildPatala(world)
 	buildMarkers()
 	buildPortals(world)
 	spawn.Position = WorldBuilder.place("bhumi", LokaDefs.Locations.bhumi_village.offset) + Vector3.new(0, 3, 0)

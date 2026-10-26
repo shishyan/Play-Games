@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
+local SoundService = game:GetService("SoundService")
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -27,6 +28,27 @@ local NUM_COLORS = {
 }
 
 local fxFolder: Folder
+
+local SOUNDS = {
+	hit = { id = "rbxassetid://12222208", pitch = 1.0, vol = 0.35 },
+	swing = { id = "rbxassetid://12222216", pitch = 1.05, vol = 0.3 },
+	proj = { id = "rbxassetid://12222216", pitch = 1.35, vol = 0.25 },
+	ring = { id = "rbxassetid://12222084", pitch = 0.9, vol = 0.45 },
+	chime = { id = "rbxassetid://12222253", pitch = 1.15, vol = 0.4 },
+}
+
+function Effects.sound(kind: string, pitchMult: number?)
+	local spec = SOUNDS[kind] or SOUNDS.chime
+	local s = Instance.new("Sound")
+	s.SoundId = spec.id
+	s.PlaybackSpeed = spec.pitch * (pitchMult or 1)
+	s.Volume = spec.vol
+	s.Parent = SoundService
+	s:Play()
+	task.delay(2.5, function()
+		s:Destroy()
+	end)
+end
 
 local function floatNumber(pos: Vector3, amount: number, colorKey: string)
 	local anchor = Instance.new("Part")
@@ -269,6 +291,7 @@ local LOKA_LIGHT = {
 	svarga = { clock = 12, ambient = Color3.fromRGB(190, 175, 140), brightness = 3, fogEnd = 2200, fog = Color3.fromRGB(255, 240, 205), density = 0.15 },
 	bardo = { clock = 0, ambient = Color3.fromRGB(90, 60, 140), brightness = 0.5, fogEnd = 500, fog = Color3.fromRGB(22, 12, 44), density = 0.5 },
 	mahaloka = { clock = 17, ambient = Color3.fromRGB(180, 150, 120), brightness = 2.8, fogEnd = 1800, fog = Color3.fromRGB(255, 225, 190), density = 0.2 },
+	patala = { clock = 0, ambient = Color3.fromRGB(20, 110, 110), brightness = 1.1, fogEnd = 700, fog = Color3.fromRGB(10, 45, 55), density = 0.4 },
 }
 
 -- Tint per Yuga: golden, amber, twilight, neon-shadow.
@@ -348,20 +371,30 @@ function Effects.start()
 	Remotes.get("Fx").OnClientEvent:Connect(function(p)
 		if p.kind == "num" then
 			floatNumber(p.pos, p.amount, p.color)
+			if p.color == "hit" then
+				Effects.sound("hit")
+			end
 		elseif p.kind == "ring" then
 			ring(p.pos, p.radius, ELEMENT_COLORS[p.color] or ELEMENT_COLORS.hit)
+			Effects.sound("ring")
 		elseif p.kind == "proj" then
 			projectile(p)
+			Effects.sound("proj")
 		elseif p.kind == "swing" then
 			swing(p)
+			Effects.sound("swing")
 		end
 	end)
 	Remotes.get("Toast").OnClientEvent:Connect(function(text, kind)
 		HUD.toast(text, kind)
+		if kind == "karma_good" or kind == "level" or kind == "quest" then
+			Effects.sound("chime")
+		end
 	end)
 	Remotes.get("Travel").OnClientEvent:Connect(function(loka, name)
 		currentLoka = loka
 		applyLighting()
+		Effects.sound("chime", 0.85)
 		HUD.toast("— " .. name .. " —", "path")
 	end)
 

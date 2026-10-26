@@ -34,6 +34,8 @@ function Profile.new(className: string, weaponId: string?)
 		debt = nil,
 		vault = nil,
 		legacy = 0,
+		mounts = {},
+		mounted = nil,
 	}
 end
 
@@ -48,6 +50,8 @@ function Profile.stats(profile)
 		base.maxHp *= 0.6
 		base.speedMult *= 0.8
 		base.diminished = true
+	elseif profile.mounted then
+		base.speedMult += (profile.mounted == "marut_stag" and 0.42 or 0.35)
 	end
 	base.maxHp = math.floor(base.maxHp)
 	return base
@@ -70,6 +74,8 @@ function Profile.ctx(profile, priceMult: number)
 		danaGiven = profile.danaGiven,
 		debt = profile.debt,
 		durability = profile.durability,
+		mounts = profile.mounts or {},
+		mounted = profile.mounted,
 		now = os.time(),
 	}
 end

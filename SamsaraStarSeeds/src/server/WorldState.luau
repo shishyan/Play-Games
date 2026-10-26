@@ -15,7 +15,7 @@ pcall(function()
 	store = DataStoreService:GetDataStore("SamsaraWorldV1")
 end)
 
-local data = { rta = 0, epoch = 0, funds = { stepwell = 0, pathshala = 0, dharmashala = 0 }, monuments = {} }
+local data = { rta = 0, epoch = 0, funds = { stepwell = 0, pathshala = 0, dharmashala = 0 }, monuments = {}, decree = "aranya_raksha" }
 local bootTime = os.time()
 local current = Yuga.at(0)
 local dirty = false
@@ -28,6 +28,7 @@ local function publish()
 	workspace:SetAttribute("YugaName", current.name)
 	workspace:SetAttribute("YugaRemaining", math.floor(current.remaining))
 	workspace:SetAttribute("YugaCycle", current.cycle)
+	workspace:SetAttribute("Decree", data.decree or "aranya_raksha")
 	for id in pairs(LokaDefs.CommunityProjects) do
 		workspace:SetAttribute("Fund_" .. id, data.funds[id] or 0)
 	end
@@ -142,6 +143,25 @@ end
 
 function WorldState.fundAmount(project: string): number
 	return data.funds[project] or 0
+end
+
+---------------------------------------------------------------- Regional Decrees (Sabha Parishad)
+function WorldState.setDecree(id: string): boolean
+	if not LokaDefs.Decrees[id] then
+		return false
+	end
+	data.decree = id
+	WorldState.addRta(4)
+	publish()
+	return true
+end
+
+function WorldState.decree()
+	return LokaDefs.Decrees[data.decree] or LokaDefs.Decrees.aranya_raksha
+end
+
+function WorldState.decreeId(): string
+	return data.decree or "aranya_raksha"
 end
 
 ---------------------------------------------------------------- Monuments of the transcended

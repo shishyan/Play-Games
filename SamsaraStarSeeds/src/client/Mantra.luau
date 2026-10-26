@@ -9,6 +9,7 @@ local Shared = ReplicatedStorage.Shared
 local Remotes = require(Shared.Remotes)
 local UI = require(script.Parent.UI)
 local Input = require(script.Parent.Input)
+local Effects = require(script.Parent.Effects)
 
 local Mantra = {}
 local C = UI.colors
@@ -34,6 +35,7 @@ local function press(key: string)
 	end
 	local t = os.clock() - active.t0
 	table.insert(active.inputs, { key = key, t = t })
+	Effects.sound("chime", key == "Z" and 0.9 or (key == "X" and 1.1 or 1.3))
 	-- feedback flash on the lane
 	local lane = active.lanes[key]
 	if lane then

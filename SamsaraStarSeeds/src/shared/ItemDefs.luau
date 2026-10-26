@@ -11,6 +11,7 @@ local Items = {
 	copper_ore = { name = "Copper Ore", icon = "🟤", kind = "material", desc = "Arthashastra metal. Sold or used by the smith.", price = 5 },
 	iron_ore = { name = "Iron Ore", icon = "⚫", kind = "material", desc = "Arthashastra metal. Used for stronger weapons.", price = 9 },
 	grain = { name = "Grain", icon = "🌾", kind = "material", desc = "Harvest from an irrigated field. Sells for a fair price.", price = 8 },
+	naga_mani = { name = "Naga Mani", icon = "💎", kind = "material", desc = "A luminous serpent-gem from Patala. Prized by craftsmen and sages.", price = 35 },
 }
 
 -- Herbs are items too, so inventory/UI treat them uniformly.
