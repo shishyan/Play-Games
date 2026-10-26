@@ -1031,11 +1031,21 @@ function getTerrainHeight(x, z) {
       }
 
       // Carve the Grand Imperial Canal & Southern Maritime Harbor Bay right through the City!
-      // 1. East-West Grand City Canal at dz = +28m (width 11m, depth Y = -2.35m so Ocean water at Y = -1.6m fills it!)
-      if (Math.abs(dx) < 280.0 && Math.abs(dx) > 6.2) {
-        const dCanal = Math.abs(dz - 28.0);
-        if (dCanal < 6.2) {
-          const cF = 1.0 - Math.max(0.0, (dCanal - 3.6) / 2.6);
+      // 1. Monumental Concentric Horseshoe River Loop Carved around the Temple Citadel (dist ~ 180m to 215m)
+      const dCitadelCenter = Math.hypot(dx, dz + 30.0);
+      if (dCitadelCenter > 175.0 && dCitadelCenter < 225.0) {
+        const dRiverMid = Math.abs(dCitadelCenter - 200.0);
+        if (dRiverMid < 16.0) {
+          const rF = 1.0 - Math.max(0.0, (dRiverMid - 9.0) / 7.0);
+          h = h * (1.0 - rF) + -2.45 * rF;
+        }
+      }
+
+      // 1B. East-West Inner Canal at dz = +48m connecting to the river loop
+      if (Math.abs(dx) < 200.0 && Math.abs(dx) > 8.0) {
+        const dCanal = Math.abs(dz - 48.0);
+        if (dCanal < 7.5) {
+          const cF = 1.0 - Math.max(0.0, (dCanal - 4.5) / 3.0);
           h = h * (1.0 - cF) + -2.35 * cF;
         }
       }
@@ -1743,6 +1753,7 @@ const lanternGeoShared = new THREE.SphereGeometry(0.22, 8, 8);
 const awningMatCache = {};
 
 function createShopPavilionMesh(awningHex = 0xd97706) {
+  if (awningHex === undefined || awningHex === null) awningHex = 0xd97706;
   const stall = new THREE.Group();
   if (!awningMatCache[awningHex]) {
     awningMatCache[awningHex] = new THREE.MeshStandardMaterial({ color: awningHex, roughness: 0.55, side: THREE.DoubleSide });
@@ -3323,40 +3334,120 @@ function createArticulatedTeenOrAnimalNPC(tunicHex, isAnimalFolk = false, hasQue
   return g;
 }
 
-// Spawn Exactly 108 Interactive 3D Shops Across the 7 Continents (Grand Bazaar Avenues + Mountain Roadway Outposts!)
-for (let sIdx = 0; sIdx < 108; sIdx++) {
-  const cont = CONTINENTS[sIdx % CONTINENTS.length];
-  const localIdx = Math.floor(sIdx / CONTINENTS.length); // 0..15 per continent
-  const arch = SHOP_ARCHETYPES[sIdx % SHOP_ARCHETYPES.length];
+// ============================================================================
+// 6B. ANCIENT DRAVIDIAN CONCENTRIC TEMPLE CITADEL METROPOLIS:
+//     12 NAMED STREETS, 108 SACRED SHOPS, 1000 LIVING CITIZENS & RIVER GHATS!
+// ============================================================================
 
-  let sx = cont.x;
-  let sz = cont.z;
-  let rotY = 0;
+// 12 Distinct Named Streets & Waypoint Loops in the Citadel Metropolis
+const CITADEL_12_STREETS = [
+  { id: 'street-1', name: 'Velli Street (Inner Pradakshina)', type: 'loop', cx: 0, cz: -30, halfW: 32, halfD: 32, width: 7.0 },
+  { id: 'street-2', name: 'Temple Tank Parikrama', type: 'loop', cx: -32, cz: -22, halfW: 19, halfD: 19, width: 6.0 },
+  { id: 'street-3', name: 'East Aadi Street (Gopuram Axis)', type: 'line', x1: 48, z1: -95, x2: 48, z2: 38, width: 8.0 },
+  { id: 'street-4', name: 'West Chithirai Street', type: 'line', x1: -48, z1: -95, x2: -48, z2: 38, width: 8.0 },
+  { id: 'street-5', name: 'South Car Street (Therku Ratha Veedhi)', type: 'line', x1: -98, z1: 46, x2: 98, z2: 46, width: 12.0 },
+  { id: 'street-6', name: 'North Car Street (Vadakku Ratha Veedhi)', type: 'line', x1: -98, z1: -112, x2: 98, z2: -112, width: 12.0 },
+  { id: 'street-7', name: 'Masi Street (Outer Prakaram Chariot Ring)', type: 'loop', cx: 0, cz: -33, halfW: 98, halfD: 82, width: 10.0 },
+  { id: 'street-8', name: 'Agraharam Lane (Courtyard Mansions)', type: 'line', x1: 72, z1: -85, x2: 72, z2: -10, width: 7.0 },
+  { id: 'street-9', name: 'Weaver’s Silk Bazaar', type: 'line', x1: -72, z1: -85, x2: -72, z2: -10, width: 7.5 },
+  { id: 'street-10', name: 'Goldsmith & Bronze Guild Alley', type: 'line', x1: -72, z1: -2, x2: -72, z2: 42, width: 7.0 },
+  { id: 'street-11', name: 'Spice Quay & River Bathing Promenade', type: 'line', x1: -115, z1: 68, x2: 115, z2: 68, width: 9.0 },
+  { id: 'street-12', name: 'Potter’s Terracotta Walkway', type: 'line', x1: 72, z1: -2, x2: 72, z2: 42, width: 7.0 }
+];
 
-  if (localIdx < 8) {
-    // 8 Shops lining the North-South Grand Bazaar Avenue
-    const side = localIdx % 2 === 0 ? -1 : 1;
-    const row = Math.floor(localIdx / 2);
-    sx = cont.x + side * 15.5;
-    sz = cont.z - 22.0 + row * 18.0;
-    rotY = side < 0 ? Math.PI * 0.5 : -Math.PI * 0.5;
-  } else if (localIdx < 12) {
-    // 4 Shops lining the East-West Cross-Bazaar Boulevard
-    const side = localIdx % 2 === 0 ? -1 : 1;
-    const col = localIdx - 8;
-    sx = cont.x + (col < 2 ? -34.0 - col * 16.0 : 34.0 + (col - 2) * 16.0);
-    sz = cont.z + side * 14.5;
-    rotY = side < 0 ? 0 : Math.PI;
+// Helper to evaluate a coordinate along one of the 12 named streets
+function getStreetCoordinate(street, t, lateralOffset = 0) {
+  // t is normalized progress [0, 1]
+  let sx = 0;
+  let sz = 0;
+  let dirX = 0;
+  let dirZ = 1;
+
+  if (street.type === 'line') {
+    sx = street.x1 + (street.x2 - street.x1) * t;
+    sz = street.z1 + (street.z2 - street.z1) * t;
+    const dx = street.x2 - street.x1;
+    const dz = street.z2 - street.z1;
+    const len = Math.hypot(dx, dz) || 1;
+    dirX = dx / len;
+    dirZ = dz / len;
+    // Apply lateral offset perpendicular to street direction
+    sx += -dirZ * lateralOffset;
+    sz += dirX * lateralOffset;
   } else {
-    // 4 Mountain Roadway Waystation Shops along the Spiral Ghat Roadway to the Summit!
-    const roadFrac = 0.18 + (localIdx - 12) * 0.19;
-    const { rx, rz } = getSpiralRoadPoint(cont, roadFrac);
-    sx = rx + 6.5;
-    sz = rz + 6.5;
-    rotY = Math.PI * 0.25;
+    // Rectangular loop
+    const perimeter = 4 * (street.halfW + street.halfD);
+    let dist = (t % 1.0) * perimeter;
+    if (dist < 0) dist += perimeter;
+
+    if (dist < 2 * street.halfW) {
+      // Top horizontal segment (West to East)
+      sx = street.cx - street.halfW + dist;
+      sz = street.cz - street.halfD;
+      dirX = 1; dirZ = 0;
+    } else if (dist < 2 * street.halfW + 2 * street.halfD) {
+      // Right vertical segment (North to South)
+      const d = dist - 2 * street.halfW;
+      sx = street.cx + street.halfW;
+      sz = street.cz - street.halfD + d;
+      dirX = 0; dirZ = 1;
+    } else if (dist < 4 * street.halfW + 2 * street.halfD) {
+      // Bottom horizontal segment (East to West)
+      const d = dist - (2 * street.halfW + 2 * street.halfD);
+      sx = street.cx + street.halfW - d;
+      sz = street.cz + street.halfD;
+      dirX = -1; dirZ = 0;
+    } else {
+      // Left vertical segment (South to North)
+      const d = dist - (4 * street.halfW + 2 * street.halfD);
+      sx = street.cx - street.halfW;
+      sz = street.cz + street.halfD - d;
+      dirX = 0; dirZ = -1;
+    }
+    // Perpendicular lateral offset
+    sx += -dirZ * lateralOffset;
+    sz += dirX * lateralOffset;
   }
 
+  return { x: sx, z: sz, dirX, dirZ, rotY: Math.atan2(dirX, dirZ) };
+}
+
+// 108 Richly Diverse Shop & Merchant Archetypes
+const BAZAAR_108_ARCHETYPES = [
+  { title: 'Kanchipuram Silk Guild', badge: 'SILK GUILD', icon: '🧵', action: 'bags', awning: 0x991b1b, greeting: 'Behold the finest golden woven silks and 18-slot traveler satchels!' },
+  { title: 'Temple Garland Crafter', badge: 'FLOWER CRAFT', icon: '🌸', action: 'shop', awning: 0xf59e0b, greeting: 'Fresh fragrant jasmine and tulsi garlands for your expedition blessing.' },
+  { title: 'Sacred Laddu & Prasad Kitchen', badge: 'PRASAD SHOP', icon: '🍯', action: 'innkeeper', greeting: 'Tirupati-style ghee laddus and sacred cardamom milk. +45% Well-Fed energy!' },
+  { title: 'Royal Bronze Bell Foundry', badge: 'BELL FOUNDRY', icon: '🔔', action: 'shop', awning: 0xb45309, greeting: 'Resonant temple bells and sounding chimes to ward off shadow spirits.' },
+  { title: 'Ayurvedic Soma Apothecary', badge: 'APOTHECARY', icon: '🌿', action: 'apothecary', awning: 0x15803d, greeting: 'Sanjeevani herbal draughts to instantly recharge all 6 Vigor Orbs!' },
+  { title: 'Ancient Palm-Leaf Astrologer', badge: 'ASTROLOGER', icon: '📜', action: 'quests', awning: 0x6d28d9, greeting: 'Your destiny across the 7 mountain continents is etched in the stars!' },
+  { title: 'Goldsmith Filigree Guild', badge: 'GOLDSMITH', icon: '💍', action: 'shop', awning: 0xd97706, greeting: 'Handcrafted navaratna talismans and gilded chest keys.' },
+  { title: 'Chola Weapon Forge', badge: 'ROYAL FORGE', icon: '⚔️', action: 'shop', awning: 0xb91c1c, greeting: 'Folded Wootz steel blades, sacred battle tridents, and saddle crampons.' },
+  { title: 'Ashva Steed Colt Groomer', badge: 'STABLE MASTER', icon: '🐎', action: 'mounts', awning: 0x0284c7, greeting: 'Your white winged Ashva steed is fed and ready to ride or take flight!' },
+  { title: 'Tanjore Sacred Art Gallery', badge: 'SACRED ART', icon: '🎨', action: 'shop', awning: 0x7c3aed, greeting: 'Golden leaf relief murals depicting the celestial mountain ascents.' },
+  { title: 'River Waterfront Spice Exchange', badge: 'SPICE QUAY', icon: '🌶️', action: 'shop', awning: 0xc2410c, greeting: 'Black Malabar pepper, cardamom pods, and Ceylon cinnamon quills.' },
+  { title: 'Terracotta Lamp Pottery', badge: 'POTTER SHOP', icon: '🏺', action: 'shop', awning: 0xa16207, greeting: 'Clay lamps and water storage matkas sculpted from river silt.' },
+];
+
+// Spawn Exactly 108 Sacred Shops Arrayed Systematically along the 12 Named Streets!
+for (let sIdx = 0; sIdx < 108; sIdx++) {
+  const streetIdx = sIdx % CITADEL_12_STREETS.length; // 0..11
+  const street = CITADEL_12_STREETS[streetIdx];
+  const localShopNum = Math.floor(sIdx / CITADEL_12_STREETS.length); // 0..8 (9 shops per street)
+  const arch = BAZAAR_108_ARCHETYPES[sIdx % BAZAAR_108_ARCHETYPES.length];
+
+  // Distribute along the street progress
+  const t = 0.08 + (localShopNum / 8.5) * 0.84;
+  const side = (localShopNum % 2 === 0) ? -1 : 1;
+  const offset = side * (street.width * 0.5 + 2.8);
+
+  const coord = getStreetCoordinate(street, t, offset);
+  const sx = coord.x;
+  const sz = coord.z;
   const sy = getTerrainHeight(sx, sz);
+
+  // Rotate shop to face toward the street center
+  const rotY = coord.rotY + (side > 0 ? -Math.PI * 0.5 : Math.PI * 0.5);
+
   const shopGroup = new THREE.Group();
   shopGroup.position.set(sx, sy, sz);
   shopGroup.rotation.y = rotY;
@@ -3364,48 +3455,48 @@ for (let sIdx = 0; sIdx < 108; sIdx++) {
   shopGroup.add(createShopPavilionMesh(arch.awning));
 
   const shopRing = new THREE.Mesh(sharedShopRingGeo, sharedShopRingMat);
-  shopRing.position.set(0, 0.12, 1.4);
+  shopRing.position.y = 0.12;
   shopGroup.add(shopRing);
 
-  // Mix of Animal & Teen Shopkeepers standing behind counter facing customers (+Z)!
-  if (localIdx % 3 === 0) {
-    loadSharedGLTF('https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Fox/glTF-Binary/Fox.glb', (gltf) => {
-      const foxKeeper = SkeletonUtils.clone(gltf.scene);
-      foxKeeper.scale.setScalar(0.022);
-      foxKeeper.position.set(0, 0, 1.35);
-      foxKeeper.rotation.y = 0; // Fox.glb faces +Z natively!
-      shopGroup.add(foxKeeper);
-    });
-  } else {
-    const keeper = createArticulatedTeenOrAnimalNPC(arch.awning, localIdx % 2 === 1, arch.action === 'quests');
-    keeper.position.set(0, 0, 1.35);
-    shopGroup.add(keeper);
-  }
+  // Resident Merchant NPC behind counter
+  const merchantGroup = new THREE.Group();
+  merchantGroup.position.set(0, 0, -0.7);
+
+  const robe = new THREE.Mesh(sharedRobeGeo, new THREE.MeshStandardMaterial({ color: (arch && arch.awning) ? arch.awning : 0xd97706, roughness: 0.6 }));
+  robe.position.y = 0.88;
+  const head = new THREE.Mesh(sharedHeadGeo, sharedSkinMat);
+  head.position.y = 1.48;
+  const turban = new THREE.Mesh(sharedHatGeo, goldMatShared);
+  turban.position.y = 1.74;
+  turban.scale.set(1.15, 0.6, 1.15);
+  merchantGroup.add(robe, head, turban);
+  shopGroup.add(merchantGroup);
 
   scene.add(shopGroup);
-  // Physical Collider for Shop Pavilion (4.2 x 3.6m footprint)
+
+  // Solid Physical Collider
   registerBoxCollider(sx, sz, 2.1, 1.8);
 
   const shopEntity = {
     id: `shop-108-${sIdx}`,
-    continent: cont,
-    tier: cont.tier,
+    continent: CONTINENTS[0],
+    streetName: street.name,
+    tier: 1,
     badge: `${arch.badge} #${sIdx + 1}`,
     kind: 'shop_npc',
     shopAction: arch.action,
-    questMarker: arch.action === 'quests' ? '❗' : null,
-    greeting: arch.greeting,
+    questMarker: arch.action === 'quests' ? '❓' : null,
+    greeting: `${arch.greeting} (Located on ${street.name})`,
     icon: arch.icon,
     name: `${arch.title} #${sIdx + 1}`,
     hp: 100,
     maxHp: 100,
     rejuvenated: true,
     mesh: shopGroup,
-    blightRing: shopRing,
     homeX: sx,
     homeZ: sz,
     wanderAngle: 0,
-    heightOffset: 3.6,
+    heightOffset: 2.8,
     mixer: null,
   };
 
@@ -3413,113 +3504,153 @@ for (let sIdx = 0; sIdx < 108; sIdx++) {
   interactables.push(shopEntity);
 }
 
-// Spawn Exactly 108 Active Forward-Facing Animal & Teen Adventurer NPCs Across the 7 Kingdoms & Mountain Roadways!
-for (let nIdx = 0; nIdx < 108; nIdx++) {
-  const cont = CONTINENTS[nIdx % CONTINENTS.length];
-  const localIdx = Math.floor(nIdx / CONTINENTS.length); // 0..15 per continent
-  const arch = CITIZEN_ARCHETYPES[nIdx % CITIZEN_ARCHETYPES.length];
+// ============================================================================
+// 1000 LIVING CITIZEN NPCs POPULATING THE 12 STREETS (STEADY 60 FPS)
+// ============================================================================
+const CITADEL_1000_NPCS = [];
+const TOTAL_METROPOLIS_NPCS = 1000;
 
-  let nx = cont.x;
-  let nz = cont.z;
-  let patrolRadius = 14.0;
-  let isRoadTrekker = false;
-  let roadProgress = 0;
+// Shared instanced geometries and materials for optimal memory and draw calls
+const npcBodyGeo = new THREE.CylinderGeometry(0.18, 0.28, 0.82, 8);
+const npcHeadGeo = new THREE.SphereGeometry(0.2, 8, 8);
+const npcLimbGeo = new THREE.CylinderGeometry(0.06, 0.05, 0.5, 6);
 
-  if (localIdx < 9) {
-    // 9 Bustling Kingdom Citizens (Animal Scouts & Gurukul Teens) patrolling the Bazaar Streets, Houses & Castle Plaza
-    const angle = (localIdx / 9) * Math.PI * 2.0;
-    const dist = 8.0 + (localIdx % 3) * 18.0;
-    nx = cont.x + Math.cos(angle) * dist;
-    nz = cont.z + Math.sin(angle) * dist;
-    patrolRadius = 12.0 + (localIdx % 4) * 6.0;
-  } else {
-    // 7 Mountain Roadway Teen & Animal Trekkers walking steadily FORWARD up the Spiral Mountain Roadway to the Summit!
-    isRoadTrekker = true;
-    roadProgress = 0.06 + ((localIdx - 9) / 7.0) * 0.86;
-    const { rx, rz } = getSpiralRoadPoint(cont, roadProgress);
-    nx = rx;
-    nz = rz;
-  }
+const NPC_ROBE_PALETTES = [
+  new THREE.MeshStandardMaterial({ color: 0xe07a5f, roughness: 0.65 }), // Terracotta
+  new THREE.MeshStandardMaterial({ color: 0xf4a261, roughness: 0.65 }), // Saffron
+  new THREE.MeshStandardMaterial({ color: 0x2a9d8f, roughness: 0.65 }), // Peacock Green
+  new THREE.MeshStandardMaterial({ color: 0x264653, roughness: 0.65 }), // Indigo
+  new THREE.MeshStandardMaterial({ color: 0x8ab17d, roughness: 0.65 }), // Shola Sage
+  new THREE.MeshStandardMaterial({ color: 0xd4a373, roughness: 0.65 }), // Sandalwood
+  new THREE.MeshStandardMaterial({ color: 0xbc6c25, roughness: 0.65 }), // Ochre
+  new THREE.MeshStandardMaterial({ color: 0x606c38, roughness: 0.65 }), // Olive
+];
 
+// Spawn 1000 Active Citizens across the 12 Named Streets
+for (let cIdx = 0; cIdx < TOTAL_METROPOLIS_NPCS; cIdx++) {
+  const streetIdx = cIdx % CITADEL_12_STREETS.length;
+  const street = CITADEL_12_STREETS[streetIdx];
+  const mat = NPC_ROBE_PALETTES[cIdx % NPC_ROBE_PALETTES.length];
+
+  // Distribute along street trajectory
+  const t = (cIdx / TOTAL_METROPOLIS_NPCS) * 7.0 + (cIdx * 0.173) % 1.0;
+  const side = ((cIdx % 3) - 1) * 0.7; // -0.7, 0, 0.7 lateral position
+  const lateral = side * (street.width * 0.38);
+
+  const coord = getStreetCoordinate(street, t % 1.0, lateral);
+  const nx = coord.x;
+  const nz = coord.z;
   const ny = getTerrainHeight(nx, nz);
+
   const npcGroup = new THREE.Group();
   npcGroup.position.set(nx, ny, nz);
+  npcGroup.rotation.y = coord.rotY;
 
-  const npcRing = new THREE.Mesh(sharedNpcRingGeo, sharedNpcRingMat);
-  npcRing.position.y = 0.12;
-  npcGroup.add(npcRing);
+  // Compact Articulated Citizen Character
+  const body = new THREE.Mesh(npcBodyGeo, mat);
+  body.position.y = 0.82;
+  const head = new THREE.Mesh(npcHeadGeo, sharedSkinMat);
+  head.position.y = 1.42;
+  npcGroup.add(body, head);
 
-  // Mix of Rigged 3D Animal Characters (Foxes & Foals/Stags) + Articulated Teen/Youth Adventurers & Kemono Animal-Folk!
-  if (localIdx % 4 === 0) {
-    // Rigged Golden Fox Scout (Fox.glb faces +Z natively, matching Math.atan2(dx, dz) 100% forward!)
-    loadSharedGLTF('https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Fox/glTF-Binary/Fox.glb', (gltf) => {
-      const foxModel = SkeletonUtils.clone(gltf.scene);
-      foxModel.scale.setScalar(0.024);
-      foxModel.rotation.y = 0; // +Z is forward for Fox.glb
-      npcGroup.add(foxModel);
-      if (gltf.animations && gltf.animations.length > 0) {
-        const m = new THREE.AnimationMixer(foxModel);
-        const runClip = gltf.animations[1] || gltf.animations[0];
-        m.clipAction(runClip).play();
-        citizenEntity.mixer = m;
-      }
-    });
-    if (arch.questMarker) {
-      const qSign = createWoW3DQuestSign(arch.questMarker === '❗');
-      qSign.position.set(0, 2.1, 0);
-      npcGroup.add(qSign);
-      npcGroup._questGem = qSign;
-    }
-  } else if (localIdx % 4 === 2) {
-    // Rigged Young Fawn / Foal Companion (Horse.glb faces +Z natively, matching Math.atan2(dx, dz) 100% forward!)
-    loadSharedGLTF('https://threejs.org/examples/models/gltf/Horse.glb', (gltf) => {
-      const foalModel = SkeletonUtils.clone(gltf.scene);
-      foalModel.scale.setScalar(0.0115);
-      foalModel.rotation.y = 0; // +Z is forward for Horse.glb
-      npcGroup.add(foalModel);
-      if (gltf.animations && gltf.animations[0]) {
-        const m = new THREE.AnimationMixer(foalModel);
-        m.clipAction(gltf.animations[0]).play();
-        citizenEntity.mixer = m;
-      }
-    });
-  } else {
-    // Articulated Youth / Teen Adventurer or Kemono Animal-Folk with swinging limbs facing +Z!
-    const walker = createArticulatedTeenOrAnimalNPC(arch.robeColor, arch.isAnimal, Boolean(arch.questMarker));
-    npcGroup.add(walker);
-    npcGroup._robeWalker = walker;
-  }
+  // Articulated legs for walking
+  const legL = new THREE.Mesh(npcLimbGeo, mat);
+  legL.position.set(-0.11, 0.28, 0);
+  const legR = new THREE.Mesh(npcLimbGeo, mat);
+  legR.position.set(0.11, 0.28, 0);
+  npcGroup.add(legL, legR);
 
   scene.add(npcGroup);
 
-  const citizenEntity = {
-    id: `npc-108-${nIdx}`,
-    continent: cont,
-    tier: cont.tier,
-    badge: `${arch.badge} #${nIdx + 1}`,
-    kind: 'town_npc',
-    npcRole: arch.role,
-    questMarker: arch.questMarker,
-    questCompleted: false,
-    icon: arch.icon,
-    name: `${arch.title} #${nIdx + 1}`,
-    hp: 100,
-    maxHp: 100,
-    rejuvenated: true,
-    mesh: npcGroup,
-    blightRing: npcRing,
-    homeX: nx,
-    homeZ: nz,
-    patrolRadius,
-    isRoadTrekker,
-    roadProgress,
-    wanderAngle: nIdx * 1.1,
-    heightOffset: 2.8,
-    mixer: null,
+  const speed = 0.8 + ((cIdx % 7) / 7.0) * 0.7; // 0.8 to 1.5 m/s
+  const direction = (cIdx % 2 === 0) ? 1 : -1;
+
+  const npcData = {
+    idx: cIdx,
+    street: street,
+    t: t % 1.0,
+    lateral: lateral,
+    speed: speed * 0.003 * direction,
+    group: npcGroup,
+    legL: legL,
+    legR: legR,
+    walkPhase: (cIdx * 1.6) % (Math.PI * 2),
+    entity: null
   };
 
-  createNameplateDOM(citizenEntity);
-  interactables.push(citizenEntity);
+  // Create interactive entity for 1 in every 8 citizens (125 fully interactive quest/dialogue citizens)
+  if (cIdx % 8 === 0) {
+    const arch = CITIZEN_ARCHETYPES[cIdx % CITIZEN_ARCHETYPES.length];
+    const citizenEntity = {
+      id: `citizen-1000-${cIdx}`,
+      continent: CONTINENTS[0],
+      tier: 1,
+      badge: `CITIZEN #${cIdx + 1}`,
+      kind: 'town_npc',
+      npcRole: arch.role,
+      questMarker: (cIdx % 16 === 0) ? '❓' : null,
+      icon: arch.icon,
+      name: `${arch.title} #${cIdx + 1}`,
+      hp: 100,
+      maxHp: 100,
+      rejuvenated: true,
+      mesh: npcGroup,
+      homeX: nx,
+      homeZ: nz,
+      heightOffset: 2.2,
+      mixer: null,
+    };
+    createNameplateDOM(citizenEntity);
+    interactables.push(citizenEntity);
+    npcData.entity = citizenEntity;
+  }
+
+  CITADEL_1000_NPCS.push(npcData);
+}
+
+// High-Performance 60FPS Spatial Update for the 1000 NPCs
+function updateCitadel1000NPCs(delta, playerPos) {
+  const pX = playerPos.x;
+  const pZ = playerPos.z;
+
+  for (let i = 0; i < TOTAL_METROPOLIS_NPCS; i++) {
+    const npc = CITADEL_1000_NPCS[i];
+    npc.t = (npc.t + npc.speed * delta * 60) % 1.0;
+    if (npc.t < 0) npc.t += 1.0;
+
+    // Fast bounding distance to player
+    const gx = npc.group.position.x;
+    const gz = npc.group.position.z;
+    const dx = gx - pX;
+    const dz = gz - pZ;
+    const distSq = dx * dx + dz * dz;
+
+    // LOD Level 1: Full transformation and limb swing within 90m
+    if (distSq < 8100) {
+      const coord = getStreetCoordinate(npc.street, npc.t, npc.lateral);
+      npc.group.position.x = coord.x;
+      npc.group.position.z = coord.z;
+      npc.group.position.y = getTerrainHeight(coord.x, coord.z);
+
+      const forwardY = npc.speed >= 0 ? coord.rotY : coord.rotY + Math.PI;
+      npc.group.rotation.y = forwardY;
+
+      npc.walkPhase += delta * 7.5;
+      const legAngle = Math.sin(npc.walkPhase) * 0.45;
+      npc.legL.rotation.x = legAngle;
+      npc.legR.rotation.x = -legAngle;
+
+      if (npc.entity) {
+        npc.entity.mesh.position.copy(npc.group.position);
+      }
+    } else if (i % 8 === (Math.floor(Date.now() / 250) % 8)) {
+      // LOD Level 2: Throttled update for distant NPCs (every 8 frames)
+      const coord = getStreetCoordinate(npc.street, npc.t, npc.lateral);
+      npc.group.position.x = coord.x;
+      npc.group.position.z = coord.z;
+      npc.group.position.y = getTerrainHeight(coord.x, coord.z);
+    }
+  }
 }
 
 // ============================================================================
@@ -5471,6 +5602,8 @@ function animate() {
   }
 
   // Animate Working City Transportation (Horse-Drawn Stagecoaches patrolling the Grand Highway!)
+    if (typeof updateCitadel1000NPCs === "function") updateCitadel1000NPCs(dt, playerGroup.position);
+
   for (let v = 0; v < animatedTransitVehicles.length; v++) {
     const veh = animatedTransitVehicles[v];
     if (veh.continent !== STATE.currentContinent) continue;
