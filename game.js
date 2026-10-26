@@ -1838,12 +1838,51 @@ const kWindowGlowMat = new THREE.MeshStandardMaterial({ color: 0xfef08a, emissiv
 const kFireGlowMat = new THREE.MeshStandardMaterial({ color: 0xfde047, emissive: 0xf97316, emissiveIntensity: 3.2 });
 const kSailMat = new THREE.MeshStandardMaterial({ color: 0xfef9c3, emissive: 0xfde047, emissiveIntensity: 0.25, side: THREE.DoubleSide });
 const kCrimsonSailMat = new THREE.MeshStandardMaterial({ color: 0xe11d48, emissive: 0x9f1239, emissiveIntensity: 0.25, side: THREE.DoubleSide });
+// Authentic Dravidian Temple City PBR Materials (Granite Sculptures, Terracotta Roof Tiles, Stucco & Golden Kalasams)
+const dravidianGraniteTex = createFoliageTexture(118, 112, 108);
+const terracottaTileTex = createFoliageTexture(184, 75, 41);
+const dravidianStuccoTex = createFoliageTexture(214, 204, 188);
+
+const dravidianGraniteMat = new THREE.MeshStandardMaterial({
+  map: dravidianGraniteTex,
+  bumpMap: dravidianGraniteTex,
+  bumpScale: 0.12,
+  roughness: 0.82,
+});
+const terracottaRoofMat = new THREE.MeshStandardMaterial({
+  map: terracottaTileTex,
+  bumpMap: terracottaTileTex,
+  bumpScale: 0.14,
+  roughness: 0.72,
+});
+const dravidianStuccoMat = new THREE.MeshStandardMaterial({
+  map: dravidianStuccoTex,
+  bumpMap: dravidianStuccoTex,
+  bumpScale: 0.08,
+  roughness: 0.78,
+});
+const dravidianGoldMat = new THREE.MeshStandardMaterial({
+  color: 0xfacc15,
+  emissive: 0xd97706,
+  emissiveIntensity: 1.8,
+  metalness: 0.85,
+  roughness: 0.22,
+});
+const lotusWaterMat = new THREE.MeshStandardMaterial({
+  color: 0x0284c7,
+  emissive: 0x0369a1,
+  emissiveIntensity: 0.45,
+  roughness: 0.15,
+  transparent: true,
+  opacity: 0.88,
+});
+
 const kRoofMats = [
-  new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.6 }),
-  new THREE.MeshStandardMaterial({ color: 0x0369a1, roughness: 0.6 }),
-  new THREE.MeshStandardMaterial({ color: 0xbe123c, roughness: 0.6 }),
-  new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.6 }),
-  new THREE.MeshStandardMaterial({ color: 0x6d28d9, roughness: 0.6 }),
+  terracottaRoofMat,
+  new THREE.MeshStandardMaterial({ color: 0x9a3412, roughness: 0.65 }),
+  new THREE.MeshStandardMaterial({ color: 0xc2410c, roughness: 0.65 }),
+  new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.65 }),
+  new THREE.MeshStandardMaterial({ color: 0x7c2d12, roughness: 0.65 }),
 ];
 
 const animatedShips = [];
@@ -1883,66 +1922,10 @@ function resolveBuildingCollisions(pos, radius = 0.95) {
 
 // Shared Geometries for Proper City Buildings, Townhouses, Warehouses, Bridges, Aqueducts, Ships & Boats
 const houseBodyGeo = new THREE.BoxGeometry(5.6, 3.4, 4.8);
+const houseWinGeo = new THREE.BoxGeometry(0.95, 0.95, 0.22);
 const houseUpperGeo = new THREE.BoxGeometry(6.1, 3.2, 5.2);
 const houseRoofGeo = new THREE.ConeGeometry(4.6, 2.5, 4);
 const houseDoorGeo = new THREE.BoxGeometry(1.1, 2.0, 0.25);
-const houseWinGeo = new THREE.BoxGeometry(0.95, 0.95, 0.22);
-const houseChimneyGeo = new THREE.BoxGeometry(0.75, 2.6, 0.75);
-const timberBeamGeo = new THREE.BoxGeometry(6.2, 0.28, 5.3);
-
-function createVillageHouseMesh(roofVariant = 0, isTwoStory = false) {
-  const h = new THREE.Group();
-  const rMat = kRoofMats[roofVariant % kRoofMats.length];
-
-  const walls = new THREE.Mesh(houseBodyGeo, kWallMat);
-  walls.position.y = 1.7;
-  walls.castShadow = true;
-  walls.receiveShadow = true;
-  h.add(walls);
-
-  let roofY = 4.55;
-  if (isTwoStory) {
-    // 2-Story Stormwind-Style Overhanging Timber-Framed City Townhouse!
-    const beam = new THREE.Mesh(timberBeamGeo, postMatShared);
-    beam.position.y = 3.45;
-    h.add(beam);
-
-    const upper = new THREE.Mesh(houseUpperGeo, kWallMat);
-    upper.position.y = 5.1;
-    upper.castShadow = true;
-    h.add(upper);
-
-    const uw1 = new THREE.Mesh(houseWinGeo, kWindowGlowMat);
-    uw1.position.set(-1.6, 5.2, 2.62);
-    const uw2 = new THREE.Mesh(houseWinGeo, kWindowGlowMat);
-    uw2.position.set(1.6, 5.2, 2.62);
-    h.add(uw1, uw2);
-    roofY = 7.85;
-  }
-
-  const roof = new THREE.Mesh(houseRoofGeo, rMat);
-  roof.position.y = roofY;
-  roof.rotation.y = Math.PI / 4;
-  if (isTwoStory) roof.scale.set(1.08, 1.15, 1.08);
-  roof.castShadow = true;
-  h.add(roof);
-
-  const door = new THREE.Mesh(houseDoorGeo, postMatShared);
-  door.position.set(0, 1.0, 2.42);
-  h.add(door);
-
-  const w1 = new THREE.Mesh(houseWinGeo, kWindowGlowMat);
-  w1.position.set(-1.55, 1.85, 2.42);
-  const w2 = new THREE.Mesh(houseWinGeo, kWindowGlowMat);
-  w2.position.set(1.55, 1.85, 2.42);
-  h.add(w1, w2);
-
-  const chimney = new THREE.Mesh(houseChimneyGeo, kStoneTrimMat);
-  chimney.position.set(1.6, roofY + 0.1, -1.1);
-  h.add(chimney);
-
-  return h;
-}
 
 // 1. Arched Stone Canal Bridge + Ornamental Streetlamps spanning the Grand City Canal
 const bridgeDeckGeo = new THREE.BoxGeometry(11.0, 0.7, 13.5);
@@ -2155,91 +2138,263 @@ function createCanalBoatSkiffMesh(variant = 0) {
   return boat;
 }
 
-const towerShaftGeo = new THREE.CylinderGeometry(2.1, 2.6, 11.5, 8);
-const towerTopGeo = new THREE.CylinderGeometry(2.8, 2.5, 1.8, 8);
-const towerRoofGeo = new THREE.ConeGeometry(3.4, 3.8, 8);
+// ============================================================================
+// DRAVIDIAN TEMPLE METROPOLIS 3D ARCHITECTURE GENERATORS
+// (Towering Tiered Gopurams, Concentric Fortress Prakarams, Nalukettu Courtyards, Stepped Tanks)
+// ============================================================================
 
-function createKingdomWatchtowerMesh(roofVariant = 0) {
-  const t = new THREE.Group();
-  const rMat = kRoofMats[roofVariant % kRoofMats.length];
-  const shaft = new THREE.Mesh(towerShaftGeo, stoneMat);
-  shaft.position.y = 5.75;
-  shaft.castShadow = true;
-  t.add(shaft);
+// 1. Towering Dravidian Raja-Gopuram Gateway Temple Tower (Pyramidal Stepped Shikhara with Kalasams)
+function createDravidianRajaGopuram(tierCount = 9, baseWidth = 16.0, baseDepth = 12.0) {
+  const gopuram = new THREE.Group();
 
-  const battlement = new THREE.Mesh(towerTopGeo, kWallMat);
-  battlement.position.y = 11.8;
-  t.add(battlement);
+  // Granite Upapeedha / Adhisthana Plinth Base with Central Arched Gateway Tunnel
+  const baseH = 7.5;
+  const plinth = new THREE.Mesh(new THREE.BoxGeometry(baseWidth, baseH, baseDepth), dravidianGraniteMat);
+  plinth.position.y = baseH / 2;
+  plinth.castShadow = true;
+  plinth.receiveShadow = true;
+  gopuram.add(plinth);
 
-  const spire = new THREE.Mesh(towerRoofGeo, rMat);
-  spire.position.y = 14.4;
-  t.add(spire);
+  // Gateway Entrance Opening (Torana Archway)
+  const gateTunnel = new THREE.Mesh(
+    new THREE.BoxGeometry(baseWidth * 0.35, baseH * 0.78, baseDepth * 1.05),
+    dravidianStuccoMat
+  );
+  gateTunnel.position.set(0, baseH * 0.39, 0);
+  gopuram.add(gateTunnel);
 
-  const beacon = new THREE.Mesh(lanternGeoShared, kWindowGlowMat);
-  beacon.scale.setScalar(2.1);
-  beacon.position.set(0, 12.2, 2.6);
-  t.add(beacon);
-  return t;
-}
+  // Stepped Pyramidal Tiers (Talas) tapering towards the sky
+  let curY = baseH;
+  const tierH = 2.8;
+  for (let t = 0; t < tierCount; t++) {
+    const factor = 1.0 - (t / tierCount) * 0.58;
+    const tw = baseWidth * factor;
+    const td = baseDepth * factor;
 
-const citadelBaseGeo = new THREE.BoxGeometry(26.0, 9.0, 20.0);
-const citadelTier2Geo = new THREE.BoxGeometry(16.0, 7.5, 13.0);
-const citadelDomeGeo = new THREE.SphereGeometry(5.6, 14, 12);
-const citadelSpireGeo = new THREE.ConeGeometry(1.4, 6.5, 8);
-const gatePillarGeo = new THREE.BoxGeometry(3.2, 10.5, 3.2);
-const gateBeamGeo = new THREE.BoxGeometry(16.5, 2.4, 3.6);
+    // Sculpted Tier Cornice / Kudu Kudus
+    const tierMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(tw, tierH, td),
+      t % 2 === 0 ? dravidianGraniteMat : dravidianStuccoMat
+    );
+    tierMesh.position.y = curY + tierH / 2;
+    tierMesh.castShadow = true;
+    tierMesh.receiveShadow = true;
+    gopuram.add(tierMesh);
 
-function createKingdomCastleMesh(contId = 0) {
-  const castle = new THREE.Group();
-  const rMat = kRoofMats[contId % kRoofMats.length];
+    // Tier projection moldings & decorative mini-shrines (Salas & Karnakutas)
+    const cornice = new THREE.Mesh(
+      new THREE.BoxGeometry(tw * 1.06, 0.45, td * 1.06),
+      dravidianGraniteMat
+    );
+    cornice.position.y = curY + tierH;
+    gopuram.add(cornice);
 
-  // Tier 1 Grand Palace Hall
-  const base = new THREE.Mesh(citadelBaseGeo, kWallMat);
-  base.position.y = 4.5;
-  base.castShadow = true;
-  base.receiveShadow = true;
-  castle.add(base);
-
-  // Tier 2 Royal Upper Keep
-  const upper = new THREE.Mesh(citadelTier2Geo, kWallMat);
-  upper.position.y = 12.2;
-  upper.castShadow = true;
-  castle.add(upper);
-
-  // Golden Sovereign Dome & Finial Spire
-  const dome = new THREE.Mesh(citadelDomeGeo, goldMatShared);
-  dome.position.y = 16.5;
-  castle.add(dome);
-
-  const finial = new THREE.Mesh(citadelSpireGeo, goldMatShared);
-  finial.position.y = 22.8;
-  castle.add(finial);
-
-  // 4 Corner Turret Towers on the Royal Citadel
-  [[-12.5, -9.5], [12.5, -9.5], [-12.5, 9.5], [12.5, 9.5]].forEach(([tx, tz]) => {
-    const turret = createKingdomWatchtowerMesh(contId);
-    turret.position.set(tx, 0, tz);
-    castle.add(turret);
-  });
-
-  // Grand Golden Archway Windows across the Palace Facade
-  for (let wx = -8; wx <= 8; wx += 4) {
-    const win = new THREE.Mesh(houseWinGeo, kWindowGlowMat);
-    win.scale.set(1.6, 2.4, 1.2);
-    win.position.set(wx, 5.2, 10.05);
-    castle.add(win);
+    curY += tierH;
   }
 
-  // Royal Courtyard Gate Archway in front of the Castle
-  const gateL = new THREE.Mesh(gatePillarGeo, stoneMat);
-  gateL.position.set(-5.8, 5.25, 15.5);
-  const gateR = new THREE.Mesh(gatePillarGeo, stoneMat);
-  gateR.position.set(5.8, 5.25, 15.5);
-  const gateTop = new THREE.Mesh(gateBeamGeo, rMat);
-  gateTop.position.set(0, 10.8, 15.5);
-  castle.add(gateL, gateR, gateTop);
+  // Vaulted Barrel-Roof Crown (Sala Shikhara / Wagon-Vault Gopuram Top)
+  const topFactor = 1.0 - 0.58;
+  const cw = baseWidth * topFactor * 1.1;
+  const cd = baseDepth * topFactor * 0.95;
+  const crownH = 3.6;
+  const crown = new THREE.Mesh(
+    new THREE.CylinderGeometry(cd * 0.5, cd * 0.52, cw, 12).rotateZ(Math.PI / 2),
+    terracottaRoofMat
+  );
+  crown.position.y = curY + crownH * 0.45;
+  crown.castShadow = true;
+  gopuram.add(crown);
 
-  return castle;
+  // Golden Kalasams (Finial Urns) crowning the peak
+  const kalasamCount = 7;
+  const kSpan = cw * 0.75;
+  for (let k = 0; k < kalasamCount; k++) {
+    const kx = -kSpan / 2 + (k / (kalasamCount - 1)) * kSpan;
+    const finial = new THREE.Mesh(new THREE.ConeGeometry(0.35, 1.45, 6), dravidianGoldMat);
+    finial.position.set(kx, curY + crownH + 0.6, 0);
+    gopuram.add(finial);
+  }
+
+  return gopuram;
+}
+
+// 2. Central Golden Vimana Sanctum (Srikovil with Golden Stupa Shikhara)
+function createDravidianVimanaSanctum() {
+  const sanctum = new THREE.Group();
+
+  // Granite Garbhagriha Chamber
+  const base = new THREE.Mesh(new THREE.BoxGeometry(22.0, 8.5, 22.0), dravidianGraniteMat);
+  base.position.y = 4.25;
+  base.castShadow = true;
+  base.receiveShadow = true;
+  sanctum.add(base);
+
+  // Tiered Stepped Vimana Pyramid
+  for (let v = 0; v < 5; v++) {
+    const vw = 20.0 - v * 3.2;
+    const vMesh = new THREE.Mesh(new THREE.BoxGeometry(vw, 2.4, vw), dravidianGraniteMat);
+    vMesh.position.y = 8.5 + v * 2.4 + 1.2;
+    vMesh.castShadow = true;
+    sanctum.add(vMesh);
+  }
+
+  // Golden Sovereign Shikhara & Gilded Stupi (Ananda Nilayam style)
+  const goldDome = new THREE.Mesh(new THREE.SphereGeometry(4.2, 16, 12), dravidianGoldMat);
+  goldDome.position.y = 22.8;
+  sanctum.add(goldDome);
+
+  const kalasa = new THREE.Mesh(new THREE.ConeGeometry(1.2, 3.8, 8), dravidianGoldMat);
+  kalasa.position.y = 28.0;
+  sanctum.add(kalasa);
+
+  // Four corner Mini-Gopurams flanking the central sanctum
+  [[-13, -13], [13, -13], [-13, 13], [13, 13]].forEach(([cx, cz]) => {
+    const cornerPillar = new THREE.Mesh(new THREE.BoxGeometry(4.8, 14.0, 4.8), dravidianGraniteMat);
+    cornerPillar.position.set(cx, 7.0, cz);
+    cornerPillar.castShadow = true;
+    const cFinial = new THREE.Mesh(new THREE.ConeGeometry(1.2, 3.2, 6), dravidianGoldMat);
+    cFinial.position.set(cx, 15.6, cz);
+    sanctum.add(cornerPillar, cFinial);
+  });
+
+  return sanctum;
+}
+
+// 3. Traditional Nalukettu / Agraharam Courtyard House (Red-Terracotta Tiled Pitched Roof with Open Central Nadumuttam)
+function createNalukettuCourtyardHouse(variant = 0) {
+  const house = new THREE.Group();
+  const width = 11.5;
+  const depth = 9.8;
+  const wallH = 3.6;
+
+  // Stucco outer walls with veranda colonnade
+  const walls = new THREE.Mesh(new THREE.BoxGeometry(width, wallH, depth), dravidianStuccoMat);
+  walls.position.y = wallH / 2;
+  walls.castShadow = true;
+  walls.receiveShadow = true;
+  house.add(walls);
+
+  // Front Veranda (Thinnai) Plinth with Carved Teak Wooden Pillars
+  const veranda = new THREE.Mesh(new THREE.BoxGeometry(width * 0.95, 0.45, 2.2), dravidianGraniteMat);
+  veranda.position.set(0, 0.22, depth / 2 + 1.1);
+  house.add(veranda);
+
+  for (let p = -3; p <= 3; p++) {
+    const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, wallH, 6), postMatShared);
+    pillar.position.set(p * (width * 0.14), wallH / 2, depth / 2 + 1.9);
+    house.add(pillar);
+  }
+
+  // Open Central Courtyard (Nadumuttam) cutout impression on the roof
+  // 4 Sloped Hipped Roof Sections with Authentic Kerala/Tamil Terracotta Clay Tiles
+  const roofH = 2.4;
+  const roof = new THREE.Mesh(new THREE.ConeGeometry(width * 0.72, roofH, 4), terracottaRoofMat);
+  roof.position.y = wallH + roofH / 2;
+  roof.rotation.y = Math.PI / 4;
+  roof.scale.set(1.22, 1.0, 1.05);
+  roof.castShadow = true;
+  house.add(roof);
+
+  // Decorative Golden Finial / Brass Lamp on the Gable Peak
+  const finial = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.85, 4), dravidianGoldMat);
+  finial.position.y = wallH + roofH + 0.42;
+  house.add(finial);
+
+  return house;
+}
+
+// 4. Sacred Stepped Temple Water Tank (Kalyani / Teppakulam) with Perimeter Stone Steps & Central Mandapam
+function createSteppedTempleTank(size = 32.0) {
+  const tank = new THREE.Group();
+
+  // Water Surface with Lotus pads
+  const water = new THREE.Mesh(new THREE.PlaneGeometry(size * 0.85, size * 0.85).rotateX(-Math.PI / 2), lotusWaterMat);
+  water.position.y = -1.25;
+  tank.add(water);
+
+  // Concentric Stepped Granite Terraces descending into the water
+  for (let s = 0; s < 4; s++) {
+    const stepW = size * (1.0 - s * 0.08);
+    const stepMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(stepW, 0.5, stepW),
+      dravidianGraniteMat
+    );
+    stepMesh.position.y = -s * 0.4;
+    stepMesh.receiveShadow = true;
+    tank.add(stepMesh);
+  }
+
+  // Central Neerazhi Mandapam (Pavilion in the center of the lake)
+  const centerPlatform = new THREE.Mesh(new THREE.BoxGeometry(6.2, 1.2, 6.2), dravidianGraniteMat);
+  centerPlatform.position.y = -0.5;
+  const centerPillars = [];
+  [[-2.2, -2.2], [2.2, -2.2], [-2.2, 2.2], [2.2, 2.2]].forEach(([px, pz]) => {
+    const pil = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 3.2, 6), dravidianGraniteMat);
+    pil.position.set(px, 1.5, pz);
+    centerPlatform.add(pil);
+  });
+  const centerRoof = new THREE.Mesh(new THREE.ConeGeometry(3.6, 2.2, 4), terracottaRoofMat);
+  centerRoof.position.y = 3.8;
+  centerRoof.rotation.y = Math.PI / 4;
+  const cFinial = new THREE.Mesh(new THREE.ConeGeometry(0.25, 1.1, 4), dravidianGoldMat);
+  cFinial.position.y = 5.2;
+  centerPlatform.add(centerRoof, cFinial);
+  tank.add(centerPlatform);
+
+  return tank;
+}
+
+// 5. Fortified Concentric Prakaram Stone Wall with Crenelated Battlements & Sentry Bastions
+function createPrakaramWallSegment(length = 42.0, height = 7.5, thickness = 3.6) {
+  const wall = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(length, height, thickness), dravidianGraniteMat);
+  body.position.y = height / 2;
+  body.castShadow = true;
+  body.receiveShadow = true;
+  wall.add(body);
+
+  // Crenelated parapet teeth along the rampart
+  const crenCount = Math.floor(length / 2.6);
+  for (let c = 0; c < crenCount; c++) {
+    const cx = -length / 2 + (c + 0.5) * 2.6;
+    const cren = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.1, thickness * 1.05), dravidianGraniteMat);
+    cren.position.set(cx, height + 0.55, 0);
+    wall.add(cren);
+  }
+  return wall;
+}
+
+// Watchtower / Bastion Tower replacement with Dravidian Stone Fortress Bastion
+function createKingdomWatchtowerMesh(roofVariant = 0) {
+  const bastion = new THREE.Group();
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 5.0, 10.5, 12), dravidianGraniteMat);
+  base.position.y = 5.25;
+  base.castShadow = true;
+  bastion.add(base);
+
+  const top = new THREE.Mesh(new THREE.CylinderGeometry(5.2, 4.6, 2.4, 12), dravidianGraniteMat);
+  top.position.y = 11.7;
+  bastion.add(top);
+
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(3.2, 10, 8), terracottaRoofMat);
+  dome.position.y = 13.8;
+  bastion.add(dome);
+
+  const finial = new THREE.Mesh(new THREE.ConeGeometry(0.35, 1.6, 6), dravidianGoldMat);
+  finial.position.y = 17.2;
+  bastion.add(finial);
+
+  return bastion;
+}
+
+// Palace / Castle replacement with Dravidian Golden Vimana Sanctum
+function createKingdomCastleMesh(contId = 0) {
+  return createDravidianVimanaSanctum();
+}
+
+// House replacement with Traditional Nalukettu / Agraharam Courtyard House
+function createVillageHouseMesh(roofVariant = 0, isTwoStory = false) {
+  return createNalukettuCourtyardHouse(roofVariant);
 }
 
 const campTentGeo = new THREE.ConeGeometry(2.3, 2.7, 4);
@@ -2283,24 +2438,130 @@ function createExpeditionCampgroundMesh(variant = 0) {
   return camp;
 }
 
+// 6. Sacred Banyan Tree (Vatavriksha) with Hanging Prop Roots and Stone Althara
+function createSacredBanyanTreeMesh() {
+  const tree = new THREE.Group();
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.4, 7.5, 12), barkMat);
+  trunk.position.y = 3.75;
+  tree.add(trunk);
+
+  const althara = new THREE.Mesh(new THREE.CylinderGeometry(4.8, 5.2, 0.7, 8), dravidianGraniteMat);
+  althara.position.y = 0.35;
+  althara.receiveShadow = true;
+  tree.add(althara);
+
+  [
+    [-3.8, -2.4], [3.8, -2.4], [-3.2, 3.4], [3.2, 3.4],
+    [-5.4, 0.5], [5.4, 0.5], [0, -4.8], [0, 4.8]
+  ].forEach(([rx, rz]) => {
+    const root = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.28, 7.0, 8), barkMat);
+    root.position.set(rx, 3.5, rz);
+    tree.add(root);
+  });
+
+  const banyanCanopyMat = lushCrownMat;
+  [
+    [0, 8.2, 0, 7.5],
+    [-4.5, 7.2, -3.2, 5.5], [4.5, 7.2, -3.2, 5.5],
+    [-4.5, 7.2, 3.2, 5.5], [4.5, 7.2, 3.2, 5.5],
+    [0, 8.8, -5.5, 5.0], [0, 8.8, 5.5, 5.0]
+  ].forEach(([cx, cy, cz, r]) => {
+    const cMesh = new THREE.Mesh(createSculptedCanopyGeometry(r), banyanCanopyMat);
+    cMesh.position.set(cx, cy, cz);
+    cMesh.castShadow = true;
+    tree.add(cMesh);
+  });
+
+  return tree;
+}
+
+// 7. Ceremonial River Bathing Ghats descending with broad flagstones into the water
+function createRiverGhatMesh(width = 38.0) {
+  const ghat = new THREE.Group();
+  const numSteps = 7;
+  const stepRise = 0.55;
+  const stepTread = 1.3;
+
+  for (let s = 0; s < numSteps; s++) {
+    const stepGeo = new THREE.BoxGeometry(width, stepRise, (numSteps - s) * stepTread);
+    const stepMesh = new THREE.Mesh(stepGeo, dravidianGraniteMat);
+    stepMesh.position.set(0, -s * stepRise, (numSteps - s) * stepTread * 0.5);
+    stepMesh.receiveShadow = true;
+    ghat.add(stepMesh);
+  }
+
+  [-width * 0.45, width * 0.45].forEach((bx) => {
+    const bollard = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.28, 1.1, 8), dravidianGraniteMat);
+    bollard.position.set(bx, 0.5, stepTread * 1.5);
+    ghat.add(bollard);
+  });
+
+  return ghat;
+}
+
 function spawnContinentKingdomAndVillages(cont) {
-  // 1. Grand Royal Kingdom Citadel / Palace overlooking the Capital Plaza (at cont.z - 62)
-  const castle = createKingdomCastleMesh(cont.id);
+  // 1. GRAND CENTRAL VIMANA SANCTUM (Inner Brahmasthana at cont.z - 62)
   const castleZ = cont.z - 62.0;
+  const castle = createKingdomCastleMesh(cont.id);
   castle.position.set(cont.x, getTerrainHeight(cont.x, castleZ), castleZ);
   scene.add(castle);
-  // Physical Collider for Citadel Hall (citadelBaseGeo 24x10x24)
-  registerBoxCollider(cont.x, castleZ, 12.5, 12.5);
+  // Physical Collider for Central Sanctum (22x22m)
+  registerBoxCollider(cont.x, castleZ, 11.5, 11.5);
 
-  // 2. Southern Kingdom City Gate & Twin Watchtowers welcoming travelers from the Harbor (at cont.z + 52)
+  // 2. MONUMENTAL RAJA-GOPURAM (Southern Royal Gateway at cont.z + 52)
   const southGateZ = cont.z + 52.0;
-  const wtL = createKingdomWatchtowerMesh(cont.id);
-  wtL.position.set(cont.x - 13.5, getTerrainHeight(cont.x - 13.5, southGateZ), southGateZ);
-  const wtR = createKingdomWatchtowerMesh(cont.id);
-  wtR.position.set(cont.x + 13.5, getTerrainHeight(cont.x + 13.5, southGateZ), southGateZ);
-  scene.add(wtL, wtR);
-  registerBoxCollider(cont.x - 13.5, southGateZ, 2.6, 2.6);
-  registerBoxCollider(cont.x + 13.5, southGateZ, 2.6, 2.6);
+  const rajaGopuram = createDravidianRajaGopuram(cont.id === 0 ? 9 : 7, 22.0, 12.0);
+  rajaGopuram.position.set(cont.x, getTerrainHeight(cont.x, southGateZ), southGateZ);
+  scene.add(rajaGopuram);
+  registerBoxCollider(cont.x - 7.5, southGateZ, 3.8, 5.5);
+  registerBoxCollider(cont.x + 7.5, southGateZ, 3.8, 5.5);
+
+  // 3. NORTHERN, EASTERN & WESTERN GOPURAMS (Cardinal Prakaram Gateways)
+  // North Gate
+  const northGop = createDravidianRajaGopuram(5, 16.0, 10.0);
+  northGop.position.set(cont.x, getTerrainHeight(cont.x, cont.z - 118.0), cont.z - 118.0);
+  scene.add(northGop);
+  registerBoxCollider(cont.x - 5.5, cont.z - 118.0, 2.8, 4.5);
+  registerBoxCollider(cont.x + 5.5, cont.z - 118.0, 2.8, 4.5);
+
+  // East & West Gates
+  [-52.0, 52.0].forEach((gx) => {
+    const sideGop = createDravidianRajaGopuram(5, 16.0, 10.0);
+    sideGop.position.set(cont.x + gx, getTerrainHeight(cont.x + gx, cont.z - 62.0), cont.z - 62.0);
+    sideGop.rotation.y = Math.PI * 0.5;
+    scene.add(sideGop);
+    registerBoxCollider(cont.x + gx, cont.z - 62.0 - 5.5, 4.5, 2.8);
+    registerBoxCollider(cont.x + gx, cont.z - 62.0 + 5.5, 4.5, 2.8);
+  });
+
+  // 4. FOUR CORNER BASTIONS (Burj Towers) on the Outer Prakaram Perimeter
+  [[-52.0, -118.0], [52.0, -118.0], [-52.0, 52.0], [52.0, 52.0]].forEach(([bx, bz]) => {
+    const bastion = createKingdomWatchtowerMesh(cont.id);
+    bastion.position.set(cont.x + bx, getTerrainHeight(cont.x + bx, cont.z + bz), cont.z + bz);
+    scene.add(bastion);
+    registerBoxCollider(cont.x + bx, cont.z + bz, 5.0, 5.0);
+  });
+
+  // 5. SACRED STEPPED TEMPLE WATER TANK (Kalyani / Teppakulam) in Western Courtyard
+  const tankX = cont.x - 28.0;
+  const tankZ = cont.z - 22.0;
+  const kalyani = createSteppedTempleTank(28.0);
+  kalyani.position.set(tankX, getTerrainHeight(tankX, tankZ) + 1.2, tankZ);
+  scene.add(kalyani);
+  registerBoxCollider(tankX, tankZ, 14.5, 14.5);
+
+  // 6. SACRED BANYAN TREE (Vatavriksha) in Eastern Courtyard
+  const banyanX = cont.x + 32.0;
+  const banyanZ = cont.z - 22.0;
+  const banyan = createSacredBanyanTreeMesh();
+  banyan.position.set(banyanX, getTerrainHeight(banyanX, banyanZ), banyanZ);
+  scene.add(banyan);
+  registerBoxCollider(banyanX, banyanZ, 3.5, 3.5);
+
+  // 7. CEREMONIAL RIVER BATHING GHATS along the City Canal
+  const riverGhat = createRiverGhatMesh(42.0);
+  riverGhat.position.set(cont.x, 2.35, cont.z + 28.0);
+  scene.add(riverGhat);
 
   // 3. Arched Stone Canal Bridge spanning the Grand Imperial City Canal at (cont.x, cont.z + 28)
   const canalBridge = createCanalBridgeMesh();
