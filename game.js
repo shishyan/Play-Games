@@ -953,6 +953,61 @@ function getRoadwayMask(c, x, z) {
   return mask;
 }
 
+// ============================================================================
+// 4 NEW REFERENCE CITIES (Continent I plains): sites + terrain carving
+// ============================================================================
+const NEW_CITY_SITES = [
+  { id: 'A', name: 'Gangapuram - River Delta Village', x: 1100, z: 500 },
+  { id: 'B', name: 'Valayapatti - Horseshoe River Village', x: -1100, z: 500 },
+  { id: 'C', name: 'Ratnapuri - Riverbank Sail Village', x: 1100, z: 1300 },
+  { id: 'D', name: 'Vijayapattanam - Coastal Temple Citadel', x: -1100, z: 1300 },
+];
+function cityStep(a, b, v) {
+  const t = Math.min(1, Math.max(0, (v - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+}
+function cityRiverX(site, z) {
+  if (site.id === 'A') return site.x + 170 + 35 * Math.sin((z - site.z) * 0.018);
+  return site.x - 190 + 30 * Math.sin((z - site.z) * 0.014);
+}
+function applyNewCityTerrain(x, z, h) {
+  for (let i = 0; i < NEW_CITY_SITES.length; i++) {
+    const s = NEW_CITY_SITES[i];
+    const dx = x - s.x;
+    const dz = z - s.z;
+    if (Math.abs(dx) > 700 || Math.abs(dz) > 700) continue;
+    if (s.id === 'A' || s.id === 'C') {
+      const w = s.id === 'A' ? 26 : 36;
+      const d = Math.abs(x - cityRiverX(s, z));
+      if (d < w) {
+        const f = (1 - cityStep(w * 0.55, w, d)) * (1 - cityStep(520, 650, Math.abs(dz)));
+        h = h * (1 - f) + -2.5 * f;
+      }
+    } else if (s.id === 'B') {
+      const dist = Math.hypot(dx, dz);
+      const ang = Math.atan2(dx, dz);
+      const d = Math.abs(dist - 160);
+      if (d < 24) {
+        const g = cityStep(0.18, 0.30, Math.abs(ang));
+        const f = (1 - cityStep(12, 24, d)) * g;
+        h = h * (1 - f) + -2.5 * f;
+      }
+    } else if (s.id === 'D') {
+      const bx = dx - 140;
+      if (bx > 0) {
+        const f = cityStep(0, 40, bx) * (1 - cityStep(380, 470, Math.abs(dz - 100)));
+        h = h * (1 - f) + -2.9 * f;
+      }
+      const dd = Math.hypot(x - (s.x - 120), z - (s.z - 230));
+      if (dd < 140) {
+        const p = 1 - cityStep(85, 140, dd);
+        h = h * (1 - p) + 17 * p;
+      }
+    }
+  }
+  return h;
+}
+
 function getTerrainHeight(x, z) {
   let maxContinentH = -8.5;
 
@@ -1057,6 +1112,7 @@ function getTerrainHeight(x, z) {
         h = h * (1.0 - bayF) + -2.85 * bayF;
       }
 
+      if (i === 0) h = applyNewCityTerrain(x, z, h);
       if (h > maxContinentH) maxContinentH = h;
     }
   }
@@ -5273,6 +5329,595 @@ function drawMinimap() {
 }
 
 const projVec = new THREE.Vector3();
+// ============================================================================
+// 4 NEW CITIES BUILT FROM THE REFERENCE IMAGES (built one by one)
+//  A: River-delta village | B: Horseshoe-loop village | C: Riverbank sail village
+//  D: Fortified coastal temple citadel with harbor
+// ============================================================================
+const cityBoats = [];
+const cityWalkers = [];
+
+function cityRng(seed) {
+  let a = seed | 0;
+  return function () {
+    a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const cityMat = {
+  wall: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 }),
+  roof: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.75 }),
+  dirt: new THREE.MeshStandardMaterial({ color: 0xb88a52, roughness: 1.0 }),
+  stone: new THREE.MeshStandardMaterial({ color: 0xb9a98a, roughness: 0.85 }),
+  paddy: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95 }),
+  leaf: new THREE.MeshStandardMaterial({ color: 0x2f7d32, roughness: 0.9 }),
+  trunk: new THREE.MeshStandardMaterial({ color: 0x5b3a1e, roughness: 1.0 }),
+  sand: new THREE.MeshStandardMaterial({ color: 0xe3cf9f, roughness: 1.0 }),
+  boat: new THREE.MeshStandardMaterial({ color: 0x4a3220, roughness: 0.8 }),
+  sail: new THREE.MeshStandardMaterial({ color: 0xf0c040, roughness: 0.7, side: THREE.DoubleSide }),
+  elephant: new THREE.MeshStandardMaterial({ color: 0x8b8b8b, roughness: 0.9 }),
+};
+const cityTmpObj = new THREE.Object3D();
+const cityTmpCol = new THREE.Color();
+
+function cityLand(x, z, minH = 1.4) {
+  return getTerrainHeight(x, z) > minH;
+}
+
+function cityScatter(rng, cx, cz, count, rMin, rMax, spacing, accept, existing) {
+  const out = [];
+  const all = existing ? existing.slice() : [];
+  let tries = 0;
+  while (out.length < count && tries < count * 40) {
+    tries++;
+    const ang = rng() * Math.PI * 2;
+    const r = rMin + Math.sqrt(rng()) * (rMax - rMin);
+    const x = cx + Math.cos(ang) * r;
+    const z = cz + Math.sin(ang) * r;
+    if (!cityLand(x, z) || (accept && !accept(x, z))) continue;
+    let ok = true;
+    for (let i = 0; i < all.length; i++) {
+      const ddx = all[i].x - x;
+      const ddz = all[i].z - z;
+      if (ddx * ddx + ddz * ddz < spacing * spacing) { ok = false; break; }
+    }
+    if (!ok) continue;
+    const p = { x, z };
+    out.push(p);
+    all.push(p);
+  }
+  return out;
+}
+
+function cityBuildHouses(rng, pts) {
+  if (!pts.length) return;
+  const wallGeo = new THREE.BoxGeometry(5.4, 3.0, 4.4);
+  wallGeo.translate(0, 1.5, 0);
+  const roofGeo = new THREE.ConeGeometry(4.6, 2.2, 4);
+  roofGeo.rotateY(Math.PI / 4);
+  roofGeo.translate(0, 4.1, 0);
+  const walls = new THREE.InstancedMesh(wallGeo, cityMat.wall, pts.length);
+  const roofs = new THREE.InstancedMesh(roofGeo, cityMat.roof, pts.length);
+  const wallCols = [0xd9c3a0, 0xe8dcc4, 0xc9a77c, 0xf1e6d0, 0xb98f66];
+  const roofCols = [0xa8442a, 0xb5532f, 0x9a3a22, 0xc0643a, 0x8d3b24];
+  pts.forEach((p, i) => {
+    const y = getTerrainHeight(p.x, p.z);
+    const rot = Math.round(rng() * 3) * (Math.PI / 2) + (rng() - 0.5) * 0.25;
+    const sc = 0.85 + rng() * 0.45;
+    cityTmpObj.position.set(p.x, y - 0.2, p.z);
+    cityTmpObj.rotation.set(0, rot, 0);
+    cityTmpObj.scale.set(sc, 0.9 + rng() * 0.3, sc);
+    cityTmpObj.updateMatrix();
+    walls.setMatrixAt(i, cityTmpObj.matrix);
+    roofs.setMatrixAt(i, cityTmpObj.matrix);
+    walls.setColorAt(i, cityTmpCol.setHex(wallCols[Math.floor(rng() * wallCols.length)]));
+    roofs.setColorAt(i, cityTmpCol.setHex(roofCols[Math.floor(rng() * roofCols.length)]));
+    registerBoxCollider(p.x, p.z, 2.9 * sc, 2.9 * sc);
+  });
+  scene.add(walls, roofs);
+}
+
+function cityBuildTrees(rng, pts) {
+  if (!pts.length) return;
+  const trunkGeo = new THREE.CylinderGeometry(0.3, 0.45, 3.4, 6);
+  trunkGeo.translate(0, 1.7, 0);
+  const canopyGeo = new THREE.SphereGeometry(2.6, 8, 6);
+  canopyGeo.scale(1, 0.85, 1);
+  canopyGeo.translate(0, 4.6, 0);
+  const trunks = new THREE.InstancedMesh(trunkGeo, cityMat.trunk, pts.length);
+  const canopies = new THREE.InstancedMesh(canopyGeo, cityMat.leaf, pts.length);
+  pts.forEach((p, i) => {
+    cityTmpObj.position.set(p.x, getTerrainHeight(p.x, p.z) - 0.1, p.z);
+    cityTmpObj.rotation.set(0, rng() * 6.28, 0);
+    const sc = 0.8 + rng() * 0.9;
+    cityTmpObj.scale.set(sc, sc, sc);
+    cityTmpObj.updateMatrix();
+    trunks.setMatrixAt(i, cityTmpObj.matrix);
+    canopies.setMatrixAt(i, cityTmpObj.matrix);
+    canopies.setColorAt(i, cityTmpCol.setHSL(0.27 + rng() * 0.07, 0.5, 0.2 + rng() * 0.1));
+  });
+  scene.add(trunks, canopies);
+}
+
+function cityBuildRoad(path, width = 4.2) {
+  const segs = [];
+  for (let i = 0; i < path.length - 1; i++) {
+    const a = path[i];
+    const b = path[i + 1];
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    const n = Math.max(1, Math.ceil(len / 5));
+    for (let k = 0; k < n; k++) {
+      const t0 = k / n;
+      const t1 = (k + 1) / n;
+      segs.push([a[0] + (b[0] - a[0]) * t0, a[1] + (b[1] - a[1]) * t0, a[0] + (b[0] - a[0]) * t1, a[1] + (b[1] - a[1]) * t1]);
+    }
+  }
+  const geo = new THREE.BoxGeometry(1, 0.26, width);
+  const mesh = new THREE.InstancedMesh(geo, cityMat.dirt, segs.length);
+  const p0 = new THREE.Vector3();
+  const p1 = new THREE.Vector3();
+  const dir = new THREE.Vector3();
+  const xAxis = new THREE.Vector3(1, 0, 0);
+  segs.forEach((s, i) => {
+    p0.set(s[0], Math.max(getTerrainHeight(s[0], s[1]), -0.5) + 0.14, s[1]);
+    p1.set(s[2], Math.max(getTerrainHeight(s[2], s[3]), -0.5) + 0.14, s[3]);
+    dir.subVectors(p1, p0);
+    const len = dir.length();
+    dir.normalize();
+    cityTmpObj.position.addVectors(p0, p1).multiplyScalar(0.5);
+    cityTmpObj.quaternion.setFromUnitVectors(xAxis, dir);
+    cityTmpObj.scale.set(len + 0.6, 1, 1);
+    cityTmpObj.updateMatrix();
+    mesh.setMatrixAt(i, cityTmpObj.matrix);
+  });
+  mesh.receiveShadow = true;
+  scene.add(mesh);
+  cityTmpObj.quaternion.identity();
+  return mesh;
+}
+
+function cityBuildPaddies(rng, pts) {
+  if (!pts.length) return;
+  const geo = new THREE.BoxGeometry(26, 0.22, 18);
+  const mesh = new THREE.InstancedMesh(geo, cityMat.paddy, pts.length);
+  pts.forEach((p, i) => {
+    const y = getTerrainHeight(p.x, p.z);
+    cityTmpObj.position.set(p.x, y + 0.08, p.z);
+    cityTmpObj.rotation.set(0, Math.round(rng()) * (Math.PI / 2), 0);
+    cityTmpObj.scale.set(1, 1, 1);
+    cityTmpObj.updateMatrix();
+    mesh.setMatrixAt(i, cityTmpObj.matrix);
+    mesh.setColorAt(i, cityTmpCol.setHSL(0.25 + rng() * 0.07, 0.62, 0.34 + rng() * 0.12));
+  });
+  scene.add(mesh);
+}
+
+function cityBanyan(x, z, scale = 1.8) {
+  const b = createSacredBanyanTreeMesh();
+  b.position.set(x, getTerrainHeight(x, z), z);
+  b.scale.setScalar(scale);
+  scene.add(b);
+  registerBoxCollider(x, z, 3.2 * scale, 3.2 * scale);
+}
+
+function cityBoat(x, z, rot, withSail) {
+  const g = new THREE.Group();
+  const hull = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.6, 5.4), cityMat.boat);
+  hull.position.y = 0.1;
+  g.add(hull);
+  const bow = new THREE.Mesh(new THREE.ConeGeometry(0.8, 1.6, 4), cityMat.boat);
+  bow.rotation.x = Math.PI / 2;
+  bow.rotation.y = Math.PI / 4;
+  bow.position.set(0, 0.1, 3.4);
+  g.add(bow);
+  if (withSail) {
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 5, 6), cityMat.trunk);
+    mast.position.y = 2.6;
+    const sail = new THREE.Mesh(new THREE.ConeGeometry(1.9, 4.2, 3), cityMat.sail);
+    sail.position.set(0, 3.0, 0.2);
+    g.add(mast, sail);
+  }
+  g.position.set(x, -1.42, z);
+  g.rotation.y = rot;
+  scene.add(g);
+  cityBoats.push({ mesh: g, baseY: -1.42, phase: x * 0.013 + z * 0.007 });
+}
+
+function cityPier(x, z, rot, length = 14) {
+  const g = new THREE.Group();
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(length, 0.3, 2.6), cityMat.trunk);
+  deck.position.set(length / 2, 0.55, 0);
+  g.add(deck);
+  for (let k = 0; k <= 3; k++) {
+    [-1.1, 1.1].forEach((pz) => {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 3.0, 6), cityMat.trunk);
+      post.position.set((k / 3) * length, -0.6, pz);
+      g.add(post);
+    });
+  }
+  g.position.set(x, 0.4, z);
+  g.rotation.y = rot;
+  scene.add(g);
+}
+
+function cityElephant(x, z, rot) {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(2.4, 2.2, 4.2), cityMat.elephant);
+  body.position.y = 2.6;
+  const head = new THREE.Mesh(new THREE.BoxGeometry(1.7, 1.8, 1.7), cityMat.elephant);
+  head.position.set(0, 3.0, 2.7);
+  const trunkM = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.16, 2.2, 6), cityMat.elephant);
+  trunkM.position.set(0, 1.8, 3.6);
+  const earL = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.4, 1.2), cityMat.elephant);
+  earL.position.set(-1.0, 3.1, 2.4);
+  const earR = earL.clone();
+  earR.position.x = 1.0;
+  g.add(body, head, trunkM, earL, earR);
+  [[-0.8, -1.4], [0.8, -1.4], [-0.8, 1.4], [0.8, 1.4]].forEach(([lx, lz]) => {
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.38, 2.0, 6), cityMat.elephant);
+    leg.position.set(lx, 1.0, lz);
+    g.add(leg);
+  });
+  g.position.set(x, getTerrainHeight(x, z), z);
+  g.rotation.y = rot;
+  scene.add(g);
+}
+
+function cityStupa(x, z, scale = 1) {
+  const g = new THREE.Group();
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(5.5, 6.5, 2.2, 12), dravidianGraniteMat);
+  base.position.y = 1.1;
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(4.4, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2), dravidianStuccoMat);
+  dome.position.y = 2.2;
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.5, 2.2, 8), dravidianGraniteMat);
+  neck.position.y = 7.1;
+  const spire = new THREE.Mesh(new THREE.ConeGeometry(1.2, 4.6, 8), dravidianGoldMat);
+  spire.position.y = 10.5;
+  g.add(base, dome, neck, spire);
+  g.scale.setScalar(scale);
+  g.position.set(x, getTerrainHeight(x, z), z);
+  scene.add(g);
+  registerBoxCollider(x, z, 6 * scale, 6 * scale);
+}
+
+function cityShops(rng, site, line, count, tag) {
+  for (let i = 0; i < count; i++) {
+    const t = (i + 0.5) / count;
+    const px = line[0] + (line[2] - line[0]) * t;
+    const pz = line[1] + (line[3] - line[1]) * t;
+    const side = i % 2 === 0 ? -1 : 1;
+    const dxl = line[2] - line[0];
+    const dzl = line[3] - line[1];
+    const len = Math.hypot(dxl, dzl) || 1;
+    const sx = px + (-dzl / len) * side * 7.2;
+    const sz = pz + (dxl / len) * side * 7.2;
+    if (!cityLand(sx, sz)) continue;
+    const arch = BAZAAR_108_ARCHETYPES[Math.floor(rng() * BAZAAR_108_ARCHETYPES.length)];
+    const grp = new THREE.Group();
+    grp.position.set(sx, getTerrainHeight(sx, sz), sz);
+    grp.rotation.y = Math.atan2(dxl, dzl) + (side > 0 ? -Math.PI / 2 : Math.PI / 2);
+    grp.add(createShopPavilionMesh(arch.awning));
+    const ring = new THREE.Mesh(sharedShopRingGeo, sharedShopRingMat);
+    ring.position.y = 0.12;
+    grp.add(ring);
+    scene.add(grp);
+    registerBoxCollider(sx, sz, 2.1, 1.8);
+    const ent = {
+      id: `citynew-shop-${site.id}-${i}`,
+      continent: CONTINENTS[0],
+      tier: 1,
+      badge: `${arch.badge} (${tag})`,
+      kind: 'shop_npc',
+      shopAction: arch.action,
+      questMarker: arch.action === 'quests' ? '\u2753' : null,
+      greeting: arch.greeting,
+      icon: arch.icon,
+      name: `${arch.title} - ${site.name.split(' - ')[0]}`,
+      hp: 100, maxHp: 100, rejuvenated: true,
+      mesh: grp, homeX: sx, homeZ: sz, wanderAngle: 0, heightOffset: 2.8, mixer: null,
+    };
+    createNameplateDOM(ent);
+    interactables.push(ent);
+  }
+}
+
+function cityWalkersAlong(rng, path, count) {
+  for (let i = 0; i < count; i++) {
+    const si = Math.floor(rng() * (path.length - 1));
+    const a = path[si];
+    const b = path[si + 1];
+    const g = new THREE.Group();
+    const mat = NPC_ROBE_PALETTES[Math.floor(rng() * NPC_ROBE_PALETTES.length)];
+    const body = new THREE.Mesh(npcBodyGeo, mat);
+    body.position.y = 0.82;
+    const head = new THREE.Mesh(npcHeadGeo, sharedSkinMat);
+    head.position.y = 1.42;
+    const legL = new THREE.Mesh(npcLimbGeo, mat);
+    legL.position.set(-0.11, 0.28, 0);
+    const legR = new THREE.Mesh(npcLimbGeo, mat);
+    legR.position.set(0.11, 0.28, 0);
+    g.add(body, head, legL, legR);
+    scene.add(g);
+    cityWalkers.push({
+      g, legL, legR, a, b,
+      lat: (rng() - 0.5) * 2.6,
+      speed: 0.04 + rng() * 0.05,
+      t: rng(),
+      dir: rng() < 0.5 ? 1 : -1,
+      phase: rng() * 6.28,
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// CITY A: Gangapuram river-delta village (image 1)
+// ---------------------------------------------------------------------------
+function buildCityA(site) {
+  const rng = cityRng(101);
+  const cx = site.x - 20;
+  const cz = site.z;
+  const rx = (z) => cityRiverX(site, z);
+  const mainRoad = [[cx - 10, cz - 120], [cx - 6, cz - 60], [cx - 12, cz], [cx - 4, cz + 60], [cx - 10, cz + 120]];
+  const dockRoad = [[cx - 12, cz + 8], [cx + 30, cz + 14], [cx + 70, cz + 8], [rx(cz + 8) - 30, cz + 8]];
+  const lane2 = [[cx - 80, cz - 30], [cx - 40, cz - 20], [cx - 6, cz - 60]];
+  const houses = cityScatter(rng, cx, cz, 105, 9, 105, 10.5, (x, z) => x < rx(z) - 36 && Math.abs(x - (cx - 8)) > 5.5);
+  cityBuildHouses(rng, houses);
+  cityBuildTrees(rng, cityScatter(rng, cx, cz, 60, 10, 125, 8, (x, z) => x < rx(z) - 32, houses));
+  [mainRoad, dockRoad, lane2].forEach((p) => cityBuildRoad(p));
+  cityBanyan(cx - 36, cz - 26, 2.0);
+  cityBanyan(cx + 28, cz + 32, 1.8);
+  cityBuildPaddies(rng, cityScatter(rng, cx, cz, 34, 118, 300, 22, (x, z) => Math.abs(x - rx(z)) > 44, houses));
+  [cz + 8, cz + 46].forEach((pz) => cityPier(rx(pz) - 30, pz, 0, 20));
+  for (let i = 0; i < 7; i++) cityBoat(rx(cz - 80 + i * 30) + (rng() - 0.5) * 16, cz - 80 + i * 30, Math.PI / 2 * (rng() < 0.5 ? 1 : -1) + (rng() - 0.5) * 0.4, i % 3 === 0);
+  cityShops(rng, site, [cx - 10, cz - 90, cx - 8, cz + 90], 6, 'Delta Bazaar');
+  cityWalkersAlong(rng, mainRoad.concat(dockRoad), 30);
+}
+
+// ---------------------------------------------------------------------------
+// CITY B: Valayapatti horseshoe river-loop village (image 2)
+// ---------------------------------------------------------------------------
+function buildCityB(site) {
+  const rng = cityRng(202);
+  const cx = site.x;
+  const cz = site.z;
+  const ring = [];
+  for (let k = 0; k <= 28; k++) {
+    const a = (k / 28) * Math.PI * 2;
+    ring.push([cx + Math.sin(a) * 126, cz + Math.cos(a) * 126]);
+  }
+  const causeway = [[cx, cz + 126], [cx, cz + 200], [cx, cz + 290]];
+  const crossA = [[cx - 120, cz], [cx, cz + 4], [cx + 120, cz]];
+  const crossB = [[cx, cz - 120], [cx + 2, cz], [cx, cz + 126]];
+  const houses = cityScatter(rng, cx, cz, 110, 30, 116, 10.5, (x, z) => Math.hypot(x - cx, z - cz) < 119 && Math.hypot(x - cx, z - cz) > 28);
+  cityBuildHouses(rng, houses);
+  cityBuildTrees(rng, cityScatter(rng, cx, cz, 55, 20, 128, 8, (x, z) => Math.hypot(x - cx, z - cz) < 132, houses));
+  [ring, causeway, crossA, crossB].forEach((p) => cityBuildRoad(p));
+  cityBanyan(cx - 18, cz - 10, 2.2);
+  cityBanyan(cx + 26, cz + 14, 2.0);
+  cityBuildPaddies(rng, cityScatter(rng, cx, cz, 32, 196, 340, 22, (x, z) => Math.hypot(x - cx, z - cz) > 190, houses));
+  for (let k = 0; k < 8; k++) {
+    const a = 0.7 + k * 0.72;
+    cityBoat(cx + Math.sin(a) * 160, cz + Math.cos(a) * 160, a + Math.PI / 2, k % 4 === 0);
+  }
+  cityPier(cx - 142, cz + 40, 0, 16);
+  cityShops(rng, site, [cx - 100, cz + 4, cx + 100, cz + 2], 6, 'Loop Bazaar');
+  cityWalkersAlong(rng, ring.concat(crossA, crossB), 30);
+}
+
+// ---------------------------------------------------------------------------
+// CITY C: Ratnapuri riverbank sail village (image 3)
+// ---------------------------------------------------------------------------
+function buildCityC(site) {
+  const rng = cityRng(303);
+  const rx = (z) => cityRiverX(site, z);
+  const cx = site.x + 20;
+  const cz = site.z;
+  const bankRoad = [];
+  for (let z = cz - 130; z <= cz + 130; z += 26) bankRoad.push([rx(z) + 62, z]);
+  const eastRoad = [[rx(cz) + 62, cz + 10], [cx + 40, cz + 14], [cx + 120, cz + 8], [cx + 230, cz]];
+  const lane = [[rx(cz - 70) + 62, cz - 70], [cx + 30, cz - 60], [cx + 90, cz - 70]];
+  const houses = cityScatter(rng, cx, cz, 100, 8, 110, 10.5, (x, z) => x > rx(z) + 46);
+  cityBuildHouses(rng, houses);
+  cityBuildTrees(rng, cityScatter(rng, cx, cz, 50, 10, 130, 8, (x, z) => x > rx(z) + 42, houses));
+  [bankRoad, eastRoad, lane].forEach((p) => cityBuildRoad(p));
+  const beachGeo = new THREE.BoxGeometry(34, 0.22, 15);
+  const beach = new THREE.InstancedMesh(beachGeo, cityMat.sand, 20);
+  for (let i = 0; i < 20; i++) {
+    const z = cz - 140 + i * 14.5;
+    cityTmpObj.position.set(rx(z) + 30, Math.max(getTerrainHeight(rx(z) + 30, z), 0.2) + 0.1, z);
+    cityTmpObj.rotation.set(0, 0, 0);
+    cityTmpObj.scale.set(1, 1, 1);
+    cityTmpObj.updateMatrix();
+    beach.setMatrixAt(i, cityTmpObj.matrix);
+  }
+  scene.add(beach);
+  cityBanyan(cx - 30, cz - 20, 2.0);
+  cityBanyan(cx + 40, cz + 30, 1.8);
+  cityBuildPaddies(rng, cityScatter(rng, cx, cz, 36, 115, 310, 22, (x, z) => x > rx(z) + 60, houses));
+  for (let i = 0; i < 6; i++) cityBoat(rx(cz - 70 + i * 28) - 10 - rng() * 14, cz - 70 + i * 28, (rng() - 0.5) * 0.7, i % 2 === 0);
+  cityPier(rx(cz + 10) + 10, cz + 10, Math.PI, 14);
+  cityShops(rng, site, [rx(cz - 90) + 62, cz - 90, rx(cz + 90) + 62, cz + 90], 6, 'Bank Bazaar');
+  cityWalkersAlong(rng, bankRoad.concat(eastRoad), 30);
+}
+
+// ---------------------------------------------------------------------------
+// CITY D: Vijayapattanam coastal temple citadel + harbor (image 4)
+// ---------------------------------------------------------------------------
+function buildCityD(site) {
+  const rng = cityRng(404);
+  const hx = site.x - 120;
+  const hz = site.z - 230;
+  const hy = 17;
+  const halfW = 65;
+  const halfD = 45;
+  const wallH = 9;
+
+  // Fortress walls on the hill plateau
+  const wallMat = dravidianGraniteMat;
+  const addWall = (cx0, cz0, w, d) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, wallH, d), wallMat);
+    m.position.set(cx0, hy + wallH / 2 - 0.4, cz0);
+    m.castShadow = true;
+    scene.add(m);
+    registerBoxCollider(cx0, cz0, w / 2, d / 2);
+  };
+  addWall(hx, hz - halfD, halfW * 2 + 5, 5);
+  addWall(hx - halfW, hz, 5, halfD * 2);
+  addWall(hx + halfW, hz, 5, halfD * 2);
+  const gateGap = 9;
+  addWall(hx - (halfW + gateGap) / 2 - 0.5, hz + halfD, halfW - gateGap, 5);
+  addWall(hx + (halfW + gateGap) / 2 + 0.5, hz + halfD, halfW - gateGap, 5);
+
+  // Crenellations
+  const merlonGeo = new THREE.BoxGeometry(1.6, 1.5, 1.6);
+  const merlonPts = [];
+  const sideLine = (x0, z0, x1, z1) => {
+    const len = Math.hypot(x1 - x0, z1 - z0);
+    const n = Math.floor(len / 3.4);
+    for (let i = 0; i <= n; i++) merlonPts.push([x0 + ((x1 - x0) * i) / n, z0 + ((z1 - z0) * i) / n]);
+  };
+  sideLine(hx - halfW, hz - halfD, hx + halfW, hz - halfD);
+  sideLine(hx - halfW, hz - halfD, hx - halfW, hz + halfD);
+  sideLine(hx + halfW, hz - halfD, hx + halfW, hz + halfD);
+  sideLine(hx - halfW, hz + halfD, hx - gateGap, hz + halfD);
+  sideLine(hx + gateGap, hz + halfD, hx + halfW, hz + halfD);
+  const merlons = new THREE.InstancedMesh(merlonGeo, wallMat, merlonPts.length);
+  merlonPts.forEach((p, i) => {
+    cityTmpObj.position.set(p[0], hy + wallH + 0.35, p[1]);
+    cityTmpObj.rotation.set(0, 0, 0);
+    cityTmpObj.scale.set(1, 1, 1);
+    cityTmpObj.updateMatrix();
+    merlons.setMatrixAt(i, cityTmpObj.matrix);
+  });
+  scene.add(merlons);
+
+  // Corner & mid bastions
+  [[-halfW, -halfD], [halfW, -halfD], [-halfW, halfD], [halfW, halfD], [0, -halfD], [-halfW, 0], [halfW, 0]].forEach(([bx, bz]) => {
+    const b = createKingdomWatchtowerMesh(0);
+    b.position.set(hx + bx, hy - 0.4, hz + bz);
+    scene.add(b);
+    registerBoxCollider(hx + bx, hz + bz, 4.6, 4.6);
+  });
+
+  // Gopurams: south main gate, east side gate, inner north gopuram, central vimana
+  const gS = createDravidianRajaGopuram(9, 22.0, 12.0);
+  gS.position.set(hx, hy - 0.4, hz + halfD);
+  scene.add(gS);
+  const gE = createDravidianRajaGopuram(7, 18.0, 10.0);
+  gE.position.set(hx + halfW, hy - 0.4, hz + 10);
+  gE.rotation.y = Math.PI / 2;
+  scene.add(gE);
+  const gN = createDravidianRajaGopuram(7, 16.0, 10.0);
+  gN.position.set(hx - 10, hy - 0.4, hz - halfD + 8);
+  scene.add(gN);
+  const vim = createDravidianVimanaSanctum();
+  vim.position.set(hx + 10, hy - 0.4, hz - 4);
+  scene.add(vim);
+  registerBoxCollider(hx + 10, hz - 4, 11.5, 11.5);
+
+  // Ramp road from citadel gate down to the town
+  const townCx = site.x + 10;
+  const townCz = site.z + 40;
+  const ramp = [[hx, hz + halfD + 6], [hx + 10, hz + halfD + 40], [hx + 30, hz + halfD + 90], [townCx - 20, townCz - 40], [townCx, townCz]];
+  cityBuildRoad(ramp, 5.0);
+
+  // Town houses, roads, trees
+  const houses = cityScatter(rng, townCx, townCz, 78, 10, 105, 10.5, (x, z) => x < site.x + 118 && Math.hypot(x - hx, z - hz) > 150);
+  cityBuildHouses(rng, houses);
+  cityBuildTrees(rng, cityScatter(rng, townCx, townCz, 45, 10, 130, 8, (x, z) => x < site.x + 118 && Math.hypot(x - hx, z - hz) > 150, houses));
+  const quay = [[site.x - 60, site.z + 20], [site.x + 10, site.z + 24], [site.x + 112, site.z + 30]];
+  const quay2 = [[townCx, townCz - 20], [townCx - 4, townCz + 60], [townCx + 20, townCz + 120]];
+  [quay, quay2].forEach((p) => cityBuildRoad(p));
+  cityBanyan(townCx - 40, townCz - 24, 1.8);
+
+  // Paddy islands with stupas
+  cityBuildPaddies(rng, cityScatter(rng, site.x - 120, site.z - 40, 28, 40, 230, 22, (x, z) => Math.hypot(x - hx, z - hz) > 150, houses));
+  [[site.x - 190, site.z - 10], [site.x - 90, site.z - 80], [site.x - 230, site.z + 80]].forEach(([sx, sz]) => cityStupa(sx, sz, 1.0));
+
+  // Harbor: piers, lighthouse, galleons, elephants on the beach
+  cityPier(site.x + 112, site.z + 30, 0, 44);
+  cityPier(site.x + 118, site.z + 96, 0, 36);
+  const lh = createHarborLighthouseMesh();
+  lh.position.set(site.x + 130, getTerrainHeight(site.x + 130, site.z + 170), site.z + 170);
+  scene.add(lh);
+  [[site.x + 270, site.z + 70, true], [site.x + 340, site.z + 170, false], [site.x + 230, site.z + 210, true]].forEach(([gx, gz, cr], gi) => {
+    const gal = createMerchantGalleonMesh(cr);
+    gal.position.set(gx, -1.5, gz);
+    gal.rotation.y = 0.4 + gi * 0.5;
+    scene.add(gal);
+    cityBoats.push({ mesh: gal, baseY: -1.5, phase: gi * 1.9 });
+  });
+  [[site.x + 112, site.z + 62], [site.x + 108, site.z + 76], [site.x + 114, site.z + 88]].forEach(([ex, ez], ei) => cityElephant(ex, ez, Math.PI / 2 + ei * 0.2));
+  for (let i = 0; i < 5; i++) cityBoat(site.x + 180 + rng() * 150, site.z - 60 + rng() * 200, rng() * 6.28, i % 2 === 0);
+
+  cityShops(rng, site, [site.x - 60, site.z + 20, site.x + 100, site.z + 28], 6, 'Harbor Bazaar');
+  cityWalkersAlong(rng, quay.concat(quay2, ramp), 34);
+}
+
+// Build all four cities one by one
+const NEW_CITY_BUILDERS = { A: buildCityA, B: buildCityB, C: buildCityC, D: buildCityD };
+NEW_CITY_SITES.forEach((site) => NEW_CITY_BUILDERS[site.id](site));
+
+function updateNewCities(dt, time, playerPos) {
+  for (let i = 0; i < cityBoats.length; i++) {
+    const b = cityBoats[i];
+    b.mesh.position.y = b.baseY + Math.sin(time * 1.3 + b.phase) * 0.08;
+    b.mesh.rotation.z = Math.sin(time * 0.9 + b.phase) * 0.025;
+  }
+  for (let i = 0; i < cityWalkers.length; i++) {
+    const w = cityWalkers[i];
+    const dxp = w.a[0] - playerPos.x;
+    const dzp = w.a[1] - playerPos.z;
+    if (dxp * dxp + dzp * dzp > 160000) continue;
+    w.t += w.speed * dt * w.dir;
+    if (w.t > 1) { w.t = 1; w.dir = -1; }
+    if (w.t < 0) { w.t = 0; w.dir = 1; }
+    const x = w.a[0] + (w.b[0] - w.a[0]) * w.t;
+    const z = w.a[1] + (w.b[1] - w.a[1]) * w.t + w.lat;
+    w.g.position.set(x, Math.max(getTerrainHeight(x, z), -1) + 0.12, z);
+    w.g.rotation.y = Math.atan2((w.b[0] - w.a[0]) * w.dir, (w.b[1] - w.a[1]) * w.dir);
+    const ang = Math.sin(time * 7 + w.phase) * 0.45;
+    w.legL.rotation.x = ang;
+    w.legR.rotation.x = -ang;
+  }
+}
+
+// Fast travel between the 4 new cities
+function travelToCity(i) {
+  const s = NEW_CITY_SITES[i];
+  let tx = s.x;
+  let tz = s.z;
+  if (s.id === 'A') { tx = s.x - 30; tz = s.z + 14; }
+  if (s.id === 'B') { tx = s.x; tz = s.z + 6; }
+  if (s.id === 'C') { tx = cityRiverX(s, s.z) + 70; tz = s.z + 6; }
+  if (s.id === 'D') { tx = s.x + 10; tz = s.z + 50; }
+  STATE.isBoating = false;
+  playerGroup.position.set(tx, getTerrainHeight(tx, tz) + 1.2, tz);
+  showToast(`Arrived at ${s.name}`);
+}
+window.travelToCity = travelToCity;
+(function buildCityTravelPanel() {
+  const box = document.createElement('div');
+  box.id = 'city-travel-panel';
+  box.style.cssText = 'position:fixed;left:18px;top:230px;z-index:40;display:flex;flex-direction:column;gap:5px;font-family:Inter,sans-serif;';
+  const title = document.createElement('div');
+  title.textContent = 'CITIES';
+  title.style.cssText = 'font-family:Marcellus,Cinzel,serif;color:#ffd100;font-size:12px;letter-spacing:.12em;text-shadow:1px 1px 0 #000;';
+  box.appendChild(title);
+  NEW_CITY_SITES.forEach((s, i) => {
+    const b = document.createElement('button');
+    b.textContent = `${i + 1}. ${s.name.split(' - ')[0]}`;
+    b.title = s.name;
+    b.style.cssText = 'background:linear-gradient(180deg,#1b2230,#111722);border:1.5px solid #967009;color:#ffd100;font-size:11px;font-weight:700;padding:5px 9px;border-radius:3px;cursor:pointer;text-align:left;text-shadow:1px 1px 0 #000;';
+    b.addEventListener('pointerdown', (e) => { e.stopPropagation(); travelToCity(i); });
+    box.appendChild(b);
+  });
+  document.body.appendChild(box);
+})();
+
 function updateWorldNameplates() {
   const halfW = window.innerWidth / 2;
   const halfH = window.innerHeight / 2;
@@ -5603,6 +6248,7 @@ function animate() {
 
   // Animate Working City Transportation (Horse-Drawn Stagecoaches patrolling the Grand Highway!)
     if (typeof updateCitadel1000NPCs === "function") updateCitadel1000NPCs(dt, playerGroup.position);
+  if (typeof updateNewCities === "function") updateNewCities(dt, clock.elapsedTime, playerGroup.position);
 
   for (let v = 0; v < animatedTransitVehicles.length; v++) {
     const veh = animatedTransitVehicles[v];
