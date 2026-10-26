@@ -1781,16 +1781,15 @@ function createNameplateDOM(entity) {
   const el = document.createElement('div');
   el.className = 'nameplate';
   const isFriendlyNPC = entity.kind === 'shop_npc' || entity.kind === 'town_npc';
-  const qBadge = entity.questMarker
-    ? `<span class="np-quest-marker" style="color:${entity.questMarker === '❓' ? '#38bdf8' : '#fde047'};font-size:15px;font-weight:900;text-shadow:0 0 8px #f59e0b;margin-right:3px;">${entity.questMarker}</span>`
-    : '';
+  // Authentic WoW Minimal Floating Plate: ONLY Health & Power Bands visible, absolutely nothing more!
   el.innerHTML = `
-    <div class="np-title">
-      ${qBadge}<span class="np-lvl" style="color:${isFriendlyNPC ? '#fde047' : '#38bdf8'}">[${entity.badge}]</span>
-      <span class="np-name" style="color:${isFriendlyNPC ? '#4ade80' : '#f8fafc'}">${entity.name}</span>
-    </div>
-    <div class="np-bar-bg">
-      <div class="np-bar-fill ${isFriendlyNPC ? 'rejuvenated' : ''}" style="width: ${(entity.hp / entity.maxHp) * 100}%"></div>
+    <div class="np-bars-wrap">
+      <div class="np-hp-bar">
+        <div class="np-bar-fill ${isFriendlyNPC ? 'rejuvenated' : ''}" style="width: ${(entity.hp / entity.maxHp) * 100}%"></div>
+      </div>
+      <div class="np-pwr-bar">
+        <div class="np-pwr-fill" style="width: 100%"></div>
+      </div>
     </div>
   `;
   el.addEventListener('pointerdown', (e) => {
@@ -1808,7 +1807,7 @@ function createNameplateDOM(entity) {
   nameplatesContainer.appendChild(el);
   entity.nameplateEl = el;
   entity.npFillEl = el.querySelector('.np-bar-fill');
-  entity.npQuestEl = el.querySelector('.np-quest-marker');
+  entity.npQuestEl = null;
 }
 
 // ============================================================================

@@ -7,7 +7,7 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐎</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&family=EB+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@500;600;700;800&family=Marcellus&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
   <script type="importmap">
     {
@@ -29,37 +29,53 @@
        1. TOP-LEFT PLAYER, TARGET & TARGET-OF-TARGET UNIT FRAMES (Borderless)
        ===================================================================== -->
   <div id="hud-unit-frames">
-    <!-- PLAYER UNIT -->
-    <div class="unit-block" id="player-unit">
-      <div class="unit-header">
-        <span class="unit-lvl" id="wow-player-lvl">1</span>
-        <span class="unit-name">Sadhak</span>
-        <span class="unit-sub" id="wow-mount-badge">🐎 Mounted (Seated)</span>
+    <!-- PLAYER UNIT (Dragonflight Gold Crest & Medallion Frame) -->
+    <div class="wow-unit-frame" id="player-unit">
+      <div class="wow-portrait-wrap">
+        <div class="wow-portrait-ring player-ring">
+          <div class="wow-portrait-avatar" id="wow-player-avatar">🧘</div>
+        </div>
+        <div class="wow-level-pip" id="wow-player-lvl">1</div>
       </div>
-      <div class="bar-slim hp-slim">
-        <div class="bar-slim-fill player-hp" id="wow-player-hp-bar" style="width: 100%;"></div>
-        <span class="bar-slim-txt" id="wow-player-hp-txt">100% Stamina • Power: 85</span>
-      </div>
-      <div class="bar-slim karma-slim">
-        <div class="bar-slim-fill player-karma" id="wow-player-mp-bar" style="width: 100%;"></div>
-        <span class="bar-slim-txt" id="wow-player-mp-txt">☸️ 350 KARMA • 🎁 0/7 RELICS</span>
+      <div class="wow-unit-bars">
+        <div class="wow-unit-title">
+          <span class="wow-unit-name">Sadhak</span>
+          <span class="wow-unit-sub" id="wow-mount-badge">🐎 Mounted</span>
+        </div>
+        <div class="wow-bar-track wow-hp-track">
+          <div class="wow-bar-fill player-hp" id="wow-player-hp-bar" style="width: 100%;"></div>
+          <div class="wow-bar-glare"></div>
+          <span class="wow-bar-txt" id="wow-player-hp-txt">100 / 100</span>
+        </div>
+        <div class="wow-bar-track wow-pwr-track">
+          <div class="wow-bar-fill player-karma" id="wow-player-mp-bar" style="width: 100%;"></div>
+          <div class="wow-bar-segments"></div>
+          <span class="wow-bar-txt" id="wow-player-mp-txt">350 KARMA</span>
+        </div>
       </div>
     </div>
 
-    <!-- TARGET UNIT + TARGET OF TARGET -->
-    <div class="unit-block" id="target-unit">
-      <div class="unit-header">
-        <span class="unit-icon" id="wow-target-icon">🎁</span>
-        <span class="unit-name" id="wow-target-name">Sahyadri Summit Chest</span>
-        <span class="unit-sub" id="wow-target-diff">Summit</span>
+    <!-- TARGET UNIT (Reaction Dragon Crest & Target-of-Target Frame) -->
+    <div class="wow-unit-frame" id="target-unit">
+      <div class="wow-portrait-wrap">
+        <div class="wow-portrait-ring target-ring">
+          <div class="wow-portrait-avatar" id="wow-target-icon">🎁</div>
+        </div>
+        <div class="wow-level-pip" id="wow-target-diff">60</div>
       </div>
-      <div class="bar-slim hp-slim">
-        <div class="bar-slim-fill target-hp" id="wow-target-hp-bar" style="width: 20%;"></div>
-        <span class="bar-slim-txt" id="wow-target-hp-txt">20 / 120 Seal</span>
-      </div>
-      <div class="bar-slim blight-slim">
-        <div class="bar-slim-fill target-blight" id="wow-target-blight-bar" style="width: 80%;"></div>
-        <span class="bar-slim-txt" id="wow-target-status-txt">Right-Click or [1] • ToT: Sadhak</span>
+      <div class="wow-unit-bars">
+        <div class="wow-unit-title">
+          <span class="wow-unit-name" id="wow-target-name">Sahyadri Summit Chest</span>
+        </div>
+        <div class="wow-bar-track wow-hp-track">
+          <div class="wow-bar-fill target-hp" id="wow-target-hp-bar" style="width: 20%;"></div>
+          <div class="wow-bar-glare"></div>
+          <span class="wow-bar-txt" id="wow-target-hp-txt">20 / 120</span>
+        </div>
+        <div class="wow-bar-track wow-blight-track">
+          <div class="wow-bar-fill target-blight" id="wow-target-blight-bar" style="width: 80%;"></div>
+          <span class="wow-bar-txt" id="wow-target-status-txt">Purify [1]</span>
+        </div>
       </div>
     </div>
   </div>
