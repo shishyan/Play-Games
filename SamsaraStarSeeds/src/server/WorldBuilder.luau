@@ -351,6 +351,36 @@ local function buildTrees(parent: Instance)
 	end
 end
 
+local function buildKalari(parent: Instance)
+	local Kalari = require(Shared.Kalari)
+	local start = WorldBuilder.place("bhumi", LokaDefs.Landmarks.kalari)
+	local f = Instance.new("Folder")
+	f.Name = "KalariCourse"
+	f.Parent = parent
+	local layout = Kalari.layout(8)
+	for i, off in ipairs(layout) do
+		local pos = start + Vector3.new(off[1], off[2] + 0.5, off[3])
+		local isFirst, isLast = i == 1, i == #layout
+		local color = isFirst and Color3.fromRGB(110, 220, 130) or (isLast and GOLD or Color3.fromRGB(175, 150, 120))
+		local plat = mk(f, Vector3.new(9, 1.2, 9), CFrame.new(pos), color, Enum.Material.Wood, nil, "KalariPlatform" .. i)
+		light(plat, color, 14, 1)
+		if isFirst or isLast then
+			plat:SetAttribute("Interact", isFirst and "kalari_start" or "kalari_finish")
+			CollectionService:AddTag(plat, "DLInteract")
+			local prompt = Instance.new("ProximityPrompt")
+			prompt.ObjectText = "Kalari course"
+			prompt.ActionText = isFirst and "Start the run" or "Finish the run"
+			prompt.MaxActivationDistance = 12
+			prompt.RequiresLineOfSight = false
+			prompt.Parent = plat
+		end
+		-- a support pillar so the course reads as a structure, not floating blocks
+		if off[2] > 0 then
+			pillar(f, Vector3.new(pos.X, start.Y - 2, pos.Z), off[2] + 2, 1.4, Color3.fromRGB(120, 95, 70), Enum.Material.Wood)
+		end
+	end
+end
+
 ---------------------------------------------------------------- other realms
 local function buildSvarga(parent: Instance)
 	local c = LokaDefs.Lokas.svarga.center
@@ -505,6 +535,7 @@ function WorldBuilder.build()
 	buildMandapa(bhumi)
 	buildTorana(bhumi)
 	buildHermitage(bhumi)
+	buildKalari(bhumi)
 	buildTrees(bhumi)
 	buildSvarga(world)
 	buildBardo(world)

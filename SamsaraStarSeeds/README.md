@@ -6,11 +6,15 @@ invoke Astras by rhythm, keep the world's **Rta** in balance, and when you die y
 **Bardo** and are judged by your Karma.
 
 > **Status: vertical-slice prototype. It has not been run inside Roblox Studio yet.**
-> It builds with Rojo, type-checks cleanly against the full Roblox API, and its game logic passes 488
+> It builds with Rojo, type-checks cleanly against the full Roblox API, and its game logic passes 542
 > automated checks — but nothing here has been play-tested in the engine. Expect first-run bugs
 > (see [Known risks](#known-risks)).
 
-## Run it
+## Publish it (no Roblox experience needed)
+
+Use `publish/Samsara-Journey-of-Star-Seeds.rbxl` and follow `publish/HOW_TO_PUBLISH.md`.
+
+## Run it (developers)
 
 1. Install [Rojo](https://rojo.space) (the repo already ships `../DharmaSanctuary/rojo.exe`, 7.7.1) and the Rojo Studio plugin.
 2. `rojo serve default.project.json` in this folder, then connect from Studio's Rojo plugin (or `rojo build -o Samsara.rbxl`).
@@ -51,9 +55,11 @@ Tester chat commands (Studio, or the game's creator): `/yuga 1-4`, `/karma N`, `
 | Mercy: pacify instead of kill (Dharma over annihilation) | ✅ | `EnemyService.pacify` |
 | Community funds with server-wide blessings (step-well, school, rest house) | ✅ | `WorldState`, `DialogueService` |
 | Moksha: Mandala puzzle, Vrata fast, letting go, transcendence + monument | ✅ | `InteractService`, `LokaService.transcend` |
-| Quests & branching dialogue, Karma-aware NPCs and prices | ✅ 10 quests, 10 NPCs | `shared/QuestDefs`, `DialogueDefs` |
-| Mount taming, irrigation / farmland, real estate, regional assemblies | ❌ not built | — |
-| Dispute arbitration with philosophical texts, Kalari obstacle course | ❌ not built | — |
+| Quests & branching dialogue, Karma-aware NPCs and prices | ✅ 13 quests, 11 NPCs | `shared/QuestDefs`, `DialogueDefs` |
+| Irrigation channels and farmland (Artha) | ✅ build channel, grow, harvest, sell grain | `InteractService` (fields) |
+| Mount taming, real estate, regional assemblies | ❌ not built | — |
+| Dispute arbitration: restorative justice earns Dharma | ✅ 3 disputes | `DialogueDefs` (Nyaya Pandit Gargi) |
+| Kalari obstacle course (timed climb) | ✅ | `shared/Kalari`, `WorldBuilder` |
 | Svarga content beyond the Herald and Maya; Patala | ❌ not built | — |
 | Audio, bespoke art, custom animations | ❌ (Roblox default R15 animations, procedural props) | — |
 
@@ -63,7 +69,7 @@ Tester chat commands (Studio, or the game's creator): `/yuga 1-4`, `/karma N`, `
 src/shared   pure game design + logic (no Roblox APIs except Color3/Vector3 in data) — unit-tested
 src/server   services: world, enemies, combat, interaction, dialogue, Samsara, Vyuha, persistence
 src/client   HUD, input, mantra rhythm UI, panels, dialogue, effects, lighting
-tests/       logic.test.luau   (488 checks)
+tests/       logic.test.luau   (542 checks)
 tools/       verify.ps1        (tests + analyzer + Rojo build)
 ```
 

@@ -8,6 +8,7 @@ local Shared = ReplicatedStorage.Shared
 local LokaDefs = require(Shared.LokaDefs)
 local ItemDefs = require(Shared.ItemDefs)
 local Samsara = require(Shared.Samsara)
+local Kalari = require(Shared.Kalari)
 local WorldBuilder = require(script.Parent.WorldBuilder)
 local WorldState = require(script.Parent.WorldState)
 local PlayerState = require(script.Parent.PlayerState)
@@ -144,6 +145,55 @@ local function makeGrove(pos: Vector3)
 	m.Parent = features
 end
 
+local FIELD_BROWN = Color3.fromRGB(110, 80, 50)
+
+local function setFieldState(m: Model, state: string)
+	m:SetAttribute("State", state)
+	local plot = m.PrimaryPart :: BasePart
+	local water = m:FindFirstChild("Water") :: BasePart
+	local crop = m:FindFirstChild("Crop") :: BasePart
+	local prompt = plot:FindFirstChildWhichIsA("ProximityPrompt") :: ProximityPrompt
+	if state == "dry" then
+		plot.Color = FIELD_BROWN
+		water.Transparency = 1
+		crop.Transparency = 1
+		prompt.ObjectText = "Dry field"
+		prompt.ActionText = "Build an irrigation channel (3 copper ore)"
+	elseif state == "irrigated" then
+		plot.Color = Color3.fromRGB(70, 55, 40)
+		water.Transparency = 0.35
+		crop.Transparency = 0.2
+		crop.Size = Vector3.new(5, 1.5, 5)
+		crop.Color = Color3.fromRGB(110, 190, 90)
+		prompt.ObjectText = "Irrigated field"
+		prompt.ActionText = "Check the crop"
+	else
+		water.Transparency = 0.35
+		crop.Transparency = 0
+		crop.Size = Vector3.new(5, 4, 5)
+		crop.Color = Color3.fromRGB(235, 200, 90)
+		prompt.ObjectText = "Ripe field"
+		prompt.ActionText = "Harvest"
+	end
+end
+
+local function makeField(pos: Vector3)
+	local m = Instance.new("Model")
+	m.Name = "Field"
+	m:SetAttribute("Interact", "field")
+	local plot = part(m, Vector3.new(0.4, 12, 12), CFrame.new(pos + Vector3.new(0, 0.2, 0)) * CFrame.Angles(0, 0, math.pi / 2), FIELD_BROWN, Enum.Material.Ground, Enum.PartType.Cylinder)
+	local water = part(m, Vector3.new(12, 0.3, 2), CFrame.new(pos + Vector3.new(0, 0.5, -7)), Color3.fromRGB(80, 160, 230), Enum.Material.Glass)
+	water.Name = "Water"
+	local crop = part(m, Vector3.new(5, 2, 5), CFrame.new(pos + Vector3.new(0, 1.5, 0)), Color3.fromRGB(110, 190, 90), Enum.Material.Grass)
+	crop.Name = "Crop"
+	crop.CanCollide = false
+	m.PrimaryPart = plot
+	nodePrompt(plot, "Dry field", "Build an irrigation channel (3 copper ore)")
+	CollectionService:AddTag(m, "DLField")
+	m.Parent = features
+	setFieldState(m, "dry")
+end
+
 ---------------------------------------------------------------- effects of completed actions
 -- Called by the mantra engine when a Yajna succeeds.
 function InteractService.completeBlight(player: Player, node: Model?)
@@ -271,6 +321,53 @@ local function onPrompt(player: Player, node: Instance)
 		else
 			PlayerState.toast(player, ("Too little water remains (%d%%). Return to the well and try again, more gently."):format(debt.water), "warn")
 		end
+	elseif kind == "field" and model then
+		local state = model:GetAttribute("State")
+		if state == "dry" then
+			if (profile.inv.copper_ore or 0) < 3 then
+				PlayerState.toast(player, "You need 3 copper ore to build a channel (mine it from the rocky outcrops).", "info")
+				return
+			end
+			PlayerState.addItem(player, "copper_ore", -3)
+			setFieldState(model, "irrigated")
+			PlayerState.addPath(player, "artha", 1.5)
+			Services.Quest.event(player, { k = "irrigate" })
+			PlayerState.toast(player, "Water flows into the field. The crop will ripen soon.", "karma_good")
+			task.delay(90, function()
+				if model.Parent and model:GetAttribute("State") == "irrigated" then
+					setFieldState(model, "ripe")
+				end
+			end)
+		elseif state == "irrigated" then
+			PlayerState.toast(player, "The crop is still growing. Return in a little while.", "info")
+		else
+			local n = yieldCount(rng:NextInteger(2, 4))
+			PlayerState.addItem(player, "grain", n)
+			PlayerState.addPath(player, "artha", 1.5)
+			PlayerState.toast(player, ("Harvested %d x %s Grain"):format(n, ItemDefs.grain.icon), "loot")
+			setFieldState(model, "dry")
+		end
+	elseif kind == "kalari_start" then
+		PlayerState.rt(player).kalariStart = os.clock()
+		PlayerState.toast(player, "Run! Climb the platforms to the golden one.", "info")
+	elseif kind == "kalari_finish" then
+		local rt = PlayerState.rt(player)
+		local root = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+		local ok, why = Kalari.valid(rt.kalariStart, os.clock(), root and root.Position.Y or 0, node:IsA("BasePart") and node.Position.Y or 0)
+		if not ok then
+			PlayerState.toast(player, why or "No run in progress.", "info")
+			return
+		end
+		local seconds = os.clock() - rt.kalariStart
+		rt.kalariStart = nil
+		local kama = Kalari.reward(seconds)
+		if kama > 0 then
+			PlayerState.addPath(player, "kama", kama)
+			Services.Quest.event(player, { k = "kalari" })
+			PlayerState.toast(player, ("Kalari course: %.1fs"):format(seconds), "karma_good")
+		else
+			PlayerState.toast(player, ("%.1fs is too slow. Try again — keep your rhythm."):format(seconds), "info")
+		end
 	elseif kind == "mandala" then
 		local rt = PlayerState.rt(player)
 		local element = node:GetAttribute("Element")
@@ -328,6 +425,8 @@ function InteractService.start()
 				makeOre(pos, f.ore)
 			elseif f.kind == "grove" then
 				makeGrove(pos)
+			elseif f.kind == "field" then
+				makeField(pos)
 			end
 		end
 	end

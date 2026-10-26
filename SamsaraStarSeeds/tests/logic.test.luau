@@ -38,6 +38,7 @@ local NPCs = require("./shared/DialogueDefs")
 local ItemDefs = require("./shared/ItemDefs")
 local EnemyDefs = require("./shared/EnemyDefs")
 local LokaDefs = require("./shared/LokaDefs")
+local Kalari = require("./shared/Kalari")
 
 -- deterministic stand-in for Random
 local function rng(seed)
@@ -745,7 +746,7 @@ do
 	for id, proj in pairs(LokaDefs.CommunityProjects) do
 		check("project " .. id, proj.goal > 0 and proj.blessing ~= nil)
 	end
-	for _, q in ipairs({ "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10" }) do
+	for _, q in ipairs({ "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "q11", "q12", "q13" }) do
 		check("quest " .. q .. " defined", QuestDefs[q] ~= nil)
 	end
 	-- every path is reachable through some quest reward
@@ -758,6 +759,87 @@ do
 	for _, path in ipairs(P.PATHS) do
 		check("path " .. path .. " can be advanced by a quest", rewarded[path] == true)
 	end
+end
+
+---------------------------------------------------------------- Kalari, arbitration, farming
+do
+	eq("fast run earns full Kama", Kalari.reward(Kalari.PURE_TIME - 1), Kalari.MAX_KAMA)
+	check("slow run earns less", Kalari.reward(40) < Kalari.MAX_KAMA and Kalari.reward(40) > 0)
+	eq("too slow earns nothing", Kalari.reward(Kalari.PASS_TIME + 1), 0)
+	check("reward falls with time", Kalari.reward(30) > Kalari.reward(50))
+	check("run must be started", not (Kalari.valid(nil, 10, 50, 50)))
+	check("run expires", not (Kalari.valid(0, Kalari.GRACE + 1, 50, 50)))
+	check("must reach the top", not (Kalari.valid(0, 10, 10, 50)))
+	check("valid run accepted", (Kalari.valid(0, 10, 49, 50)))
+	local layout = Kalari.layout(8)
+	eq("course has 8 platforms", #layout, 8)
+	check("course climbs", layout[8][2] > layout[1][2])
+	local jumpable = true
+	for i = 2, #layout do
+		local dx, dz = layout[i][1] - layout[i - 1][1], layout[i][3] - layout[i - 1][3]
+		if layout[i][2] - layout[i - 1][2] > 5 or math.sqrt(dx * dx + dz * dz) > 20 then
+			jumpable = false
+		end
+	end
+	check("every hop is jumpable (rise <= 5, gap <= 20 studs)", jumpable)
+
+	local function ctx(t)
+		local c = { karma = 0, paths = P.newScores(), gold = 0, quests = {}, inv = {}, flags = {}, priceMult = 1, class = "Mukta", weapon = "chakra", weaponTier = 1, goldEarned = 0, danaGiven = 0 }
+		for k, v in pairs(t or {}) do
+			c[k] = v
+		end
+		return c
+	end
+	local root = Dialogue.build(ctx(), "nyayadhish", "root")
+	eq("quest + three disputes + farewell", #root.choices, 5)
+	check("arbitration quest offered", string.find(root.choices[1].text, "Arbiter", 1, true) ~= nil)
+	for i = 1, 3 do
+		local node = Dialogue.build(ctx(), "nyayadhish", "dispute" .. i)
+		eq("dispute " .. i .. " has 3 judgements", #node.choices, 3)
+		local good = node.choices[1].raw
+		local fxKinds = {}
+		for _, fx in ipairs(good.fx) do
+			fxKinds[fx[1]] = true
+		end
+		check("dispute " .. i .. " right judgement rewards Dharma and counts", fxKinds.path and fxKinds.karma and fxKinds.flag and fxKinds.event)
+		check("dispute " .. i .. " wrong judgements cost karma and do not count", node.choices[2].raw.fx[1][1] == "karma" and node.choices[2].raw.fx[1][2] < 0 and #node.choices[2].raw.fx == 1)
+	end
+	local done = Dialogue.build(ctx({ flags = { dispute1 = true, dispute2 = true, dispute3 = true } }), "nyayadhish", "root")
+	check("settled disputes are not offered again", string.find(done.choices[1].text, "Hear", 1, true) == nil)
+
+	local Defs = require("./shared/QuestDefs")
+	for _, q in ipairs({ "q11", "q12", "q13" }) do
+		check(q .. " exists", Defs[q] ~= nil)
+	end
+	local qctx = { quests = {} }
+	Quests.accept(qctx.quests, "q11", {})
+	for _ = 1, 3 do
+		Quests.event(qctx.quests, { k = "arbitrate" })
+	end
+	eq("three judgements complete the arbitration quest", qctx.quests.q11.state, "ready")
+	Quests.accept(qctx.quests, "q12", {})
+	Quests.event(qctx.quests, { k = "irrigate" })
+	Quests.event(qctx.quests, { k = "irrigate" })
+	eq("two irrigations complete the field quest", qctx.quests.q12.state, "ready")
+	Quests.accept(qctx.quests, "q13", {})
+	Quests.event(qctx.quests, { k = "kalari" })
+	eq("a finished run completes the Kalari quest", qctx.quests.q13.state, "ready")
+	check("grain exists and can be sold", ItemDefs.grain ~= nil and ItemDefs.grain.price > 0)
+	local sells = false
+	for _, c in ipairs(Dialogue.build(ctx({ inv = { grain = 3 } }), "vyapari", "root").choices) do
+		if string.find(c.text, "grain", 1, true) then
+			sells = true
+		end
+	end
+	check("vyapari buys grain", sells)
+	local fieldFeature = false
+	for _, f in ipairs(LokaDefs.Features) do
+		if f.kind == "field" then
+			fieldFeature = true
+		end
+	end
+	check("fields are placed in the world", fieldFeature)
+	check("kalari landmark exists", LokaDefs.Landmarks.kalari ~= nil)
 end
 
 print(("Logic tests: %d passed, %d failed"):format(passed, failed))

@@ -76,6 +76,27 @@ local Q = {
 		obj = { { k = "kill", t = "maya", n = 1, label = "Maya" } },
 		reward = { paths = { dharma = 15, moksha = 8 }, gold = 200, karma = 10 },
 	},
+	q11 = {
+		name = "Arbiter of the Village", giver = "nyayadhish", turnIn = "nyayadhish", req = {},
+		text = "Hear three disputes in the Sabha and judge each with restorative justice, not punishment. Dharma is harmony, not victory.",
+		doneText = "You judged well. A just village is one where both sides can still live beside one another.",
+		obj = { { k = "arbitrate", n = 3, label = "Disputes settled" } },
+		reward = { paths = { dharma = 10 }, karma = 5 },
+	},
+	q12 = {
+		name = "Water the Fields", giver = "vyapari", turnIn = "vyapari", req = {},
+		text = "Dry fields near the village lie idle. Build irrigation channels for two of them (3 copper ore each), then harvest the crop.",
+		doneText = "Irrigated land feeds everyone. That is prosperity worth the name.",
+		obj = { { k = "irrigate", n = 2, label = "Fields irrigated" } },
+		reward = { paths = { artha = 7 }, gold = 30, karma = 2 },
+	},
+	q13 = {
+		name = "The Kalari Run", giver = "kripa", turnIn = "kripa", req = {},
+		text = "Test your body in the Kalari course west of the village: climb the rising platforms to the top within the time. A calm, nimble body is the first weapon.",
+		doneText = "Quick feet, steady mind. That is Kalari.",
+		obj = { { k = "kalari", n = 1, label = "Course completed" } },
+		reward = { paths = { kama = 6 }, gold = 15, karma = 1 },
+	},
 }
 
 return Q

@@ -45,6 +45,7 @@ local NpcPlacements = {
 	{ key = "sabha_guru", loka = "bhumi", offset = Vector3.new(62, 0, 36), skin = Color3.fromRGB(195, 145, 100), robe = Color3.fromRGB(180, 60, 150) },
 	{ key = "smith", loka = "bhumi", offset = Vector3.new(-62, 0, 36), skin = Color3.fromRGB(170, 120, 85), robe = Color3.fromRGB(60, 60, 70) },
 	{ key = "yogi", loka = "bhumi", offset = Vector3.new(6, 0, -250), skin = Color3.fromRGB(205, 160, 120), robe = Color3.fromRGB(240, 170, 60), beard = true },
+	{ key = "nyayadhish", loka = "bhumi", offset = Vector3.new(-8, 0, 62), skin = Color3.fromRGB(200, 150, 110), robe = Color3.fromRGB(70, 90, 170) },
 	{ key = "tempter", loka = "bhumi", offset = Vector3.new(-135, 0, -20), skin = Color3.fromRGB(60, 20, 30), robe = Color3.fromRGB(90, 10, 20), hidden = true },
 	{ key = "herald", loka = "svarga", offset = Vector3.new(0, 0, -8), skin = Color3.fromRGB(240, 210, 150), robe = Color3.fromRGB(255, 220, 120), halo = true },
 }
@@ -76,6 +77,7 @@ local Features = {
 	{ kind = "ore", ore = "copper_ore", count = 7, rMin = 200, rMax = 285, respawn = 120 },
 	{ kind = "ore", ore = "iron_ore", count = 5, rMin = 220, rMax = 290, respawn = 150 },
 	{ kind = "grove", count = 8, rMin = 60, rMax = 110, respawn = 600 },
+	{ kind = "field", count = 6, rMin = 62, rMax = 112, respawn = 0 },
 }
 
 -- Fixed landmarks (offsets from the Bhumi center).
@@ -85,6 +87,7 @@ local Landmarks = {
 	mandapa = Vector3.new(140, 0, -150),
 	temple = Vector3.new(0, 0, -90),
 	hermitage = Vector3.new(0, 0, -255),
+	kalari = Vector3.new(-150, 0, 125),
 }
 
 -- The five pillars of the Dhyana Mandapa, in the order the elements are manifested.

@@ -159,7 +159,7 @@ NPCs.vyapari = {
 	},
 	topics = {
 		{ text = "Show me your wares.", next = "shop" },
-		{ text = "Sell my ore.", cond = function(ctx) return (ctx.inv.copper_ore or 0) + (ctx.inv.iron_ore or 0) > 0 end, fx = { { "sell_ore" } }, reply = "A fair price, paid in full." },
+		{ text = "Sell my ore and grain.", cond = function(ctx) return (ctx.inv.copper_ore or 0) + (ctx.inv.iron_ore or 0) + (ctx.inv.grain or 0) > 0 end, fx = { { "sell_ore" } }, reply = "A fair price, paid in full." },
 		{
 			text = "Give me a discount — or else.",
 			cond = function(ctx) return not ctx.flags.coerced end,
@@ -334,6 +334,52 @@ NPCs.herald = {
 			text = "Maya is the veil that makes the many seem separate. Her shield is made of attachment; edged weapons cut it best. Defeat her and you see the Lokas as they are.",
 			choices = back(),
 		},
+	},
+}
+
+-- Dispute arbitration (Dharma): restorative justice is rewarded, punishment and force are not.
+local function dispute(id, setup, right, wrongA, wrongB, lesson)
+	return {
+		text = setup,
+		choices = {
+			{ text = right, fx = { { "path", "dharma", 5 }, { "karma", 3 }, { "flag", id }, { "event", "arbitrate" } }, reply = lesson },
+			{ text = wrongA[1], fx = { { "karma", -1 } }, reply = wrongA[2] },
+			{ text = wrongB[1], fx = { { "karma", -1 } }, reply = wrongB[2] },
+		},
+	}
+end
+
+NPCs.nyayadhish = {
+	name = "Nyaya Pandit Gargi", title = "Judge of the Sabha",
+	greeting = {
+		Deva = "Your judgement is trusted by both sides, Star Seed. Shall we hear a case?",
+		Madhyama = "Justice in the Dharmic sense is not victory for one party. It is the restoring of harmony. Will you sit in judgement?",
+		Asura = "Force settles quarrels only until the next one. Sit, and learn another way.",
+	},
+	topics = {
+		{ text = "Hear the dispute of the two farmers.", cond = function(ctx) return not ctx.flags.dispute1 end, next = "dispute1" },
+		{ text = "Hear the dispute of the spoiled grain.", cond = function(ctx) return not ctx.flags.dispute2 end, next = "dispute2" },
+		{ text = "Hear the case of the hungry thief.", cond = function(ctx) return not ctx.flags.dispute3 end, next = "dispute3" },
+	},
+	nodes = {
+		dispute1 = dispute("dispute1",
+			"Two farmers share one irrigation channel. The upstream farmer has dammed it; the downstream farmer's crop is dying. Each demands the whole channel.",
+			"Share the water by need, and make both responsible for the channel's upkeep.",
+			{ "Give the whole channel to the elder farmer: age deserves it.", "The younger farmer's crop dies and resentment hardens. Age is not a claim on water." },
+			{ "Let them settle it by a contest of strength.", "The stronger wins and the weaker waits for revenge. Force is Anrita." },
+			"Both farmers leave with water and a duty. The quarrel ends because neither lost everything."),
+		dispute2 = dispute("dispute2",
+			"A grain seller sold a spoiled sack. The buyer demands the seller's whole shop in compensation. The seller says the fault was in storage, not intent.",
+			"Have the seller refund and replace the grain, and the buyer accept the proportionate remedy; both agree on how grain is stored in future.",
+			{ "Give the buyer the shop: the seller must suffer.", "A ruined seller feeds no one. Punishment beyond harm is its own wrong." },
+			{ "Dismiss the case: the market looks after itself.", "The buyer leaves cheated and trust in the market falls. Ignoring harm is also adharma." },
+			"The grain is replaced, the storage mended, and both trade on. Fairness keeps Artha alive."),
+		dispute3 = dispute("dispute3",
+			"A hungry man stole bread for his children. The baker wants him flogged. The man admits it and weeps.",
+			"The man repays the bread's value through honest work for the baker, and the village shares food with his family until he can.",
+			{ "Flog him as an example to others.", "Fear is taught; need remains. The theft will come again, from another door." },
+			{ "Let him go without consequence.", "The baker is wronged and the debt of the community is unpaid. Mercy without repair is incomplete." },
+			"The debt is repaid in labour, the family is fed, the baker is made whole. This is restorative justice."),
 	},
 }
 

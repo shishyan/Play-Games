@@ -10,6 +10,7 @@ local Items = {
 	sapling = { name = "Sacred Sapling", icon = "🌳", kind = "quest", desc = "Plant it in a grove plot to restore Rta.", price = 12 },
 	copper_ore = { name = "Copper Ore", icon = "🟤", kind = "material", desc = "Arthashastra metal. Sold or used by the smith.", price = 5 },
 	iron_ore = { name = "Iron Ore", icon = "⚫", kind = "material", desc = "Arthashastra metal. Used for stronger weapons.", price = 9 },
+	grain = { name = "Grain", icon = "🌾", kind = "material", desc = "Harvest from an irrigated field. Sells for a fair price.", price = 8 },
 }
 
 -- Herbs are items too, so inventory/UI treat them uniformly.

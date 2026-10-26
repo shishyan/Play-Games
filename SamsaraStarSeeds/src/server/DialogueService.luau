@@ -95,7 +95,7 @@ end
 local function sellOre(player: Player)
 	local profile = PlayerState.get(player)
 	local total = 0
-	for _, id in ipairs({ "copper_ore", "iron_ore" }) do
+	for _, id in ipairs({ "copper_ore", "iron_ore", "grain" }) do
 		local n = profile.inv[id] or 0
 		if n > 0 then
 			-- fair trade: full price, no haggling down
@@ -197,6 +197,8 @@ local function applyFx(player: Player, fx)
 		else
 			PanelRemote:FireClient(player, { name = fx[2] })
 		end
+	elseif kind == "event" then
+		Services.Quest.event(player, { k = fx[2] })
 	elseif kind == "sell_ore" then
 		sellOre(player)
 	elseif kind == "coerce" then
