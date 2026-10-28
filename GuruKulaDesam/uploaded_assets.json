@@ -1,0 +1,33 @@
+{
+  "images": {
+    "IndiaReliefMap": "rbxassetid://80570807268961",
+    "TempleStepsTex": "rbxassetid://137190866614064",
+    "HighwayRoadTex": "rbxassetid://110050893690646",
+    "WesternGhatsHill": "rbxassetid://75811375036121",
+    "HimalayaKedarnath": "rbxassetid://103265524054710",
+    "TiruchendurExterior": "rbxassetid://136724952545761",
+    "MuruganGarbhagriha": "rbxassetid://97403791752923",
+    "HillVelPeak": "rbxassetid://73156715301016",
+    "RockCutCourtyard": "rbxassetid://135023011319153",
+    "SwamimalaiStepsRiver": "rbxassetid://125853126926039",
+    "CholaShivaComplex": "rbxassetid://86511657089030",
+    "ShivaRishabhaDarshan": "rbxassetid://96968396673015",
+    "PalaniHillDawn": "rbxassetid://129471220190849",
+    "GurukulamBanyan": "rbxassetid://104064707402630",
+    "TiruttaniHillTemple": "rbxassetid://86000877147743",
+    "ShivaLingamSanctum": "rbxassetid://123327233180198"
+  },
+  "audio_uncut_50pct_volume": {
+    "kunruthoradal_full": "rbxassetid://92659256164116",
+    "thiruveragam_full": "rbxassetid://115598298566726",
+    "kaumaram_full": "rbxassetid://107656727902679",
+    "shanmukha_full": "rbxassetid://127350233906519",
+    "angamum_full": "rbxassetid://104645607101465",
+    "vedha_sara_shiva": "rbxassetid://104705787327298",
+    "thiruvoththur_saranam": "rbxassetid://105377285504418",
+    "gayathri": "rbxassetid://97476251841353",
+    "kadavul_vazhthu": "rbxassetid://111971900277592",
+    "vaan_sirappu": "rbxassetid://114793987355409",
+    "kollaamai": "rbxassetid://100056961644623"
+  }
+}
