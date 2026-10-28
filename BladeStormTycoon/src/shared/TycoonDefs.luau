@@ -236,6 +236,15 @@ TycoonDefs.SPIN_REWARDS = {
 	{ id = "spin_jackpot", label = "JACKPOT: +300 Gems & Solaris Blade!", kind = "aura_jackpot", auraId = "solaris_sovereign", gems = 300, weight = 4 },
 }
 
+TycoonDefs.PLAYTIME_REWARDS = {
+	{ index = 1, reqSeconds = 60, label = "1m: +1,000 Coins", kind = "coins", amount = 1000 },
+	{ index = 2, reqSeconds = 180, label = "3m: +40 Star Gems", kind = "gems", amount = 40 },
+	{ index = 3, reqSeconds = 360, label = "6m: +8,500 Coins", kind = "coins", amount = 8500 },
+	{ index = 4, reqSeconds = 600, label = "10m: +120 Star Gems", kind = "gems", amount = 120 },
+	{ index = 5, reqSeconds = 900, label = "15m: Void Reaver Blade!", kind = "aura", auraId = "void_reaver" },
+	{ index = 6, reqSeconds = 1200, label = "20m: +300 Gems & Solaris Kirin Pet!", kind = "pet", petId = "solar_kirin", gems = 300 },
+}
+
 TycoonDefs.PROMO_CODES = {
 	["MILLION"] = { coins = 5000, gems = 100, desc = "5,000 Coins & 100 Star Gems" },
 	["BLADESTORM"] = { coins = 2500, gems = 60, desc = "2,500 Coins & 60 Star Gems" },

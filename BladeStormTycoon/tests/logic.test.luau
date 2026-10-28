@@ -7,6 +7,7 @@ local Vector3 = {
 } :: any
 local AuraDefs = require("./shared/AuraDefs")
 local TycoonDefs = require("./shared/TycoonDefs")
+local CompanionDefs = require("./shared/CompanionDefs")
 local Profile = require("./shared/Profile")
 local ArenaMath = require("./shared/ArenaMath")
 local Format = require("./shared/Format")
@@ -68,8 +69,18 @@ check(p.buildings["essence_forge"] == 1, "Starts with level 1 Essence Forge")
 
 local baseCps = Profile.getCoinsPerSecond(p, false)
 local frenzyCps = Profile.getCoinsPerSecond(p, true)
-check(baseCps == 8, "Base CPS is 8 with level 1 Essence Forge")
-check(frenzyCps == 12, "Frenzy CPS is 1.5x base CPS")
+check(baseCps == 9, "Base CPS is 9 with level 1 Essence Forge and starter Volt Spark Drone (1.15x)")
+check(frenzyCps == 13, "Frenzy CPS is 1.5x base CPS")
+
+-- Companion Hatching & Golden Evolution Tests
+check(#CompanionDefs.EGGS == 3, "3 Companion Egg tiers")
+check(#CompanionDefs.LIST == 9, "9 Spirit Companions defined")
+local hatched0 = CompanionDefs.hatch("cyber_egg", 0.01)
+check(hatched0.id == "spark_drone", "Low RNG cyber_egg hatches spark_drone")
+Profile.addCompanion(p, "spark_drone")
+Profile.addCompanion(p, "spark_drone")
+local okGold, _ = Profile.craftGoldenCompanion(p, "spark_drone")
+check(okGold and (p.goldenCompanions["spark_drone"] == 1), "3x spark_drone merges into 1 Golden spark_drone")
 
 local baseLuck = Profile.getLuckMultiplier(p, false)
 p.upgrades["luck_boost"] = 4

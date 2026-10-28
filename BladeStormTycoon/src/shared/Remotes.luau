@@ -8,6 +8,7 @@ local S2C = {
 	"Toast",
 	"Fx",
 	"RollResult",
+	"HatchResult",
 	"ArenaState",
 	"ArenaParry",
 }
@@ -22,6 +23,10 @@ local C2S = {
 	"Rebirth",
 	"ClaimSpin",
 	"ClaimQuest",
+	"ClaimPlaytime",
+	"HatchEgg",
+	"CraftGoldenCompanion",
+	"AttackBoss",
 	"RedeemCode",
 	"JoinArena",
 	"LeaveArena",

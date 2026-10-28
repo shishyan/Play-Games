@@ -10,6 +10,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Remotes = require(Shared.Remotes)
 local AuraDefs = require(Shared.AuraDefs)
 local TycoonDefs = require(Shared.TycoonDefs)
+local CompanionDefs = require(Shared.CompanionDefs)
 local Profile = require(Shared.Profile)
 local Format = require(Shared.Format)
 
@@ -25,11 +26,13 @@ local profiles: { [Player]: Profile.PlayerProfile } = {}
 local dirty: { [Player]: boolean } = {}
 local plotAssignments: { [Player]: number } = {}
 local lastRollTime: { [Player]: number } = {}
+local sessionJoinTime: { [Player]: number } = {}
 local serverFrenzyUntil = 0
 
 local StateSync = Remotes.get("StateSync")
 local ToastRemote = Remotes.get("Toast")
 local RollResultRemote = Remotes.get("RollResult")
+local HatchResultRemote = Remotes.get("HatchResult")
 local FxRemote = Remotes.get("Fx")
 
 function PlayerState.isFrenzyActive(): boolean
@@ -254,6 +257,50 @@ function PlayerState.applyAuraVisuals(player: Player)
 		sw.Parent = sat
 	end
 
+	-- 2b. 3D Floating Spirit Companions (Top 3 Equipped Pets)
+	local _, _, topPets = Profile.getCompanionBonuses(prof)
+	for pIdx, petEntry in ipairs(topPets) do
+		local cDef = CompanionDefs.get(petEntry.id)
+		local pScale = cDef.scale
+		local petOffset = Vector3.new(
+			(if pIdx == 1 then -3.4 elseif pIdx == 2 then 3.4 else 0),
+			2.6 + (if pIdx == 3 then 1.4 else 0),
+			2.8
+		)
+		local body = Instance.new("Part")
+		body.Name = "SpiritPet_" .. tostring(pIdx)
+		body.Shape = Enum.PartType.Ball
+		body.Size = Vector3.new(1.5 * pScale, 1.5 * pScale, 1.5 * pScale)
+		body.Material = Enum.Material.Neon
+		body.Color = if petEntry.isGolden then Color3.fromRGB(255, 215, 55) else cDef.color
+		body.CanCollide = false
+		body.Massless = true
+		body.CFrame = root.CFrame * CFrame.new(petOffset)
+		body.Parent = rig
+
+		local pw = Instance.new("WeldConstraint")
+		pw.Part0 = root
+		pw.Part1 = body
+		pw.Parent = body
+
+		local pbb = Instance.new("BillboardGui")
+		pbb.Size = UDim2.new(0, 130, 0, 26)
+		pbb.StudsOffset = Vector3.new(0, 1.6, 0)
+		pbb.AlwaysOnTop = false
+		pbb.MaxDistance = 60
+		pbb.Parent = body
+
+		local plbl = Instance.new("TextLabel")
+		plbl.Size = UDim2.new(1, 0, 1, 0)
+		plbl.BackgroundTransparency = 1
+		plbl.Font = Enum.Font.GothamBlack
+		plbl.TextSize = 11
+		plbl.TextColor3 = body.Color
+		plbl.TextStrokeTransparency = 0.2
+		plbl.Text = (if petEntry.isGolden then "★ GOLDEN " else "") .. cDef.name
+		plbl.Parent = pbb
+	end
+
 	-- 3. Overhead Title Billboard (Shows Aura Name, Rarity, & Odds)
 	local head = (char:FindFirstChild("Head") or root) :: BasePart
 	local bb = Instance.new("BillboardGui")
@@ -293,6 +340,8 @@ function PlayerState.sync(player: Player)
 	end
 	updateLeaderstats(player, prof)
 	local frenzy = PlayerState.isFrenzyActive()
+	local petCoinMult, petLuckAdd, _ = Profile.getCompanionBonuses(prof)
+	local joinT = sessionJoinTime[player] or os.time()
 	StateSync:FireClient(player, {
 		profile = prof,
 		cps = Profile.getCoinsPerSecond(prof, frenzy),
@@ -301,6 +350,9 @@ function PlayerState.sync(player: Player)
 		parryReach = Profile.getParryReach(prof),
 		rebirthMult = Profile.getRebirthMultiplier(prof),
 		rebirthCost = TycoonDefs.rebirthCost(prof.rebirths),
+		petCoinMult = petCoinMult,
+		petLuckAdd = petLuckAdd,
+		sessionSeconds = math.max(0, os.time() - joinT),
 		frenzyRemaining = PlayerState.frenzyRemaining(),
 		plotIndex = PlayerState.getPlotIndex(player),
 		spinCooldown = math.max(0, 120 - (os.time() - prof.lastSpinTime)),
@@ -316,6 +368,7 @@ function PlayerState.load(player: Player): Profile.PlayerProfile
 	end
 	local prof = Profile.sanitize(raw)
 	profiles[player] = prof
+	sessionJoinTime[player] = os.time()
 	PlayerState.assignPlot(player)
 	updateLeaderstats(player, prof)
 	return prof
@@ -613,6 +666,102 @@ function PlayerState.start(onPlotUpdate: ((Player, Profile.PlayerProfile) -> ())
 			PlayerState.applyAuraVisuals(player)
 		end
 		PlayerState.toast(player, "Redeemed '" .. code .. "': " .. def.desc .. "!", "legendary")
+		PlayerState.markDirty(player)
+	end)
+
+	Remotes.get("HatchEgg").OnServerEvent:Connect(function(player, eggId)
+		local prof = profiles[player]
+		if not prof or type(eggId) ~= "string" then
+			return
+		end
+		local egg = CompanionDefs.EGG_BY_ID[eggId]
+		if not egg then
+			return
+		end
+		if egg.currency == "gems" then
+			if prof.gems < egg.cost then
+				PlayerState.toast(player, "Need " .. Format.compact(egg.cost) .. " Star Gems to hatch " .. egg.name .. "!", "warn")
+				return
+			end
+			prof.gems -= egg.cost
+		else
+			if prof.coins < egg.cost then
+				PlayerState.toast(player, "Need " .. Format.compact(egg.cost) .. " Coins to hatch " .. egg.name .. "!", "warn")
+				return
+			end
+			prof.coins -= egg.cost
+		end
+
+		local hatched = CompanionDefs.hatch(eggId)
+		Profile.addCompanion(prof, hatched.id)
+		PlayerState.applyAuraVisuals(player)
+		HatchResultRemote:FireClient(player, {
+			companionId = hatched.id,
+			eggId = eggId,
+		})
+		if hatched.rarity == "Legendary" or hatched.rarity == "Mythic" or hatched.rarity == "Apex" then
+			PlayerState.broadcastToast(
+				"🐾 " .. player.DisplayName .. " hatched [" .. string.upper(hatched.rarity) .. "] " .. hatched.name .. "!",
+				"legendary"
+			)
+		else
+			PlayerState.toast(player, "Hatched [" .. hatched.rarity .. "] " .. hatched.name .. "!", "success")
+		end
+		PlayerState.markDirty(player)
+	end)
+
+	Remotes.get("CraftGoldenCompanion").OnServerEvent:Connect(function(player, compId)
+		local prof = profiles[player]
+		if not prof or type(compId) ~= "string" then
+			return
+		end
+		local ok, msg = Profile.craftGoldenCompanion(prof, compId)
+		if not ok then
+			PlayerState.toast(player, msg, "warn")
+			return
+		end
+		PlayerState.applyAuraVisuals(player)
+		PlayerState.toast(player, msg, "legendary")
+		PlayerState.markDirty(player)
+	end)
+
+	Remotes.get("ClaimPlaytime").OnServerEvent:Connect(function(player, rewardIndex)
+		local prof = profiles[player]
+		if not prof or type(rewardIndex) ~= "number" then
+			return
+		end
+		local idx = math.floor(rewardIndex)
+		local def = TycoonDefs.PLAYTIME_REWARDS[idx]
+		if not def then
+			return
+		end
+		local key = "pt_" .. tostring(idx)
+		if prof.claimedPlaytime[key] then
+			return
+		end
+		local elapsed = os.time() - (sessionJoinTime[player] or os.time())
+		if elapsed < def.reqSeconds then
+			PlayerState.toast(player, "Wait " .. tostring(def.reqSeconds - elapsed) .. "s more to claim this gift!", "warn")
+			return
+		end
+		prof.claimedPlaytime[key] = true
+		if def.kind == "coins" then
+			local amt = math.floor(def.amount * Profile.getRebirthMultiplier(prof))
+			prof.coins += amt
+			PlayerState.toast(player, "Session Gift: +" .. Format.compact(amt) .. " Coins!", "success")
+		elseif def.kind == "gems" then
+			prof.gems += def.amount
+			PlayerState.toast(player, "Session Gift: +" .. tostring(def.amount) .. " Star Gems!", "success")
+		elseif def.kind == "aura" then
+			Profile.unlockAura(prof, def.auraId)
+			PlayerState.applyAuraVisuals(player)
+			PlayerState.toast(player, "Session Gift: Unlocked " .. AuraDefs.get(def.auraId).name .. "!", "legendary")
+		elseif def.kind == "pet" then
+			prof.gems += def.gems or 0
+			Profile.addCompanion(prof, def.petId)
+			PlayerState.applyAuraVisuals(player)
+			PlayerState.toast(player, "Session Gift: Unlocked " .. CompanionDefs.get(def.petId).name .. " & +300 Gems!", "legendary")
+		end
 		PlayerState.markDirty(player)
 	end)
 

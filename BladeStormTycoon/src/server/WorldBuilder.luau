@@ -13,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local TycoonDefs = require(Shared.TycoonDefs)
 local AuraDefs = require(Shared.AuraDefs)
+local CompanionDefs = require(Shared.CompanionDefs)
 local Profile = require(Shared.Profile)
 local Format = require(Shared.Format)
 local PlayerState = require(script.Parent.PlayerState)
@@ -358,6 +359,167 @@ function WorldBuilder.build()
 		Vector3.new(0, 7, 0)
 	)
 
+	-- 2b. Spirit Companion Egg Pedestals near Hub South-East (18..34, 2, 24)
+	for eIdx, egg in ipairs(CompanionDefs.EGGS) do
+		local eggPos = Vector3.new(12 + eIdx * 10, 5.5, 26)
+		local ped = makePart({
+			Name = "EggPedestal_" .. egg.id,
+			Shape = Enum.PartType.Ball,
+			Size = Vector3.new(5.2, 6.6, 5.2),
+			Position = eggPos,
+			Color = egg.color,
+			Material = Enum.Material.Neon,
+			Parent = root,
+		})
+		local costStr = Format.compact(egg.cost) .. (if egg.currency == "gems" then " Gems" else " Coins")
+		makeBillboard(
+			ped,
+			"🥚 " .. string.upper(egg.name),
+			"Hatch Spirit Companions (" .. costStr .. ")",
+			egg.color,
+			Vector3.new(0, 5.2, 0)
+		)
+		local ep = Instance.new("ProximityPrompt")
+		ep.ObjectText = egg.name
+		ep.ActionText = "Hatch (" .. costStr .. ")"
+		ep.KeyboardKeyCode = Enum.KeyCode.E
+		ep.MaxActivationDistance = 15
+		ep.HoldDuration = 0
+		ep.Parent = ped
+		ep.Triggered:Connect(function(player)
+			local prof = PlayerState.get(player)
+			if not prof then
+				return
+			end
+			if egg.currency == "gems" then
+				if prof.gems < egg.cost then
+					PlayerState.toast(player, "Need " .. costStr .. "!", "warn")
+					return
+				end
+				prof.gems -= egg.cost
+			else
+				if prof.coins < egg.cost then
+					PlayerState.toast(player, "Need " .. costStr .. "!", "warn")
+					return
+				end
+				prof.coins -= egg.cost
+			end
+			local hatched = CompanionDefs.hatch(egg.id)
+			Profile.addCompanion(prof, hatched.id)
+			PlayerState.applyAuraVisuals(player)
+			PlayerState.toast(player, "Hatched [" .. hatched.rarity .. "] " .. hatched.name .. "!", "success")
+			PlayerState.markDirty(player)
+		end)
+	end
+
+	-- 2c. Hall of Champions Live Leaderboard Wall at Hub North-West (-26, 11, -34)
+	local boardWall = makePart({
+		Name = "LeaderboardMonolith",
+		Size = Vector3.new(18, 14, 1.5),
+		Position = Vector3.new(-26, 9, -34),
+		Color = Color3.fromRGB(22, 28, 46),
+		Material = Enum.Material.Metal,
+		Parent = root,
+	})
+	local sGui = Instance.new("SurfaceGui")
+	sGui.Face = Enum.NormalId.Back
+	sGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	sGui.PixelsPerStud = 35
+	sGui.Parent = boardWall
+
+	local boardTitle = Instance.new("TextLabel")
+	boardTitle.Size = UDim2.new(1, 0, 0.18, 0)
+	boardTitle.BackgroundColor3 = Color3.fromRGB(45, 135, 235)
+	boardTitle.Font = Enum.Font.GothamBlack
+	boardTitle.TextSize = 28
+	boardTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+	boardTitle.Text = "🏆 SERVER HALL OF CHAMPIONS 🏆"
+	boardTitle.Parent = sGui
+
+	local boardBody = Instance.new("TextLabel")
+	boardBody.Position = UDim2.new(0.04, 0, 0.22, 0)
+	boardBody.Size = UDim2.new(0.92, 0, 0.74, 0)
+	boardBody.BackgroundTransparency = 1
+	boardBody.Font = Enum.Font.GothamBold
+	boardBody.TextSize = 22
+	boardBody.TextXAlignment = Enum.TextXAlignment.Left
+	boardBody.TextYAlignment = Enum.TextYAlignment.Top
+	boardBody.TextColor3 = Color3.fromRGB(235, 245, 255)
+	boardBody.Text = "Loading Champions..."
+	boardBody.Parent = sGui
+
+	-- 2d. Colossal World Boss Raid: "THE ABYSSAL SHOGUN" at Hub South (0, 12, 54)
+	local bossModel = Instance.new("Model")
+	bossModel.Name = "AbyssalShogunBoss"
+	bossModel.Parent = root
+
+	local bossCore = makePart({
+		Name = "BossTorso",
+		Size = Vector3.new(9, 15, 6),
+		Position = Vector3.new(0, 10, 54),
+		Color = Color3.fromRGB(215, 35, 85),
+		Material = Enum.Material.Neon,
+		Parent = bossModel,
+	})
+	local bossCrown = makePart({
+		Name = "BossCrown",
+		Size = Vector3.new(11, 2.5, 7),
+		Position = Vector3.new(0, 18.5, 54),
+		Color = Color3.fromRGB(255, 205, 55),
+		Material = Enum.Material.Neon,
+		Parent = bossModel,
+	})
+	local _ = bossCrown
+
+	local bossTitleLbl, bossHpLbl = makeBillboard(
+		bossCore,
+		"👹 WORLD RAID BOSS: ABYSSAL SHOGUN 👹",
+		"HP: 5,000 / 5,000  •  Attack with [E] or Click to Earn Gems & Coins!",
+		Color3.fromRGB(255, 75, 115),
+		Vector3.new(0, 11, 0)
+	)
+	local _ = bossTitleLbl
+
+	local bossMaxHp = 5000
+	local bossHp = bossMaxHp
+	local bossPrompt = Instance.new("ProximityPrompt")
+	bossPrompt.ObjectText = "Abyssal Shogun (World Boss)"
+	bossPrompt.ActionText = "Slash Boss"
+	bossPrompt.KeyboardKeyCode = Enum.KeyCode.E
+	bossPrompt.MaxActivationDistance = 26
+	bossPrompt.HoldDuration = 0
+	bossPrompt.Parent = bossCore
+
+	local function hitBoss(player: Player)
+		local prof = PlayerState.get(player)
+		if not prof then
+			return
+		end
+		local aura = AuraDefs.get(prof.equippedAura)
+		local dmg = math.floor(45 * aura.coinMult * Profile.getRebirthMultiplier(prof))
+		bossHp = math.max(0, bossHp - dmg)
+		local hitCoins = math.floor(35 * Profile.getRebirthMultiplier(prof))
+		prof.coins += hitCoins
+
+		if bossHp <= 0 then
+			prof.bossKills = (prof.bossKills or 0) + 1
+			local killCoins = math.floor(2500 * Profile.getRebirthMultiplier(prof))
+			prof.coins += killCoins
+			prof.gems += 45
+			PlayerState.broadcastToast(
+				"⚔ " .. player.DisplayName .. " slew the ABYSSAL SHOGUN World Boss! (+45 Gems & +" .. Format.compact(killCoins) .. " Coins!)",
+				"legendary"
+			)
+			bossMaxHp = math.floor(bossMaxHp * 1.25)
+			bossHp = bossMaxHp
+		end
+		bossHpLbl.Text = "HP: " .. Format.commas(bossHp) .. " / " .. Format.commas(bossMaxHp) .. "  •  Last Hit: -" .. Format.compact(dmg)
+		PlayerState.markDirty(player)
+	end
+
+	bossPrompt.Triggered:Connect(hitBoss)
+	Shared:WaitForChild("BladeStormRemotes"):WaitForChild("AttackBoss").OnServerEvent:Connect(hitBoss)
+
 	-- 3. North Bridge & The Blade Storm Cyber-Dome Arena (Center: (0, 6, -155))
 	makePart({
 		Name = "ArenaBridge",
@@ -620,12 +782,14 @@ function WorldBuilder.build()
 		end
 	end
 
-	-- Spin the central RNG Star Core crystal smoothly and update Vault Pad labels
+	-- Spin the central RNG Star Core crystal smoothly and update Vault Pad & Hall of Champions labels
 	task.spawn(function()
 		local angle = 0
+		local tickCount = 0
 		while root.Parent do
 			task.wait(0.05)
 			angle += 0.04
+			tickCount += 1
 			if crystal and crystal.Parent then
 				crystal.CFrame = CFrame.new(0, 13 + math.sin(angle * 1.5) * 1.1, 0)
 					* CFrame.Angles(math.rad(25), angle, math.rad(25))
@@ -639,6 +803,27 @@ function WorldBuilder.build()
 						vLbl.Text = "💰 Vault: " .. Format.compact(prof.vaultCoins) .. " Coins (Step to Collect)"
 					end
 				end
+			end
+			if tickCount % 40 == 0 and boardBody and boardBody.Parent then
+				local lines = {}
+				for _, p in ipairs(Players:GetPlayers()) do
+					local prof = PlayerState.get(p)
+					if prof then
+						local aura = AuraDefs.get(prof.equippedAura)
+						table.insert(
+							lines,
+							string.format(
+								"• %s — 💰 %s Coins | ⚡ Rebirth %d | ⚔ %s (1/%s)",
+								p.DisplayName,
+								Format.compact(prof.coins),
+								prof.rebirths,
+								aura.name,
+								Format.compact(prof.bestOdds)
+							)
+						)
+					end
+				end
+				boardBody.Text = if #lines > 0 then table.concat(lines, "\n") else "Waiting for Champions..."
 			end
 		end
 	end)

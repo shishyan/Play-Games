@@ -68,6 +68,8 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		HUD.openTab("fortress")
 	elseif input.KeyCode == Enum.KeyCode.C then
 		HUD.openTab("collection")
+	elseif input.KeyCode == Enum.KeyCode.P then
+		HUD.openTab("companions")
 	end
 end)
 

@@ -1,7 +1,8 @@
 --!nonstrict
--- Pure profile data structure, income calculations, luck math, and serialization.
+-- Pure profile data structure, income calculations, luck math, companion bonuses, and serialization.
 local AuraDefs = require(script.Parent.AuraDefs)
 local TycoonDefs = require(script.Parent.TycoonDefs)
+local CompanionDefs = require(script.Parent.CompanionDefs)
 
 export type PlayerProfile = {
 	coins: number,
@@ -10,9 +11,12 @@ export type PlayerProfile = {
 	rebirths: number,
 	equippedAura: string,
 	unlockedAuras: { [string]: number }, -- auraId -> count
+	companions: { [string]: number }, -- companionId -> count
+	goldenCompanions: { [string]: number }, -- companionId -> count
 	buildings: { [string]: number }, -- buildingId -> level
 	upgrades: { [string]: number }, -- upgradeId -> level
 	claimedQuests: { [string]: boolean },
+	claimedPlaytime: { [string]: boolean },
 	redeemedCodes: { [string]: boolean },
 	epicPity: number,
 	legendaryPity: number,
@@ -21,6 +25,7 @@ export type PlayerProfile = {
 	totalBuilds: number,
 	arenaWins: number,
 	arenaElims: number,
+	bossKills: number,
 	bestOdds: number,
 	lastSpinTime: number,
 }
@@ -32,7 +37,7 @@ function Profile.new(): PlayerProfile
 	for _, b in ipairs(TycoonDefs.BUILDINGS) do
 		buildings[b.id] = 0
 	end
-	buildings["essence_forge"] = 1 -- Start with level 1 Cyber Essence Forge so coins flow immediately!
+	buildings["essence_forge"] = 1
 
 	local upgrades = {}
 	for _, u in ipairs(TycoonDefs.UPGRADES) do
@@ -46,9 +51,12 @@ function Profile.new(): PlayerProfile
 		rebirths = 0,
 		equippedAura = "rust_katana",
 		unlockedAuras = { ["rust_katana"] = 1 },
+		companions = { ["spark_drone"] = 1 }, -- Start with a loyal Volt Spark Drone companion!
+		goldenCompanions = {},
 		buildings = buildings,
 		upgrades = upgrades,
 		claimedQuests = {},
+		claimedPlaytime = {},
 		redeemedCodes = {},
 		epicPity = 0,
 		legendaryPity = 0,
@@ -57,6 +65,7 @@ function Profile.new(): PlayerProfile
 		totalBuilds = 1,
 		arenaWins = 0,
 		arenaElims = 0,
+		bossKills = 0,
 		bestOdds = 2,
 		lastSpinTime = 0,
 	}
@@ -78,6 +87,20 @@ function Profile.sanitize(raw: any): PlayerProfile
 		for k, v in pairs(raw.unlockedAuras) do
 			if AuraDefs.BY_ID[k] and type(v) == "number" and v > 0 then
 				base.unlockedAuras[k] = math.floor(v)
+			end
+		end
+	end
+	if type(raw.companions) == "table" then
+		for k, v in pairs(raw.companions) do
+			if CompanionDefs.BY_ID[k] and type(v) == "number" and v >= 0 then
+				base.companions[k] = math.floor(v)
+			end
+		end
+	end
+	if type(raw.goldenCompanions) == "table" then
+		for k, v in pairs(raw.goldenCompanions) do
+			if CompanionDefs.BY_ID[k] and type(v) == "number" and v >= 0 then
+				base.goldenCompanions[k] = math.floor(v)
 			end
 		end
 	end
@@ -104,6 +127,13 @@ function Profile.sanitize(raw: any): PlayerProfile
 			end
 		end
 	end
+	if type(raw.claimedPlaytime) == "table" then
+		for k, v in pairs(raw.claimedPlaytime) do
+			if type(k) == "string" and v == true then
+				base.claimedPlaytime[k] = true
+			end
+		end
+	end
 	if type(raw.redeemedCodes) == "table" then
 		for k, v in pairs(raw.redeemedCodes) do
 			if type(k) == "string" and v == true then
@@ -118,6 +148,7 @@ function Profile.sanitize(raw: any): PlayerProfile
 	base.totalBuilds = math.max(1, math.floor(tonumber(raw.totalBuilds) or 1))
 	base.arenaWins = math.max(0, math.floor(tonumber(raw.arenaWins) or 0))
 	base.arenaElims = math.max(0, math.floor(tonumber(raw.arenaElims) or 0))
+	base.bossKills = math.max(0, math.floor(tonumber(raw.bossKills) or 0))
 	base.bestOdds = math.max(2, math.floor(tonumber(raw.bestOdds) or 2))
 	base.lastSpinTime = math.max(0, math.floor(tonumber(raw.lastSpinTime) or 0))
 	return base
@@ -125,6 +156,10 @@ end
 
 function Profile.getRebirthMultiplier(p: PlayerProfile): number
 	return 1 + (p.rebirths * 0.75)
+end
+
+function Profile.getCompanionBonuses(p: PlayerProfile): (number, number, { { id: string, isGolden: boolean } })
+	return CompanionDefs.getTopEquippedBonuses(p.companions, p.goldenCompanions)
 end
 
 function Profile.getLuckMultiplier(p: PlayerProfile, serverFrenzyActive: boolean?): number
@@ -139,6 +174,9 @@ function Profile.getLuckMultiplier(p: PlayerProfile, serverFrenzyActive: boolean
 		end
 	end
 
+	local _, petLuck, _ = Profile.getCompanionBonuses(p)
+	luck += petLuck
+
 	luck *= (1 + p.rebirths * 0.35)
 	if serverFrenzyActive then
 		luck *= 2.0
@@ -151,7 +189,6 @@ function Profile.getCoinsPerSecond(p: PlayerProfile, serverFrenzyActive: boolean
 	for id, lvl in pairs(p.buildings) do
 		local def = TycoonDefs.BUILDING_BY_ID[id]
 		if def and lvl > 0 then
-			-- Super-linear scaling per building level
 			raw += def.baseIncome * lvl * (1 + (lvl - 1) * 0.12)
 		end
 	end
@@ -160,9 +197,10 @@ function Profile.getCoinsPerSecond(p: PlayerProfile, serverFrenzyActive: boolean
 	local coinUpg = p.upgrades["coin_overdrive"] or 0
 	local upgMult = 1 + (coinUpg * TycoonDefs.UPGRADE_BY_ID["coin_overdrive"].effectPerLevel)
 	local rebirthMult = Profile.getRebirthMultiplier(p)
+	local petCoinMult, _, _ = Profile.getCompanionBonuses(p)
 	local frenzyMult = if serverFrenzyActive then 1.5 else 1.0
 
-	return math.floor(raw * aura.coinMult * upgMult * rebirthMult * frenzyMult)
+	return math.floor(raw * aura.coinMult * petCoinMult * upgMult * rebirthMult * frenzyMult)
 end
 
 function Profile.getGemsPerMinute(p: PlayerProfile): number
@@ -196,11 +234,29 @@ function Profile.unlockAura(p: PlayerProfile, auraId: string)
 	if def.odds > p.bestOdds then
 		p.bestOdds = def.odds
 	end
-	-- Auto-equip if strictly higher tier than current equipped aura
 	local curDef = AuraDefs.get(p.equippedAura)
 	if def.tier > curDef.tier then
 		p.equippedAura = def.id
 	end
+end
+
+function Profile.addCompanion(p: PlayerProfile, compId: string)
+	local def = CompanionDefs.get(compId)
+	p.companions[def.id] = (p.companions[def.id] or 0) + 1
+end
+
+function Profile.craftGoldenCompanion(p: PlayerProfile, compId: string): (boolean, string)
+	local def = CompanionDefs.BY_ID[compId]
+	if not def then
+		return false, "Invalid companion!"
+	end
+	local count = p.companions[compId] or 0
+	if count < 3 then
+		return false, "Need 3x " .. def.name .. " to evolve a Golden version!"
+	end
+	p.companions[compId] = count - 3
+	p.goldenCompanions[compId] = (p.goldenCompanions[compId] or 0) + 1
+	return true, "✨ Evolved GOLDEN " .. def.name .. " (1.8x Stats)!"
 end
 
 function Profile.canRebirth(p: PlayerProfile): (boolean, number)

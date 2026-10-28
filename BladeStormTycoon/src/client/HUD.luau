@@ -8,6 +8,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Remotes = require(Shared.Remotes)
 local AuraDefs = require(Shared.AuraDefs)
 local TycoonDefs = require(Shared.TycoonDefs)
+local CompanionDefs = require(Shared.CompanionDefs)
 local Format = require(Shared.Format)
 local Effects = require(script.Parent.Effects)
 
@@ -316,6 +317,105 @@ local function renderRebirthTab()
 	end)
 end
 
+local function renderCompanionsTab()
+	clearContent()
+	if not currentSync or not currentSync.profile then
+		return
+	end
+	local prof = currentSync.profile
+
+	-- 1. Egg Hatching Row Card
+	local eggCard = Instance.new("Frame")
+	eggCard.LayoutOrder = 0
+	eggCard.Size = UDim2.new(1, -12, 0, 96)
+	eggCard.BackgroundColor3 = Color3.fromRGB(24, 30, 48)
+	addCorner(eggCard, 10)
+	addStroke(eggCard, Color3.fromRGB(95, 220, 255), 1.5)
+	eggCard.Parent = modalContent
+
+	for idx, egg in ipairs(CompanionDefs.EGGS) do
+		local unit = if egg.currency == "gems" then " Gems" else " Coins"
+		local canAfford = if egg.currency == "gems" then prof.gems >= egg.cost else prof.coins >= egg.cost
+		local eb = Instance.new("TextButton")
+		eb.Position = UDim2.new((idx - 1) * 0.33 + 0.015, 0, 0, 12)
+		eb.Size = UDim2.new(0.30, 0, 0, 72)
+		eb.BackgroundColor3 = if canAfford then Color3.fromRGB(36, 48, 76) else Color3.fromRGB(55, 40, 58)
+		eb.Font = Enum.Font.GothamBlack
+		eb.TextSize = 13
+		eb.TextWrapped = true
+		eb.TextColor3 = egg.color
+		eb.Text = "🥚 " .. egg.name .. "\nHATCH (" .. Format.compact(egg.cost) .. unit .. ")"
+		addCorner(eb, 8)
+		addStroke(eb, egg.color, 1.5)
+		eb.Parent = eggCard
+		eb.MouseButton1Click:Connect(function()
+			Effects.playSound("rollRare")
+			Remotes.get("HatchEgg"):FireServer(egg.id)
+		end)
+	end
+
+	-- 2. Owned Spirit Companions + 3-to-1 Golden Evolution
+	for i, cDef in ipairs(CompanionDefs.LIST) do
+		local nCount = prof.companions[cDef.id] or 0
+		local gCount = prof.goldenCompanions[cDef.id] or 0
+		local unlocked = (nCount > 0) or (gCount > 0)
+
+		local row = Instance.new("Frame")
+		row.LayoutOrder = i
+		row.Size = UDim2.new(1, -12, 0, 70)
+		row.BackgroundColor3 = Color3.fromRGB(20, 26, 42)
+		addCorner(row, 10)
+		addStroke(row, if gCount > 0 then Color3.fromRGB(255, 215, 55) elseif unlocked then cDef.color else Color3.fromRGB(65, 72, 92), 1.5)
+		row.Parent = modalContent
+
+		local t = Instance.new("TextLabel")
+		t.Position = UDim2.new(0, 14, 0, 8)
+		t.Size = UDim2.new(0.62, 0, 0, 24)
+		t.BackgroundTransparency = 1
+		t.Font = Enum.Font.GothamBlack
+		t.TextSize = 15
+		t.TextXAlignment = Enum.TextXAlignment.Left
+		t.TextColor3 = if unlocked then cDef.color else Color3.fromRGB(130, 140, 160)
+		t.Text = "[" .. string.upper(cDef.rarity) .. "] " .. (if unlocked then cDef.name else "??? Unknown Companion")
+		t.Parent = row
+
+		local s = Instance.new("TextLabel")
+		s.Position = UDim2.new(0, 14, 0, 34)
+		s.Size = UDim2.new(0.62, 0, 0, 26)
+		s.BackgroundTransparency = 1
+		s.Font = Enum.Font.GothamMedium
+		s.TextSize = 13
+		s.TextXAlignment = Enum.TextXAlignment.Left
+		s.TextColor3 = Color3.fromRGB(205, 220, 245)
+		s.Text = string.format(
+			"%.2fx Coins  |  +%.2f Luck  |  Normal: %d  |  ★ Golden (1.8x): %d",
+			cDef.coinMult,
+			cDef.luckAdd,
+			nCount,
+			gCount
+		)
+		s.Parent = row
+
+		local evoBtn = Instance.new("TextButton")
+		evoBtn.Position = UDim2.new(1, -162, 0.5, -18)
+		evoBtn.Size = UDim2.new(0, 148, 0, 36)
+		evoBtn.Font = Enum.Font.GothamBlack
+		evoBtn.TextSize = 12
+		evoBtn.TextColor3 = Color3.fromRGB(25, 25, 35)
+		evoBtn.BackgroundColor3 = if nCount >= 3 then Color3.fromRGB(255, 205, 55) else Color3.fromRGB(75, 85, 105)
+		evoBtn.Text = "★ EVOLVE GOLD (" .. tostring(nCount) .. "/3)"
+		addCorner(evoBtn, 8)
+		evoBtn.Parent = row
+
+		if nCount >= 3 then
+			evoBtn.MouseButton1Click:Connect(function()
+				Effects.playSound("rollMythic")
+				Remotes.get("CraftGoldenCompanion"):FireServer(cDef.id)
+			end)
+		end
+	end
+end
+
 local function renderRewardsTab()
 	clearContent()
 	if not currentSync or not currentSync.profile then
@@ -323,6 +423,50 @@ local function renderRewardsTab()
 	end
 	local prof = currentSync.profile
 	local spinCd = currentSync.spinCooldown or 0
+	local sessionSec = currentSync.sessionSeconds or 0
+
+	-- 0. Session Playtime Gift Vault (6 Timed Chests)
+	local ptHeader = Instance.new("Frame")
+	ptHeader.LayoutOrder = -1
+	ptHeader.Size = UDim2.new(1, -12, 0, 114)
+	ptHeader.BackgroundColor3 = Color3.fromRGB(24, 30, 50)
+	addCorner(ptHeader, 10)
+	addStroke(ptHeader, Color3.fromRGB(95, 235, 255), 1.5)
+	ptHeader.Parent = modalContent
+
+	for idx, pt in ipairs(TycoonDefs.PLAYTIME_REWARDS) do
+		local key = "pt_" .. tostring(idx)
+		local claimed = prof.claimedPlaytime and prof.claimedPlaytime[key] == true
+		local rem = math.max(0, pt.reqSeconds - sessionSec)
+		local ready = (rem <= 0) and not claimed
+
+		local col = (idx - 1) % 3
+		local rowIdx = math.floor((idx - 1) / 3)
+		local pb = Instance.new("TextButton")
+		pb.Position = UDim2.new(col * 0.33 + 0.015, 0, 0, 8 + rowIdx * 50)
+		pb.Size = UDim2.new(0.30, 0, 0, 44)
+		pb.Font = Enum.Font.GothamBlack
+		pb.TextSize = 11
+		pb.TextWrapped = true
+		pb.TextColor3 = Color3.fromRGB(255, 255, 255)
+		pb.BackgroundColor3 = if claimed
+			then Color3.fromRGB(55, 65, 82)
+			elseif ready then Color3.fromRGB(45, 205, 110)
+			else Color3.fromRGB(38, 48, 72)
+		pb.Text = if claimed
+			then "✓ CLAIMED (" .. pt.label .. ")"
+			elseif ready then "🎁 CLAIM: " .. pt.label
+			else "⏳ " .. tostring(rem) .. "s — " .. pt.label
+		addCorner(pb, 8)
+		pb.Parent = ptHeader
+
+		if ready then
+			pb.MouseButton1Click:Connect(function()
+				Effects.playSound("upgrade")
+				Remotes.get("ClaimPlaytime"):FireServer(idx)
+			end)
+		end
+	end
 
 	-- 1. Lucky Wheel + Promo Code Box Card
 	local topCard = Instance.new("Frame")
@@ -455,8 +599,11 @@ function HUD.openTab(tabName: string)
 	elseif tabName == "rebirth" then
 		modalTitle.Text = "⚡ ASCENSION REBIRTH SHRINE"
 		renderRebirthTab()
+	elseif tabName == "companions" then
+		modalTitle.Text = "🐾 SPIRIT COMPANIONS & EGG GACHA (TOP 3 EQUIP)"
+		renderCompanionsTab()
 	elseif tabName == "rewards" then
-		modalTitle.Text = "🎁 QUESTS, LUCKY WHEEL & PROMO CODES"
+		modalTitle.Text = "🎁 SESSION GIFTS, QUESTS, LUCKY WHEEL & CODES"
 		renderRewardsTab()
 	end
 end
@@ -635,8 +782,8 @@ function HUD.init()
 
 	-- 2. Left Navigation Sidebar
 	local sideBar = Instance.new("Frame")
-	sideBar.Position = UDim2.new(0, 14, 0.5, -165)
-	sideBar.Size = UDim2.new(0, 162, 0, 330)
+	sideBar.Position = UDim2.new(0, 14, 0.5, -195)
+	sideBar.Size = UDim2.new(0, 162, 0, 390)
 	sideBar.BackgroundTransparency = 1
 	sideBar.Parent = screenGui
 
@@ -647,9 +794,10 @@ function HUD.init()
 	local navButtons = {
 		{ id = "fortress", label = "🏰 Sky Fortress", color = Color3.fromRGB(55, 165, 255) },
 		{ id = "collection", label = "⚔ Blade Index", color = Color3.fromRGB(185, 85, 255) },
+		{ id = "companions", label = "🐾 Spirit Pets", color = Color3.fromRGB(75, 240, 165) },
 		{ id = "upgrades", label = "💎 Luck & Shop", color = Color3.fromRGB(65, 215, 225) },
 		{ id = "rebirth", label = "⚡ Ascend Rebirth", color = Color3.fromRGB(235, 85, 185) },
-		{ id = "rewards", label = "🎁 Quests & Codes", color = Color3.fromRGB(255, 195, 55) },
+		{ id = "rewards", label = "🎁 Gifts & Codes", color = Color3.fromRGB(255, 195, 55) },
 	}
 	for _, nav in ipairs(navButtons) do
 		local b = Instance.new("TextButton")
@@ -913,6 +1061,8 @@ function HUD.onStateSync(payload: { [string]: any })
 			renderUpgradesTab()
 		elseif activeTab == "rebirth" then
 			renderRebirthTab()
+		elseif activeTab == "companions" then
+			renderCompanionsTab()
 		elseif activeTab == "rewards" then
 			renderRewardsTab()
 		end
