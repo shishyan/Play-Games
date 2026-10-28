@@ -64,7 +64,8 @@ function EnemyService.canPacify(model: Model): boolean
 	if not data or data.dead or not data.def.corrupt then
 		return false
 	end
-	return data.hum.Health <= data.hum.MaxHealth * 0.4
+	-- In the Gurukula of Ahimsa, any agitated spirit at <= 85% agitation (or weakened) can be immediately calmed via Shanti Mantra
+	return data.hum.Health <= data.hum.MaxHealth * 0.85
 end
 
 ---------------------------------------------------------------- spawning
@@ -142,7 +143,7 @@ function EnemyService.spawn(id: string, pos: Vector3, home: any)
 	end)
 end
 
----------------------------------------------------------------- damage & death
+---------------------------------------------------------------- damage & Ahimsa awakening (Prabodha)
 function EnemyService.damage(model: Instance, amount: number, player: Player?, opts: any?)
 	local data = enemies[model :: Model]
 	if not data or data.dead then
@@ -150,6 +151,13 @@ function EnemyService.damage(model: Instance, amount: number, player: Player?, o
 	end
 	opts = opts or {}
 	local def = data.def
+	-- Strict Ahimsa (Kollaamai): Sacred peaceful creatures cannot be harmed at all.
+	if def.peaceful then
+		if player then
+			PlayerState.toast(player, "Ahimsa (Kollaamai): Sacred beings of the Gurukula are never harmed.", "info")
+		end
+		return 0
+	end
 	if def.shielded then
 		if opts.shieldBonus then
 			amount *= opts.shieldBonus
@@ -157,7 +165,13 @@ function EnemyService.damage(model: Instance, amount: number, player: Player?, o
 			amount *= 0.5
 		end
 	end
-	data.hum:TakeDamage(amount)
+	-- Never let Health drop to 0 so the spirit never dies/ragdolls; at 1 HP its agitation is fully calmed (Prabodha).
+	local remaining = data.hum.Health - amount
+	if remaining <= 1 then
+		data.hum.Health = 1
+	else
+		data.hum:TakeDamage(amount)
+	end
 	if player then
 		data.dmgBy[player] = (data.dmgBy[player] or 0) + amount
 		if not def.peaceful then
@@ -180,33 +194,34 @@ function EnemyService.damage(model: Instance, amount: number, player: Player?, o
 		end
 		Services.Combat.fx(hrp.Position, { kind = "num", pos = hrp.Position + Vector3.new(0, 4, 0), amount = math.floor(amount + 0.5), color = def.shielded and not opts.pierceShield and "shield" or "hit" })
 	end
+	if remaining <= 1 then
+		data.pacified = true
+		EnemyService.onDeath(data, true)
+	end
 	return amount
 end
 
 local function reward(player: Player, data, pacified: boolean)
 	local def = data.def
 	if def.peaceful then
-		PlayerState.deed(player, "kill_peaceful", "harmed a sacred creature")
 		return
 	end
 	local rules = WorldState.rules()
-	if pacified then
-		PlayerState.addPath(player, "dharma", def.boss and 8 or 3)
-		PlayerState.deed(player, "pacify", "mercy")
-		Services.Quest.event(player, { k = "pacify" })
-	else
-		PlayerState.addGold(player, rng:NextInteger(def.gold[1], def.gold[2]), true)
-		if def.kama then
-			PlayerState.addPath(player, "kama", def.kama)
-		end
-		PlayerState.deed(player, "kill_corrupt")
-		Services.Quest.event(player, { k = "kill", t = data.id })
+	-- Every calmed/awakened spirit rewards Dharmic virtue, Kama mastery, offerings (Gold), and advances both pacify & spirit quests
+	PlayerState.addPath(player, "dharma", def.boss and 8 or (pacified and 3 or 2))
+	if def.kama then
+		PlayerState.addPath(player, "kama", def.kama)
 	end
+	if def.gold then
+		PlayerState.addGold(player, rng:NextInteger(def.gold[1], def.gold[2]), true)
+	end
+	PlayerState.deed(player, "pacify", "Ahimsa — spirit awakened in peace")
+	Services.Quest.event(player, { k = "pacify", t = data.id })
 	for _, drop in ipairs(def.loot or {}) do
-		local chance = drop[2] * math.min(1, rules.yield) * (pacified and 0.6 or 1)
+		local chance = drop[2] * math.min(1, rules.yield)
 		if rng:NextNumber() < chance then
 			PlayerState.addItem(player, drop[1], 1)
-			PlayerState.toast(player, ("Found: %s %s"):format(ItemDefs[drop[1]].icon, ItemDefs[drop[1]].name), "loot")
+			PlayerState.toast(player, ("Offering received: %s %s"):format(ItemDefs[drop[1]].icon, ItemDefs[drop[1]].name), "loot")
 		end
 	end
 end
@@ -217,21 +232,50 @@ function EnemyService.onDeath(data, pacified: boolean)
 	end
 	data.dead = true
 	local def = data.def
+	local rewarded = {}
 	for player in pairs(data.dmgBy) do
 		if player.Parent and PlayerState.get(player) then
-			reward(player, data, pacified)
+			rewarded[player] = true
+			reward(player, data, true)
 		end
 	end
-	if data.pacifier then
+	if data.pacifier and not rewarded[data.pacifier] and data.pacifier.Parent and PlayerState.get(data.pacifier) then
 		reward(data.pacifier, data, true)
 	end
 	local model = data.model
+	local hrp = hrpOf(model)
+	if hrp then
+		hrp.Anchored = true
+		Services.Combat.fx(hrp.Position, { kind = "ring", pos = hrp.Position, radius = 14, color = "sattva" })
+		local light = Instance.new("PointLight")
+		light.Color = Color3.fromRGB(255, 225, 130)
+		light.Brightness = 3
+		light.Range = 18
+		light.Parent = hrp
+	end
+	-- Prabodha (Awakening): transform dark agitation into golden Sattva light and ascend peacefully
 	for _, d in ipairs(model:GetDescendants()) do
-		if d:IsA("BasePart") then
-			d.Transparency = math.min(1, d.Transparency + 0.6)
+		if d:IsA("BasePart") and d.Name ~= "HumanoidRootPart" then
+			d.Color = Color3.fromRGB(255, 225, 135)
+			d.Material = Enum.Material.Neon
+			d.Transparency = math.min(0.85, d.Transparency + 0.35)
 		end
 	end
-	task.delay(2.5, function()
+	task.spawn(function()
+		for _ = 1, 20 do
+			if not model.Parent then
+				break
+			end
+			model:PivotTo(model:GetPivot() + Vector3.new(0, 0.35, 0))
+			for _, d in ipairs(model:GetDescendants()) do
+				if d:IsA("BasePart") and d.Name ~= "HumanoidRootPart" then
+					d.Transparency = math.min(1, d.Transparency + 0.03)
+				end
+			end
+			task.wait(0.1)
+		end
+	end)
+	task.delay(2.2, function()
 		enemies[model] = nil
 		model:Destroy()
 	end)
@@ -242,7 +286,7 @@ function EnemyService.onDeath(data, pacified: boolean)
 	end
 end
 
--- Mercy: end the fight without annihilation.
+-- Mercy (Shanti Mantra): awaken the agitated spirit in golden peace without annihilation.
 function EnemyService.pacify(model: Model, player: Player): boolean
 	local data = enemies[model]
 	if not data or not EnemyService.canPacify(model) then
@@ -250,9 +294,8 @@ function EnemyService.pacify(model: Model, player: Player): boolean
 	end
 	data.pacified = true
 	data.pacifier = player
-	data.dmgBy = {}
-	data.hum.Health = 0
-	EnemyService.onDeath(data, true) -- idempotent: the Died event may also fire
+	data.hum.Health = 1
+	EnemyService.onDeath(data, true)
 	return true
 end
 

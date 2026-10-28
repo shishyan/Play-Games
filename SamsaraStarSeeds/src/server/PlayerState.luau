@@ -10,10 +10,12 @@ local Purusharthas = require(Shared.Purusharthas)
 local Karma = require(Shared.Karma)
 local Ayurveda = require(Shared.Ayurveda)
 local Dhanurveda = require(Shared.Dhanurveda)
+local GurukulaDefs = require(Shared.GurukulaDefs)
 local Quests = require(Shared.Quests)
 local Remotes = require(Shared.Remotes)
 local WorldState = require(script.Parent.WorldState)
 local Guard = require(script.Parent.Guard)
+local Rigs = require(script.Parent.Rigs)
 
 local PlayerState = {}
 
@@ -185,7 +187,8 @@ end
 function PlayerState.applyToCharacter(player: Player, fullHeal: boolean)
 	local char = player.Character
 	local hum = char and char:FindFirstChildOfClass("Humanoid")
-	if not hum or not profiles[player] then
+	local profile = profiles[player]
+	if not hum or not profile then
 		return
 	end
 	local s = PlayerState.stats(player)
@@ -193,6 +196,17 @@ function PlayerState.applyToCharacter(player: Player, fullHeal: boolean)
 	hum.MaxHealth = s.maxHp
 	hum.WalkSpeed = s.walkSpeed
 	hum.Health = if fullHeal then s.maxHp else math.clamp(ratio * s.maxHp, 1, s.maxHp)
+	if char then
+		Rigs.attachWeapon(char, profile.weapon, profile.weaponTier)
+		local stage = GurukulaDefs.gradeFor(profile.paths, profile.legacy)
+		local kPath = Karma.path(profile.karma)
+		Rigs.updateStudentBadge(
+			char,
+			player.DisplayName,
+			("%s • %s"):format(stage.code, stage.title),
+			("%s Path • Ahimsa Gurukula"):format(kPath)
+		)
+	end
 end
 
 ---------------------------------------------------------------- notifications
@@ -214,6 +228,7 @@ function PlayerState.addPath(player: Player, path: string, amount: number)
 		return 0
 	end
 	local mult = WorldState.rules().pathGain * (WorldState.funded("pathshala") and 1.15 or 1)
+	local beforeStage = GurukulaDefs.gradeFor(profile.paths, profile.legacy)
 	local before = Purusharthas.tier(profile.paths[path])
 	local gained = Purusharthas.award(profile.paths, path, amount * mult)
 	if gained > 0.05 then
@@ -222,6 +237,10 @@ function PlayerState.addPath(player: Player, path: string, amount: number)
 	local after = Purusharthas.tier(profile.paths[path])
 	if after > before then
 		PlayerState.toast(player, ("%s tier up: %s"):format(PATH_LABEL[path], Purusharthas.TIER_NAMES[after]), "level")
+	end
+	local afterStage = GurukulaDefs.gradeFor(profile.paths, profile.legacy)
+	if afterStage.order > beforeStage.order then
+		PlayerState.toast(player, ("🎓 Gurukula Promotion: %s — %s!"):format(afterStage.code, afterStage.title), "level")
 	end
 	PlayerState.applyToCharacter(player, false)
 	dirty[player] = true

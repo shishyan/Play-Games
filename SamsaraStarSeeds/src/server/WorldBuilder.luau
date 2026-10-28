@@ -6,6 +6,7 @@ local CollectionService = game:GetService("CollectionService")
 
 local Shared = ReplicatedStorage.Shared
 local LokaDefs = require(Shared.LokaDefs)
+local GurukulaDefs = require(Shared.GurukulaDefs)
 local WorldState = require(script.Parent.WorldState)
 
 local WorldBuilder = {}
@@ -381,6 +382,188 @@ local function buildKalari(parent: Instance)
 	end
 end
 
+local function makeBannerSign(parent: Instance, pos: Vector3, title: string, subtitle: string, accent: Color3)
+	local post = mk(parent, Vector3.new(1, 1, 1), CFrame.new(pos), accent, Enum.Material.Neon)
+	post.Transparency = 1
+	post.CanCollide = false
+	local gui = Instance.new("BillboardGui")
+	gui.Size = UDim2.fromOffset(250, 56)
+	gui.StudsOffset = Vector3.new(0, 2.5, 0)
+	gui.AlwaysOnTop = false
+	gui.MaxDistance = 95
+	gui.Adornee = post
+	gui.Parent = post
+
+	local tLbl = Instance.new("TextLabel")
+	tLbl.Size = UDim2.new(1, 0, 0, 26)
+	tLbl.BackgroundTransparency = 1
+	tLbl.Font = Enum.Font.GothamBold
+	tLbl.TextSize = 15
+	tLbl.TextColor3 = accent
+	tLbl.TextStrokeTransparency = 0.2
+	tLbl.Text = title
+	tLbl.Parent = gui
+
+	local sLbl = Instance.new("TextLabel")
+	sLbl.Position = UDim2.fromOffset(0, 24)
+	sLbl.Size = UDim2.new(1, 0, 0, 24)
+	sLbl.BackgroundTransparency = 1
+	sLbl.Font = Enum.Font.GothamMedium
+	sLbl.TextSize = 12
+	sLbl.TextColor3 = Color3.fromRGB(245, 235, 210)
+	sLbl.TextStrokeTransparency = 0.3
+	sLbl.Text = subtitle
+	sLbl.Parent = gui
+end
+
+local function buildAgalVilakku(parent: Instance, pos: Vector3)
+	local base = disc(parent, pos, 0.45, 1.3, Color3.fromRGB(175, 95, 45), Enum.Material.Slate)
+	local flame = mk(parent, Vector3.new(0.42, 0.75, 0.42), CFrame.new(pos + Vector3.new(0, 0.65, 0)), Color3.fromRGB(255, 210, 85), Enum.Material.Neon, Enum.PartType.Ball)
+	flame.CanCollide = false
+	light(flame, Color3.fromRGB(255, 195, 80), 14, 1.2)
+	return base
+end
+
+-- Stage 0: Pre-School Sanctuary (Mazhalai Balavihar) — Lotus Pond & Aksharabhyasam Sand Slate
+local function buildPreSchoolSanctuary(parent: Instance)
+	local c = WorldBuilder.place("bhumi", Vector3.new(-28, 0, 18))
+	local f = Instance.new("Folder")
+	f.Name = "PreSchool_MazhalaiBalavihar"
+	f.Parent = parent
+
+	disc(f, c, 0.7, 22, Color3.fromRGB(230, 215, 185), Enum.Material.Marble)
+	local pond = disc(f, c + Vector3.new(-4, 0.45, -2), 0.35, 10, Color3.fromRGB(85, 185, 235), Enum.Material.Glass)
+	pond.Transparency = 0.25
+	disc(f, c + Vector3.new(-4, 0.75, -2), 0.25, 2.8, Color3.fromRGB(245, 145, 185), Enum.Material.Neon)
+
+	-- Interactive Aksharabhyasam Sand-Tracing Slate
+	local slate = mk(f, Vector3.new(5.5, 1.2, 4.2), CFrame.new(c + Vector3.new(4, 1.0, 2)), Color3.fromRGB(235, 195, 105), Enum.Material.Sand, nil, "AksharaSandSlate")
+	slate:SetAttribute("Interact", "akshara_slate")
+	CollectionService:AddTag(slate, "DLInteract")
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ObjectText = "Pre-School: Aksharabhyasam Sand Slate"
+	prompt.ActionText = "Trace Sacred Letters ('अ / அ — Akara Mudhala')"
+	prompt.MaxActivationDistance = 14
+	prompt.RequiresLineOfSight = false
+	prompt.Parent = slate
+	light(slate, Color3.fromRGB(255, 225, 130), 22, 1.5)
+
+	for i = 1, 6 do
+		local a = i * math.pi * 2 / 6
+		buildAgalVilakku(f, c + Vector3.new(math.cos(a) * 9.5, 0.7, math.sin(a) * 9.5))
+	end
+	makeBannerSign(f, c + Vector3.new(0, 7.5, 0), "🌸 PRE-SCHOOL: MAZHALAI BALAVIHAR", "Aksharabhyasam Sanctuary • Book 1: Narcheyal", Color3.fromRGB(255, 215, 120))
+end
+
+-- Stage 1: Grade 1 Zone (Prathama Kaksha / Tharam 1) — Raja Gopuram, Pathshala, Olai Chuvadi Desk, & 18 Agal Vilakku Lamps
+local function buildGrade1Campus(parent: Instance)
+	local c = WorldBuilder.place("bhumi", Vector3.new(0, 0, -24))
+	local f = Instance.new("Folder")
+	f.Name = "Grade1_PrathamaKaksha"
+	f.Parent = parent
+
+	-- Dravidian Raja Gopuram Entrance Archway
+	for _, x in ipairs({ -8.5, 8.5 }) do
+		mk(f, Vector3.new(3.2, 14, 3.2), CFrame.new(c + Vector3.new(x, 7, 14)), Color3.fromRGB(215, 185, 145), Enum.Material.Marble)
+	end
+	for tier = 1, 4 do
+		local w = 22 - tier * 2.5
+		mk(f, Vector3.new(w, 2.2, 4.2 - tier * 0.4), CFrame.new(c + Vector3.new(0, 13 + tier * 2.2, 14)), Color3.fromRGB(220, 125, 65), Enum.Material.Slate)
+	end
+	local kalasha = mk(f, Vector3.new(1.8, 1.8, 1.8), CFrame.new(c + Vector3.new(0, 23.5, 14)), GOLD, Enum.Material.Metal, Enum.PartType.Ball)
+	light(kalasha, GOLD, 30, 1.8)
+	makeBannerSign(f, c + Vector3.new(0, 25, 14), "🎓 GRADE 1: PRATHAMA KAKSHA (THARAM 1)", "3 Ds: Duty • Discipline • Dignity | Thirukkural Kollaamai (Ahimsa)", GOLD)
+
+	-- Pathshala Mandapa Platform & 18 Sacred Agal Vilakku Lamps
+	disc(f, c, 0.8, 30, Color3.fromRGB(225, 210, 185), Enum.Material.Marble)
+	for i = 1, 18 do
+		local a = i * math.pi * 2 / 18
+		buildAgalVilakku(f, c + Vector3.new(math.cos(a) * 14, 0.8, math.sin(a) * 14))
+	end
+
+	-- Interactive Olai Chuvadi (Palm-Leaf Manuscript) Study Desk
+	local desk = mk(f, Vector3.new(6, 1.8, 3.5), CFrame.new(c + Vector3.new(0, 1.5, 0)), Color3.fromRGB(145, 95, 55), Enum.Material.Wood, nil, "OlaiChuvadiDesk")
+	local leaf = mk(f, Vector3.new(4.2, 0.25, 1.6), CFrame.new(c + Vector3.new(0, 2.55, 0)), Color3.fromRGB(245, 225, 155), Enum.Material.Neon)
+	leaf.CanCollide = false
+	desk:SetAttribute("Interact", "olai_chuvadi")
+	CollectionService:AddTag(desk, "DLInteract")
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ObjectText = "Grade 1 Olai Chuvadi (Palm-Leaf Manuscripts)"
+	prompt.ActionText = "Study Thirukkural & Ashram Books (Narcheyal & Nanneri)"
+	prompt.MaxActivationDistance = 14
+	prompt.RequiresLineOfSight = false
+	prompt.Parent = desk
+	light(desk, Color3.fromRGB(255, 230, 150), 24, 1.6)
+end
+
+-- Campus Avenue of Grade 2–12, B.A., M.A., Ph.D., Dungeon, & Kingdom Gates (expanding one grade at a time)
+local function buildCampusAvenue(parent: Instance)
+	local f = Instance.new("Folder")
+	f.Name = "GurukulaAcademicAvenue"
+	f.Parent = parent
+
+	local gateIndex = 0
+	for _, stage in ipairs(GurukulaDefs.AcademicLadder) do
+		if stage.order >= 2 then
+			gateIndex += 1
+			local a = -0.75 + (gateIndex - 1) * (1.5 / 15)
+			local r = 112
+			local pos = WorldBuilder.place("bhumi", Vector3.new(math.sin(a) * r, 0, -math.cos(a) * r))
+			local rot = CFrame.lookAt(pos, Vector3.new(0, pos.Y, 0))
+
+			local gateColor = stage.order <= 12 and Color3.fromRGB(130, 210, 150)
+				or (stage.order <= 15 and Color3.fromRGB(120, 195, 250) or Color3.fromRGB(255, 205, 95))
+
+			for _, side in ipairs({ -3.2, 3.2 }) do
+				mk(f, Vector3.new(1.2, 8.5, 1.2), rot * CFrame.new(side, 4.25, 0), STONE, Enum.Material.Marble)
+			end
+			local lintel = mk(f, Vector3.new(8.2, 1.4, 1.6), rot * CFrame.new(0, 9.0, 0), gateColor, Enum.Material.Neon, nil, "GradeGate_" .. stage.id)
+			lintel:SetAttribute("Interact", "grade_gate")
+			lintel:SetAttribute("StageId", stage.id)
+			CollectionService:AddTag(lintel, "DLInteract")
+
+			local prompt = Instance.new("ProximityPrompt")
+			prompt.ObjectText = ("%s — %s"):format(stage.code, stage.title)
+			prompt.ActionText = "Inspect Zone Curriculum & Requirements"
+			prompt.MaxActivationDistance = 14
+			prompt.RequiresLineOfSight = false
+			prompt.Parent = lintel
+
+			makeBannerSign(f, pos + Vector3.new(0, 10.5, 0), ("🚪 %s: %s"):format(stage.code, stage.title), stage.zoneName, gateColor)
+		end
+	end
+end
+
+-- 14-Lokas Cosmic Spire (Brahmanda Stambha) — 7 Upper Realms + Earth + 7 Lower Realms
+local function buildFourteenLokasObservatory(parent: Instance)
+	local c = WorldBuilder.place("bhumi", Vector3.new(52, 0, -32))
+	local f = Instance.new("Folder")
+	f.Name = "FourteenLokasObservatory"
+	f.Parent = parent
+
+	disc(f, c, 1.0, 20, Color3.fromRGB(215, 205, 185), Enum.Material.Marble)
+	local spire = pillar(f, c, 32, 2.2, GOLD, Enum.Material.Metal)
+	spire.Name = "BrahmandaStambha"
+	spire:SetAttribute("Interact", "loka_observatory")
+	CollectionService:AddTag(spire, "DLInteract")
+
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ObjectText = "Brahmanda Stambha (14 Non-Human Realms + Earth)"
+	prompt.ActionText = "Contemplate the 7 Upper Lokas, Earth, & 7 Lower Talas"
+	prompt.MaxActivationDistance = 15
+	prompt.RequiresLineOfSight = false
+	prompt.Parent = spire
+
+	for idx, loka in ipairs(GurukulaDefs.FourteenLokas) do
+		local yOff = 2 + (15 - idx) * 1.9
+		local ring = disc(f, c + Vector3.new(0, yOff, 0), 0.28, 7.5 + math.abs(loka.order) * 0.7, loka.ringColor, Enum.Material.Neon)
+		ring.Transparency = loka.order == 0 and 0.05 or 0.35
+		ring.CanCollide = false
+	end
+	light(spire, GOLD, 32, 2)
+	makeBannerSign(f, c + Vector3.new(0, 34, 0), "☸ BRAHMANDA STAMBHA: 14 REALMS + EARTH", "7 Upper Lokas (Devas/Rishis) • Earth (Human Gurukula) • 7 Lower Talas (Nagas)", Color3.fromRGB(165, 230, 255))
+end
+
 ---------------------------------------------------------------- other realms
 local function buildSvarga(parent: Instance)
 	local c = LokaDefs.Lokas.svarga.center
@@ -556,6 +739,10 @@ function WorldBuilder.build()
 	bhumi.Name = "Bhumi"
 	bhumi.Parent = world
 	buildVillage(bhumi)
+	buildPreSchoolSanctuary(bhumi)
+	buildGrade1Campus(bhumi)
+	buildCampusAvenue(bhumi)
+	buildFourteenLokasObservatory(bhumi)
 	buildTemple(bhumi)
 	buildStepwell(bhumi)
 	buildStage(bhumi)

@@ -4,19 +4,19 @@
 -- All four are built in the same place at different heights so travel is a teleport.
 local Lokas = {
 	bhumi = {
-		name = "Bhumi — The Mortal Realm", center = Vector3.new(0, 0, 0), radius = 320,
+		name = "Bhumi — Earth: Gurukula of Dharmic Life", center = Vector3.new(0, 0, 0), radius = 320,
 	},
 	svarga = {
-		name = "Svarga — The Celestial Realm", center = Vector3.new(0, 900, 0), radius = 170,
+		name = "Svarga — Upper Non-Human Celestial Loka", center = Vector3.new(0, 900, 0), radius = 170,
 	},
 	bardo = {
-		name = "The Bardo — Between Lives", center = Vector3.new(0, 2200, 0), radius = 60,
+		name = "The Bardo — Subtle Threshold Between Lives", center = Vector3.new(0, 2200, 0), radius = 60,
 	},
 	mahaloka = {
-		name = "Maha-Loka — The Grove of Monuments", center = Vector3.new(0, 1500, 0), radius = 150,
+		name = "Maha-Loka — 4th Upper Loka of the Great Seers", center = Vector3.new(0, 1500, 0), radius = 150,
 	},
 	patala = {
-		name = "Patala — The Subterranean Realm", center = Vector3.new(0, -600, 0), radius = 180,
+		name = "Patala — 7th Lower Non-Human Naga Realm", center = Vector3.new(0, -600, 0), radius = 180,
 	},
 }
 

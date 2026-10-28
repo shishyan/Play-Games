@@ -6,6 +6,7 @@ local Shared = ReplicatedStorage.Shared
 local Remotes = require(Shared.Remotes)
 local UI = require(script.Parent.UI)
 local Input = require(script.Parent.Input)
+local Effects = require(script.Parent.Effects)
 
 local DialogueUI = {}
 local C = UI.colors
@@ -18,6 +19,9 @@ local choicesHolder: Frame
 local isOpen = false
 
 local function close(notify: boolean)
+	if isOpen then
+		Effects.sound("panel_close")
+	end
 	if isOpen and notify then
 		Remotes.get("CloseDialogue"):FireServer()
 	end
@@ -62,6 +66,9 @@ function DialogueUI.start()
 		if not payload then
 			close(false)
 			return
+		end
+		if not isOpen then
+			Effects.sound("dialogue_open")
 		end
 		isOpen = true
 		Input.setBlocked(true)

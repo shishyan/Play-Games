@@ -12,10 +12,12 @@ local QuestDefs = require(Shared.QuestDefs)
 local Quests = require(Shared.Quests)
 local Yuga = require(Shared.Yuga)
 local LokaDefs = require(Shared.LokaDefs)
+local GurukulaDefs = require(Shared.GurukulaDefs)
 local Remotes = require(Shared.Remotes)
 local UI = require(script.Parent.UI)
 local State = require(script.Parent.State)
 local Input = require(script.Parent.Input)
+local Effects = require(script.Parent.Effects)
 
 local Panels = {}
 local C = UI.colors
@@ -46,12 +48,18 @@ end
 
 local function openWindow(title: string)
 	titleLabel.Text = title
+	if not window.Visible then
+		Effects.sound("panel_open")
+	end
 	window.Visible = true
 	Input.setBlocked(true)
 	UI.clear(body)
 end
 
 function Panels.close()
+	if window.Visible then
+		Effects.sound("panel_close")
+	end
 	window.Visible = false
 	current = nil
 	Input.setBlocked(false)
@@ -88,8 +96,31 @@ local function character()
 	if not s then
 		return
 	end
-	openWindow("Character — The Four Purusharthas")
+	local curStage, nextStage, effLevel = GurukulaDefs.gradeFor(s.paths, s.legacy)
+	openWindow(("Gurukula & Character — %s (%s)"):format(curStage.code, curStage.title))
 	current = "character"
+	line(("<b>🎓 Current Enrollment: %s — %s</b>  ·  <i>%s</i>"):format(curStage.code, curStage.title, curStage.paruvam), C.goldBright, 19, UI.fonts.title)
+	line(("<b>Zone on Earth (Bhumi):</b> %s  ·  <b>Gurukula Level:</b> %d%s"):format(
+		curStage.zoneName,
+		effLevel,
+		nextStage and ("  (Next: %s at Level %d)"):format(nextStage.code, nextStage.minTotalLevels) or "  (Supreme Sovereign Stage)"
+	), C.good, 15)
+	line(curStage.summary, C.text, 15)
+	gap(6)
+	line("<b>📚 The 7 Sacred Ashram Books (GuruKulaDesam.com)</b>", C.goldBright, 18, UI.fonts.title)
+	for _, book in ipairs(GurukulaDefs.AshramBooks) do
+		local unlocked = table.find(curStage.booksUnlocked, book.id) ~= nil
+		line(("%s <b>Book %d: %s (%s)</b> — %s · <i>%s</i>"):format(
+			unlocked and "📖" or "🔒",
+			book.number,
+			book.translit,
+			book.tamilName,
+			book.englishName,
+			book.virtueFocus
+		), unlocked and book.color or C.dim, 14)
+	end
+	gap(6)
+	line("<b>The Four Purusharthas</b>", C.goldBright, 18, UI.fonts.title)
 	for _, path in ipairs(PATHS) do
 		local v = s.paths[path]
 		line(("<b>%s</b>   %d / 100   ·   <i>%s</i>"):format(PATH_LABEL[path], math.floor(v), Purusharthas.TIER_NAMES[Purusharthas.tier(v)]), C[path], 18, UI.fonts.hudBold)
@@ -251,20 +282,17 @@ local function alchemy()
 end
 
 local function help()
-	openWindow("How to Play")
+	openWindow("GuruKulaDesam — Virtual School of Dharmic Life")
 	current = "help"
 	local text = {
-		"<b>Goal.</b> You are an agent of Rta (order), not a conqueror. Grow along four paths: Dharma, Artha, Kama and — once the others are balanced — Moksha.",
-		"<b>Combat (Dhanurveda).</b> LMB/1-3 use your weapon. Projectiles take time to fly: lead moving targets. Bows: hold to draw, stand still, mind the wind. Khanda cuts energy shields.",
-		"<b>Astras (4-6).</b> A mantra appears: strike Z/X/C on each beat. Perfect rhythm = full power; a missed mantra backfires.",
-		"<b>Mercy.</b> Weaken a corrupted creature below 40% and press V: chant the Shanti mantra to pacify it for Dharma instead of killing.",
-		"<b>Doshas.</b> Swamp, fire and wind creatures cause Kapha, Pitta and Vata imbalance. Craft remedies from herbs at the Vaidya's table; press 7 to use one.",
-		"<b>Artha.</b> Mine ore, trade fairly, fund the community (Sadhvi Maitreyi). Hoarding without Dana brings Tamas to your gear.",
-		"<b>Death is Samsara.</b> You wake in the Bardo and are judged by your Karma: a blessing, a plain rebirth, or a Spiritual Debt (carry water from the step-well to the hermitage without jumping or being hit).",
-		"<b>The Yugas.</b> The whole server cycles Satya → Treta → Dvapara → Kali, changing gravity, danger, yields and rewards.",
-		"<b>Vyuha.</b> Stand with 5+ friends in a lotus (fighters on the rim, supporters in the heart), or 4+ circling together as a wheel, for team buffs.",
-		"<b>Mounts, Estates &amp; Sabha Parishad.</b> Attune to wild mounts with E and press M to ride. Develop Mandapa pavilions on stone plots (Artha T2) and inscribe poetry. Vote on server-wide decrees with Adhyaksha Vidura.",
-		"<b>Keys.</b> C character · B bags · L quests · H help · Tab target · V pacify · M mount · 7 remedy · 8 Amrita · Esc close.",
+		"<b>Motto: \"Living Dharma is Nirvana\" (இல்லற தர்மமே நிர்வாணம்).</b> Welcome to GuruKulaDesam on Earth (Bhumi) — a realistic Virtual School of Dharmic Life where you progress one grade at a time through Dharmic Virtues and strict Ahimsa (Non-Killing).",
+		"<b>Academic &amp; Spiritual Ladder on Earth.</b> Every soul starts at <b>Pre-School (Mazhalai Balavihar)</b> &amp; <b>Grade 1 (Prathama Kaksha)</b>, then advances through <b>Grades 2–12</b>, <b>B.A. (Snataka)</b>, <b>M.A. (Acharya)</b>, <b>Ph.D. (Vidyavaridhi)</b>, the <b>Antar-Yuddha Inner Dungeon</b>, and the <b>Dharma Rajya Kingdom</b>. Visit the Pre-School Sand Slate, the Grade 1 Olai Chuvadi Desk, and the Campus Avenue of Grade Gates!",
+		"<b>The 14 Non-Human Realms + Earth.</b> Earth (Bhumi) is the human Gurukula. Above Earth rise the <b>7 Upper Lokas</b> (Bhur, Bhuvar, Svar, Mahar, Janar, Tapar, Satya) and below lie the <b>7 Lower Talas</b> (Atala, Vitala, Sutala, Talatala, Mahatala, Rasatala, Patala). Inspect the <b>Brahmanda Stambha Observatory</b> east of the temple to study all 14 realms.",
+		"<b>100% Ahimsa (Kollaamai — Non-Killing).</b> As Thirukkural Chapter 33 teaches, no creature is ever killed here. Sacred creatures (cows, deer, Ashva steeds, Marut stags) cannot be harmed. Agitated spirits have their agitation calmed with Dhanurveda Prana implements (LMB / keys 1–3) or the <b>[V] Shanti Mantra</b> until they awaken in golden peace (Prabodha).",
+		"<b>Divine Gurukula Music &amp; Sound.</b> Authentic hymns from <b>@guru-kula-desam</b> (Gayathri Manthiram, Thirukkural Kadavul Vazhthu, Vaan Sirappu, Kollaamai, Thiruppugazh, Devaram, Thiruvasagam) play continuously. Use the bottom-right Jukebox (⏭ / 🔊) to switch tracks anytime.",
+		"<b>Astras (4-6) &amp; Yajnas.</b> Select an Astra or interact with a blighted site/stage: strike Z/X/C on each beat as it crosses the golden line.",
+		"<b>Doshas &amp; Ayurveda.</b> Gather herbs, combine two at Vaidya Kamala's alchemy table, and press 7 to restore Vata, Pitta, and Kapha balance.",
+		"<b>Keys.</b> C Gurukula &amp; Character · B Bags · L Quests · H Guide · Tab Target · V Shanti Mantra · M Mount · 7 Remedy · 8 Amrita · Esc Close.",
 	}
 	for _, t in ipairs(text) do
 		line(t, C.text, 16)

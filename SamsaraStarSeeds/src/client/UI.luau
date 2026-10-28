@@ -3,6 +3,7 @@
 local Players = game:GetService("Players")
 
 local UI = {}
+UI.onSound = nil :: ((string) -> ())?
 
 UI.colors = {
 	slate = Color3.fromRGB(18, 22, 32),
@@ -118,9 +119,19 @@ function UI.button(parent: Instance, text: string, size: UDim2, pos: UDim2, onCl
 	s.Thickness = 1
 	s.Transparency = 0.35
 	s.Parent = b
-	if onClick then
-		b.Activated:Connect(onClick)
-	end
+	b.MouseEnter:Connect(function()
+		if UI.onSound then
+			UI.onSound(opts.hoverSound or "ui_hover")
+		end
+	end)
+	b.Activated:Connect(function()
+		if UI.onSound then
+			UI.onSound(opts.clickSound or "ui_click")
+		end
+		if onClick then
+			onClick()
+		end
+	end)
 	return b
 end
 

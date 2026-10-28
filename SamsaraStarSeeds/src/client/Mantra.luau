@@ -170,14 +170,17 @@ function Mantra.start()
 		local o = payload.outcome
 		local text = ("%d%%  —  "):format(math.floor(payload.accuracy * 100 + 0.5))
 		if o == "pure" then
-			text ..= "PURE SATTVA: full power!"
+			text ..= "PURE SATTVA: full harmony!"
 			Mantra.result.TextColor3 = C.goldBright
+			Effects.sound("pacify_awakening")
 		elseif o == "partial" then
-			text ..= "Partial power"
+			text ..= "Partial resonance"
 			Mantra.result.TextColor3 = C.text
+			Effects.sound("quest_accept")
 		else
-			text ..= "BACKFIRE (Tamas)"
+			text ..= "Dissonance (Tamas)"
 			Mantra.result.TextColor3 = C.danger
+			Effects.sound("warn")
 		end
 		Mantra.result.Text = text
 		task.delay(1.4, function()

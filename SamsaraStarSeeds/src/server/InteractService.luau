@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage.Shared
 local LokaDefs = require(Shared.LokaDefs)
+local GurukulaDefs = require(Shared.GurukulaDefs)
 local ItemDefs = require(Shared.ItemDefs)
 local Samsara = require(Shared.Samsara)
 local Kalari = require(Shared.Kalari)
@@ -520,6 +521,62 @@ local function onPrompt(player: Player, node: Instance)
 			rt.mandala = 0
 			PlayerState.toast(player, "The elements fall out of order. Begin again.", "warn")
 		end
+	elseif kind == "akshara_slate" then
+		PlayerState.addPath(player, "dharma", 2)
+		PlayerState.addPath(player, "kama", 1)
+		PlayerState.addKarma(player, 1, "Aksharabhyasam sacred lettering")
+		PlayerState.toast(
+			player,
+			"🌸 Pre-School (Mazhalai Balavihar): You trace 'अ / அ — Akara Mudhala Ezhuthellam' in golden sand! (+Dharma, +Kama)",
+			"karma_good"
+		)
+	elseif kind == "olai_chuvadi" then
+		local rt = PlayerState.rt(player)
+		local idx = ((rt.lessonIdx or 0) % #GurukulaDefs.Grade1Lessons) + 1
+		rt.lessonIdx = idx
+		local lesson = GurukulaDefs.Grade1Lessons[idx]
+		PlayerState.addPath(player, "dharma", 1.5)
+		PlayerState.toast(
+			player,
+			("📜 Grade 1 (%s): \"%s\" — %s"):format(lesson.title, lesson.coupletMeaning, lesson.virtuePractice),
+			"karma_good"
+		)
+	elseif kind == "grade_gate" then
+		local stageId = node:GetAttribute("StageId")
+		local stage = stageId and GurukulaDefs.findStage(stageId)
+		local curStage, _, effLevel = GurukulaDefs.gradeFor(profile.paths, profile.legacy)
+		if stage then
+			if effLevel >= stage.minTotalLevels then
+				PlayerState.toast(
+					player,
+					("🎓 %s (%s) Unlocked! Zone: %s — %s"):format(stage.code, stage.title, stage.zoneName, stage.summary),
+					"level"
+				)
+			else
+				PlayerState.toast(
+					player,
+					("🔒 %s (%s — %s): Requires Gurukula Level %d (Current: %d, %s). Master your current grade first!"):format(
+						stage.code,
+						stage.title,
+						stage.paruvam,
+						stage.minTotalLevels,
+						effLevel,
+						curStage.code
+					),
+					"info"
+				)
+			end
+		end
+	elseif kind == "loka_observatory" then
+		local rt = PlayerState.rt(player)
+		local idx = ((rt.lokaIdx or 0) % #GurukulaDefs.FourteenLokas) + 1
+		rt.lokaIdx = idx
+		local loka = GurukulaDefs.FourteenLokas[idx]
+		PlayerState.toast(
+			player,
+			("☸ [%s Realm] %s — %s (%s): %s"):format(loka.division, loka.sanskritName, loka.englishName, loka.inhabitants, loka.summary),
+			"info"
+		)
 	end
 end
 

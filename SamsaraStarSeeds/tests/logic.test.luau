@@ -895,6 +895,29 @@ do
 	end
 	Quests.event(qctx.quests, { k = "kill", t = "vasuki_shade" })
 	eq("patala trials complete q17", qctx.quests.q17.state, "ready")
+
+	-- GuruKulaDesam Curriculum, 7 Ashram Books, 18 Academic Stages, 14 Realms + Earth, & Ahimsa Awakening
+	local GurukulaDefs = require("./shared/GurukulaDefs")
+	eq("7 Ashram Books defined", #GurukulaDefs.AshramBooks, 7)
+	eq("18 academic & spiritual stages (Pre-School -> Grade 1-12 -> B.A./M.A./Ph.D. -> Dungeon -> Kingdom)", #GurukulaDefs.AcademicLadder, 18)
+	eq("15 cosmic realms (7 Upper Lokas + Earth + 7 Lower Talas)", #GurukulaDefs.FourteenLokas, 15)
+	check("Grade 1 has 5 Thirukkural lessons including Kollaamai (Ahimsa)", #GurukulaDefs.Grade1Lessons == 5)
+	local startStage, nextStage = GurukulaDefs.gradeFor(P.newScores(), 0)
+	eq("fresh star-seed starts at Grade 1 (Prathama Kaksha)", startStage.id, "grade_1")
+	eq("next stage after Grade 1 is Grade 2", nextStage and nextStage.id, "grade_2")
+	local advancedStage = GurukulaDefs.gradeFor({ dharma = 60, artha = 60, kama = 60, moksha = 40 }, 1)
+	check("advanced Purushartha scores promote student to higher studies / Kingdom", advancedStage.order >= 12)
+
+	-- Ahimsa pacify event advances spirit-calming quests (pacify, kill, and killany)
+	local ahimsaQuests = {}
+	Quests.accept(ahimsaQuests, "q6", {})
+	Quests.accept(ahimsaQuests, "q10", {})
+	for _ = 1, 3 do
+		Quests.event(ahimsaQuests, { k = "pacify", t = "vetala" })
+	end
+	eq("Ahimsa pacify completes q6", ahimsaQuests.q6.state, "ready")
+	Quests.event(ahimsaQuests, { k = "pacify", t = "maya" })
+	eq("Ahimsa pacifying Maya completes q10", ahimsaQuests.q10.state, "ready")
 end
 
 print(("Logic tests: %d passed, %d failed"):format(passed, failed))

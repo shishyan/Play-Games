@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage.Shared
 local Dhanurveda = require(Shared.Dhanurveda)
+local GurukulaDefs = require(Shared.GurukulaDefs)
 local Purusharthas = require(Shared.Purusharthas)
 local Karma = require(Shared.Karma)
 local Quests = require(Shared.Quests)
@@ -17,6 +18,8 @@ local State = require(script.Parent.State)
 local Target = require(script.Parent.Target)
 
 local HUD = {}
+HUD.onNextHymn = nil :: (() -> ())?
+HUD.onToggleMute = nil :: (() -> ())?
 local C = UI.colors
 
 local player = Players.LocalPlayer
@@ -214,7 +217,37 @@ function HUD.build()
 
 	buildHotbar()
 
-	els.hint = UI.label(UI.root, "WASD move · Space jump · LMB attack (hold to draw a bow) · 1-3 skills · 4-6 Astras · 7 remedy · 8 Amrita · V pacify · M mount · Tab target · C B L panels · H help", UDim2.new(1, -20, 0, 14), UDim2.new(0, 10, 1, -92), { textSize = 11, color = C.dim, stroke = 0.4 })
+	-- @guru-kula-desam Divine Hymns Jukebox bar (bottom-right)
+	els.jukebox = UI.frame(UI.root, UDim2.fromOffset(296, 54), UDim2.new(1, -12, 1, -112), {
+		anchor = Vector2.new(1, 1), name = "HymnJukebox", transparency = 0.2,
+	})
+	els.hymnTitle = UI.label(els.jukebox, "🎵 Gayathri Manthiram — GuruKulaDesam", UDim2.fromOffset(214, 22), UDim2.fromOffset(10, 6), {
+		font = UI.fonts.hudBold, textSize = 12, color = C.goldBright,
+	})
+	els.hymnSub = UI.label(els.jukebox, "Divine Gurukula Radio (@guru-kula-desam)", UDim2.fromOffset(214, 18), UDim2.fromOffset(10, 27), {
+		textSize = 11, color = C.dim,
+	})
+	els.nextHymnBtn = UI.button(els.jukebox, "⏭", UDim2.fromOffset(32, 36), UDim2.new(1, -74, 0, 9), function()
+		if HUD.onNextHymn then
+			HUD.onNextHymn()
+		end
+	end, { textSize = 15 })
+	els.muteHymnBtn = UI.button(els.jukebox, "🔊", UDim2.fromOffset(32, 36), UDim2.new(1, -38, 0, 9), function()
+		if HUD.onToggleMute then
+			HUD.onToggleMute()
+		end
+	end, { textSize = 15 })
+
+	els.hint = UI.label(UI.root, "WASD move · Space jump · LMB Prana calm · 1-3 skills · 4-6 Astras · 7 remedy · 8 Amrita · V Shanti Mantra (Ahimsa) · M mount · C Gurukula · B Bags · L Quests · H Guide", UDim2.new(1, -20, 0, 14), UDim2.new(0, 10, 1, -92), { textSize = 11, color = C.dim, stroke = 0.4 })
+end
+
+function HUD.setHymnDisplay(hymn: any, muted: boolean)
+	if not els.jukebox or not hymn then
+		return
+	end
+	els.hymnTitle.Text = (muted and "🔇 " or "🎵 ") .. hymn.title
+	els.hymnSub.Text = hymn.subtitle or "Divine Gurukula Radio (@guru-kula-desam)"
+	els.muteHymnBtn.Text = muted and "🔇" or "🔊"
 end
 
 ---------------------------------------------------------------- refresh
@@ -284,10 +317,11 @@ function HUD.refresh(snap)
 	end
 	local class = Dhanurveda.Classes[snap.class]
 	local weapon = Dhanurveda.Weapons[snap.weapon]
+	local stage = GurukulaDefs.gradeFor(snap.paths, snap.legacy)
 	els.classIcon.Text = class.icon
-	els.classText.Text = class.name .. (snap.debt and snap.debt.stage ~= "done" and "  (Spiritual Debt)" or "")
+	els.classText.Text = ("%s · %s"):format(stage.code, stage.title)
 	local dur = math.floor(snap.durability)
-	els.weaponText.Text = ("%s  T%d  ·  durability %d%%%s"):format(weapon.name, snap.weaponTier, dur, snap.tamas and "  ·  Tamas!" or "")
+	els.weaponText.Text = ("%s (%s T%d) · %d%%%s"):format(class.name, weapon.name, snap.weaponTier, dur, snap.tamas and " · Tamas!" or "")
 	UI.setBar(els.stamina, snap.stamina / snap.maxStamina, ("Stamina %d / %d"):format(snap.stamina, snap.maxStamina))
 	for _, path in ipairs(PATH_ORDER) do
 		local v = snap.paths[path]
@@ -318,14 +352,14 @@ local function refreshTarget()
 	UI.setBar(els.targetHp, frac, ("%d / %d"):format(math.ceil(hum.Health), math.ceil(hum.MaxHealth)))
 	els.targetHp.fill.BackgroundColor3 = model:GetAttribute("Peaceful") and C.good or C.hpLow
 	UI.setBar(els.targetPower, model:GetAttribute("Power") or 0)
-	if model:GetAttribute("Corrupt") and frac <= 0.4 then
-		els.targetTag.Text = "Weakened — press V to pacify with a mantra (mercy earns Dharma)"
+	if model:GetAttribute("Corrupt") and frac <= 0.85 then
+		els.targetTag.Text = "Agitated Spirit — press V to chant Shanti Mantra & awaken in peace (Ahimsa)"
 	elseif model:GetAttribute("Shielded") then
-		els.targetTag.Text = "Energy-shielded — Khanda cuts shields; Astras pierce them"
+		els.targetTag.Text = "Illusion-shielded — Khanda & Astras dispel Ahamkara shields"
 	elseif model:GetAttribute("Peaceful") then
-		els.targetTag.Text = "Sacred creature — harming it breaks ahimsa"
+		els.targetTag.Text = "Sacred Gurukula Being — Protected by strict Ahimsa (Kollaamai)"
 	else
-		els.targetTag.Text = ""
+		els.targetTag.Text = "Agitated Spirit — calm with Prana implements or [V] Shanti Mantra"
 	end
 end
 

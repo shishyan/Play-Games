@@ -6,6 +6,7 @@ local Shared = ReplicatedStorage.Shared
 local Remotes = require(Shared.Remotes)
 local UI = require(script.Parent.UI)
 local Input = require(script.Parent.Input)
+local Effects = require(script.Parent.Effects)
 
 local SamsaraUI = {}
 local C = UI.colors
@@ -59,6 +60,7 @@ function SamsaraUI.start()
 		local mine = token
 		Input.setBlocked(true)
 		overlay.Visible = true
+		Effects.sound("dialogue_open", 0.85)
 		local verdictText = ({ blessing = "Your karma is bright.", neutral = "Your karma is balanced.", debt = "Your karma is heavy." })[p.kind]
 		scoreLabel.Text = ("Karmic score %d — %s"):format(p.score, verdictText)
 		reasonsLabel.Text = "Weighed: " .. table.concat(p.reasons, "  ·  ") .. "\nA correct answer brightens the verdict and your rebirth."

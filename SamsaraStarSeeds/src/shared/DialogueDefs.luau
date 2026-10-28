@@ -43,23 +43,33 @@ end
 local NPCs = {}
 
 NPCs.acharya = {
-	name = "Acharya Satyadev", title = "Guide of the Star Seeds",
+	name = "Acharya Satyadev", title = "Kulapati of GuruKulaDesam (Earth)",
 	greeting = {
-		Deva = "Your steps leave Rta in their wake, Star Seed. How may I serve?",
-		Madhyama = "Welcome, Star Seed. You are not here to conquer this world, but to keep it in balance.",
-		Asura = "I feel Anrita clinging to you. It is not too late to turn. Speak.",
+		Deva = "Your steps leave Rta in their wake, Star Seed. Welcome to the Virtual School of Dharmic Life.",
+		Madhyama = "Welcome to GuruKulaDesam on Earth (Bhumi), Star Seed. Here we grow from Pre-School & Grade 1 through Grade 12, B.A., M.A., Ph.D., Dungeon, and Kingdom — through Dharmic Virtues, never killing.",
+		Asura = "I feel Anrita clinging to you. Step into the Gurukula light and return to Ahimsa. Speak.",
 	},
 	topics = {
+		{ text = "Tell me about the Gurukula School (Pre-School to Kingdom & 14 Realms).", next = "gurukula" },
+		{ text = "Teach me Grade 1 (Tharam 1): The 3 Ds & Thirukkural Kollaamai.", next = "grade1" },
 		{ text = "What are Rta and Anrita?", next = "rta" },
 		{ text = "How do the four Purusharthas work?", next = "purusharthas" },
 	},
 	nodes = {
+		gurukula = {
+			text = "Earth (Bhumi) is the human Gurukula where every soul begins at Pre-School (Mazhalai Balavihar) and Grade 1 (Prathama Kaksha), advancing one grade at a time through Grade 12, then Vedanta Vidyapeeth (B.A. Snataka, M.A. Acharya, Ph.D. Vidyavaridhi), the Antar-Yuddha Inner Dungeon, and the Dharma Rajya Kingdom. Above and below Earth lie 14 non-human realms — 7 Upper Lokas and 7 Lower Talas — visible at the Brahmanda Stambha Observatory.",
+			choices = back("I will walk the path one grade at a time."),
+		},
+		grade1 = {
+			text = "Grade 1 rests on the 3 Ds of GuruKulaDesam — Duty (Kadamai), Discipline (Kattuppaadu), and Dignity (Kanniyam) — and the 7 Ashram Books starting with Narcheyal and Nanneri. As Thirukkural Chapter 33 (Kollaamai) teaches: 'What is virtue? Never killing any living being.' When agitated spirits cross your path, calm them with Prana implements or [V] Shanti Mantra so they awaken in golden peace.",
+			choices = back("Living Dharma is Nirvana."),
+		},
 		rta = {
-			text = "Rta is the order of the cosmos: truth, balance, the web in which all beings are threads. Anrita is its tearing. Every beast slain without need, every word spoken falsely, ripples across the whole server. Your deeds change the world for everyone.",
+			text = "Rta is the order of the cosmos: truth, balance, the web in which all beings are threads. Anrita is its tearing. Every act of Ahimsa, every hymn chanted, and every dispute healed ripples across the whole server. Your deeds change the world for everyone.",
 			choices = back("I understand."),
 		},
 		purusharthas = {
-			text = "Dharma is duty and harmony. Artha is honest prosperity — and giving back. Kama is vitality and art. Moksha, liberation, is not a fourth rung: it grows only when the other three are in balance. There are no levels here. You become what you practise.",
+			text = "Dharma is duty and harmony. Artha is honest prosperity — and giving back. Kama is vitality and sacred art. Moksha, liberation, grows when the other three are lived in balance: Illara Dharmam itself becomes Nirvana.",
 			choices = back("I will practise all of them."),
 		},
 	},

@@ -287,4 +287,129 @@ function Rigs.animal(kind: string, skin: Color3, name: string): Model
 	return m
 end
 
+-- Attaches a 3D sacred Dhanurveda Prana implement to the character's right hand (or torso fallback).
+function Rigs.attachWeapon(char: Model, weaponId: string, tier: number?)
+	if not char then
+		return
+	end
+	local old = char:FindFirstChild("EquippedDharmaImplement")
+	if old then
+		old:Destroy()
+	end
+	local hand = firstPart(char, { "RightHand", "Right Arm", "UpperTorso", "Torso", "HumanoidRootPart" })
+	if not hand then
+		return
+	end
+	local folder = Instance.new("Model")
+	folder.Name = "EquippedDharmaImplement"
+	folder.Parent = char
+
+	local tierN = math.clamp(tier or 1, 1, 4)
+	local gold = Color3.fromRGB(245, 200, 75)
+	local bronze = Color3.fromRGB(190, 140, 70)
+	local glow = tierN >= 3 and Color3.fromRGB(255, 235, 140) or Color3.fromRGB(115, 220, 245)
+
+	local function addPiece(size: Vector3, color: Color3, mat: Enum.Material, shape: Enum.PartType?, cf: CFrame)
+		local p = part(size, color, mat, shape)
+		p.CFrame = hand.CFrame * cf
+		local w = Instance.new("WeldConstraint")
+		w.Part0 = hand
+		w.Part1 = p
+		w.Parent = p
+		p.Parent = folder
+		return p
+	end
+
+	if weaponId == "chakra" then
+		addPiece(Vector3.new(0.2, 2.2, 2.2), gold, Enum.Material.Metal, Enum.PartType.Cylinder, CFrame.new(0, -0.2, -0.6) * CFrame.Angles(0, math.pi / 2, 0))
+		addPiece(Vector3.new(0.24, 1.4, 1.4), glow, Enum.Material.Neon, Enum.PartType.Cylinder, CFrame.new(0, -0.2, -0.6) * CFrame.Angles(0, math.pi / 2, 0))
+	elseif weaponId == "tomara" then
+		addPiece(Vector3.new(0.22, 4.8, 0.22), bronze, Enum.Material.Wood, Enum.PartType.Block, CFrame.new(0, -0.2, -0.6) * CFrame.Angles(math.pi / 2, 0, 0))
+		addPiece(Vector3.new(0.35, 1.1, 0.35), glow, Enum.Material.Neon, Enum.PartType.Block, CFrame.new(0, -0.2, -3.1) * CFrame.Angles(math.pi / 2, 0, 0))
+	elseif weaponId == "gada" then
+		addPiece(Vector3.new(0.28, 3.6, 0.28), bronze, Enum.Material.Metal, Enum.PartType.Block, CFrame.new(0, -0.2, -1.2) * CFrame.Angles(math.pi / 2, 0, 0))
+		addPiece(Vector3.new(1.35, 1.35, 1.35), gold, Enum.Material.Metal, Enum.PartType.Ball, CFrame.new(0, -0.2, -3.1))
+	elseif weaponId == "khanda" then
+		addPiece(Vector3.new(0.25, 0.9, 0.35), bronze, Enum.Material.Metal, Enum.PartType.Block, CFrame.new(0, -0.2, -0.3) * CFrame.Angles(math.pi / 2, 0, 0))
+		addPiece(Vector3.new(0.16, 3.4, 0.48), glow, Enum.Material.Neon, Enum.PartType.Block, CFrame.new(0, -0.2, -2.2) * CFrame.Angles(math.pi / 2, 0, 0))
+	elseif weaponId == "trishula" then
+		addPiece(Vector3.new(0.24, 5.0, 0.24), gold, Enum.Material.Metal, Enum.PartType.Block, CFrame.new(0, -0.2, -1.5) * CFrame.Angles(math.pi / 2, 0, 0))
+		for _, x in ipairs({ -0.45, 0, 0.45 }) do
+			addPiece(Vector3.new(0.16, 1.2, 0.16), glow, Enum.Material.Neon, Enum.PartType.Block, CFrame.new(x, -0.2, -4.1) * CFrame.Angles(math.pi / 2, 0, 0))
+		end
+	elseif weaponId == "vajra" then
+		addPiece(Vector3.new(0.35, 2.2, 0.35), gold, Enum.Material.Metal, Enum.PartType.Block, CFrame.new(0, -0.2, -0.8) * CFrame.Angles(math.pi / 2, 0, 0))
+		addPiece(Vector3.new(0.65, 0.65, 0.65), glow, Enum.Material.Neon, Enum.PartType.Ball, CFrame.new(0, -0.2, -1.9))
+		addPiece(Vector3.new(0.65, 0.65, 0.65), glow, Enum.Material.Neon, Enum.PartType.Ball, CFrame.new(0, -0.2, 0.2))
+	elseif weaponId == "bow" then
+		addPiece(Vector3.new(0.22, 3.8, 0.35), bronze, Enum.Material.Wood, Enum.PartType.Block, CFrame.new(0, 0, -0.7))
+		addPiece(Vector3.new(0.08, 3.6, 0.08), glow, Enum.Material.Neon, Enum.PartType.Block, CFrame.new(0, 0, -0.35))
+	end
+end
+
+-- Displays an overhead Gurukula Grade & Dharmic Virtue badge above the student's head.
+function Rigs.updateStudentBadge(char: Model, displayName: string, gradeTitle: string, virtueSubtitle: string)
+	if not char then
+		return
+	end
+	local head = firstPart(char, { "Head", "HumanoidRootPart" })
+	if not head then
+		return
+	end
+	local gui = head:FindFirstChild("GurukulaStudentBadge") :: BillboardGui?
+	if not gui then
+		gui = Instance.new("BillboardGui")
+		gui.Name = "GurukulaStudentBadge"
+		gui.Size = UDim2.fromOffset(220, 54)
+		gui.StudsOffset = Vector3.new(0, 3.2, 0)
+		gui.AlwaysOnTop = false
+		gui.MaxDistance = 75
+		gui.Parent = head
+
+		local nameLbl = Instance.new("TextLabel")
+		nameLbl.Name = "NameLabel"
+		nameLbl.Size = UDim2.new(1, 0, 0, 20)
+		nameLbl.BackgroundTransparency = 1
+		nameLbl.Font = Enum.Font.GothamBold
+		nameLbl.TextSize = 14
+		nameLbl.TextColor3 = Color3.fromRGB(255, 240, 185)
+		nameLbl.TextStrokeTransparency = 0.25
+		nameLbl.Parent = gui
+
+		local gradeLbl = Instance.new("TextLabel")
+		gradeLbl.Name = "GradeLabel"
+		gradeLbl.Position = UDim2.fromOffset(0, 19)
+		gradeLbl.Size = UDim2.new(1, 0, 0, 17)
+		gradeLbl.BackgroundTransparency = 1
+		gradeLbl.Font = Enum.Font.GothamMedium
+		gradeLbl.TextSize = 12
+		gradeLbl.TextColor3 = Color3.fromRGB(130, 235, 175)
+		gradeLbl.TextStrokeTransparency = 0.3
+		gradeLbl.Parent = gui
+
+		local virtueLbl = Instance.new("TextLabel")
+		virtueLbl.Name = "VirtueLabel"
+		virtueLbl.Position = UDim2.fromOffset(0, 35)
+		virtueLbl.Size = UDim2.new(1, 0, 0, 15)
+		virtueLbl.BackgroundTransparency = 1
+		virtueLbl.Font = Enum.Font.Gotham
+		virtueLbl.TextSize = 11
+		virtueLbl.TextColor3 = Color3.fromRGB(220, 210, 180)
+		virtueLbl.TextStrokeTransparency = 0.35
+		virtueLbl.Parent = gui
+	end
+	local nameLbl = gui:FindFirstChild("NameLabel") :: TextLabel?
+	local gradeLbl = gui:FindFirstChild("GradeLabel") :: TextLabel?
+	local virtueLbl = gui:FindFirstChild("VirtueLabel") :: TextLabel?
+	if nameLbl then
+		nameLbl.Text = displayName
+	end
+	if gradeLbl then
+		gradeLbl.Text = "🎓 " .. gradeTitle
+	end
+	if virtueLbl then
+		virtueLbl.Text = virtueSubtitle
+	end
+end
+
 return Rigs

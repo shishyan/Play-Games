@@ -1,12 +1,15 @@
 --!nonstrict
--- World-space visuals: combat effects, health/power bands over creatures (no names), quest markers over
--- NPCs, per-realm and per-Yuga lighting, the Kapha blur, and lotus footprints for Kama masters.
+-- World-space visuals & Divine Audio Engine:
+-- 1) Continuous @guru-kula-desam devotional & Thirukkural background music Jukebox + Tanpura/Bell ambience
+-- 2) Multi-layered Just-Intonation/Swara harmonic synthesizer for WoW-style interaction sounds
+-- 3) Combat effects, health/power bands over creatures, quest markers over NPCs, per-realm lighting, and lotus footprints.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
 local SoundService = game:GetService("SoundService")
 local CollectionService = game:GetService("CollectionService")
+local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage.Shared
@@ -23,31 +26,282 @@ local player = Players.LocalPlayer
 
 ---------------------------------------------------------------- floating numbers & combat fx
 local NUM_COLORS = {
-	hit = Color3.fromRGB(255, 235, 170), shield = Color3.fromRGB(150, 190, 255), hurt = Color3.fromRGB(255, 90, 80),
+	hit = Color3.fromRGB(255, 235, 170),
+	shield = Color3.fromRGB(150, 190, 255),
+	hurt = Color3.fromRGB(255, 90, 80),
 	dodge = Color3.fromRGB(190, 190, 200),
 }
 
 local fxFolder: Folder
 
-local SOUNDS = {
-	hit = { id = "rbxassetid://12222208", pitch = 1.0, vol = 0.35 },
-	swing = { id = "rbxassetid://12222216", pitch = 1.05, vol = 0.3 },
-	proj = { id = "rbxassetid://12222216", pitch = 1.35, vol = 0.25 },
-	ring = { id = "rbxassetid://12222084", pitch = 0.9, vol = 0.45 },
-	chime = { id = "rbxassetid://12222253", pitch = 1.15, vol = 0.4 },
+-- Authentic uploaded @guru-kula-desam songs (from G:\My Drive\GuruKulaDesam\Assets)
+Effects.HYMNS = {
+	{
+		id = "gayathri",
+		title = "Gayathri Manthiram — GuruKulaDesam",
+		subtitle = "Sacred Vedic Invocation of Savitur",
+		assetId = "rbxassetid://97476251841353",
+		volume = 0.38,
+	},
+	{
+		id = "kadavul_vazhthu",
+		title = "Thirukkural Ch. 1 — Kadavul Vazhthu",
+		subtitle = "Grade 1 Foundation: Praise of the Eternal Source",
+		assetId = "rbxassetid://111971900277592",
+		volume = 0.42,
+	},
+	{
+		id = "vaan_sirappu",
+		title = "Thirukkural Ch. 2 — Vaan Sirappu",
+		subtitle = "Grade 1 Ecology: The Nectar of Rain",
+		assetId = "rbxassetid://114793987355409",
+		volume = 0.42,
+	},
+	{
+		id = "kollaamai",
+		title = "Thirukkural Ch. 33 — Kollaamai (Ahimsa)",
+		subtitle = "Core Gurukula Vow: Never Taking Any Life",
+		assetId = "rbxassetid://100056961644623",
+		volume = 0.42,
+	},
+	{
+		id = "thiruavinankudi",
+		title = "Thiruppugazh — Thiruavinankudi",
+		subtitle = "Arunagirinathar's Hymn of Divine Grace",
+		assetId = "rbxassetid://86626542818612",
+		volume = 0.38,
+	},
+	{
+		id = "kaumaram_sthuthi",
+		title = "Kaumaram Sthuthi — GuruKulaDesam",
+		subtitle = "Devotional Hymn of Courage & Wisdom",
+		assetId = "rbxassetid://107656727902679",
+		volume = 0.38,
+	},
+	{
+		id = "angamum_vedhamum",
+		title = "Devaram — Angamum Vedhamum",
+		subtitle = "Panniru Thirumurai Sacred Tamil Chant",
+		assetId = "rbxassetid://118828084493265",
+		volume = 0.38,
+	},
+	{
+		id = "kunruthoradal",
+		title = "Thiruppugazh — Kunruthoradal",
+		subtitle = "Sacred Hill Sanctuary Chant",
+		assetId = "rbxassetid://92659256164116",
+		volume = 0.38,
+	},
+	{
+		id = "shanmukha_mantra",
+		title = "Shanmukha Mantra Symphony",
+		subtitle = "Six-Faced Light of Jnana & Sattva",
+		assetId = "rbxassetid://87906293095497",
+		volume = 0.38,
+	},
+	{
+		id = "sivapuranam",
+		title = "Thiruvasagam — Siva Puranam",
+		subtitle = "Manikkavasagar's Song of Soul Awakening",
+		assetId = "rbxassetid://75511113987534",
+		volume = 0.40,
+	},
+}
+
+-- Multi-layered Just-Intonation / Swara Harmonic Presets for WoW-style tactile feedback
+local BELL_ID = "rbxassetid://12222253"
+local GONG_ID = "rbxassetid://12222084"
+local LUTE_ID = "rbxassetid://12222216"
+local TAP_ID = "rbxassetid://12222208"
+
+local SYNTH_PRESETS = {
+	-- Subtle, crisp WoW-style UI hover & click
+	ui_hover = {
+		{ id = BELL_ID, pitch = 1.65, vol = 0.08, delay = 0 },
+	},
+	ui_click = {
+		{ id = TAP_ID, pitch = 1.35, vol = 0.16, delay = 0 },
+		{ id = BELL_ID, pitch = 1.25, vol = 0.14, delay = 0.01 },
+	},
+	panel_open = {
+		{ id = LUTE_ID, pitch = 1.0, vol = 0.18, delay = 0 },
+		{ id = BELL_ID, pitch = 1.25, vol = 0.22, delay = 0.05 },
+		{ id = BELL_ID, pitch = 1.5, vol = 0.18, delay = 0.10 },
+	},
+	panel_close = {
+		{ id = BELL_ID, pitch = 1.35, vol = 0.16, delay = 0 },
+		{ id = LUTE_ID, pitch = 0.95, vol = 0.15, delay = 0.05 },
+	},
+	dialogue_open = {
+		{ id = GONG_ID, pitch = 1.15, vol = 0.20, delay = 0 },
+		{ id = BELL_ID, pitch = 1.125, vol = 0.22, delay = 0.06 },
+		{ id = BELL_ID, pitch = 1.5, vol = 0.18, delay = 0.12 },
+	},
+	quest_accept = {
+		{ id = GONG_ID, pitch = 1.0, vol = 0.28, delay = 0 },
+		{ id = BELL_ID, pitch = 1.0, vol = 0.26, delay = 0.05 },
+		{ id = BELL_ID, pitch = 1.25, vol = 0.26, delay = 0.12 },
+		{ id = BELL_ID, pitch = 1.5, vol = 0.30, delay = 0.20 },
+	},
+	quest_complete = {
+		{ id = GONG_ID, pitch = 0.9, vol = 0.34, delay = 0 },
+		{ id = BELL_ID, pitch = 1.0, vol = 0.30, delay = 0.06 },
+		{ id = BELL_ID, pitch = 1.25, vol = 0.30, delay = 0.14 },
+		{ id = BELL_ID, pitch = 1.5, vol = 0.32, delay = 0.22 },
+		{ id = BELL_ID, pitch = 2.0, vol = 0.35, delay = 0.32 },
+	},
+	level_up = {
+		{ id = GONG_ID, pitch = 0.85, vol = 0.38, delay = 0 },
+		{ id = BELL_ID, pitch = 1.0, vol = 0.32, delay = 0.05 },
+		{ id = BELL_ID, pitch = 1.25, vol = 0.32, delay = 0.13 },
+		{ id = BELL_ID, pitch = 1.5, vol = 0.34, delay = 0.21 },
+		{ id = BELL_ID, pitch = 1.875, vol = 0.34, delay = 0.30 },
+		{ id = BELL_ID, pitch = 2.0, vol = 0.38, delay = 0.40 },
+	},
+	pacify_awakening = {
+		{ id = GONG_ID, pitch = 1.0, vol = 0.32, delay = 0 },
+		{ id = BELL_ID, pitch = 1.25, vol = 0.28, delay = 0.07 },
+		{ id = BELL_ID, pitch = 1.5, vol = 0.30, delay = 0.15 },
+		{ id = BELL_ID, pitch = 2.0, vol = 0.32, delay = 0.25 },
+	},
+	gather_herb = {
+		{ id = LUTE_ID, pitch = 1.35, vol = 0.22, delay = 0 },
+		{ id = BELL_ID, pitch = 1.6, vol = 0.20, delay = 0.06 },
+	},
+	mine_ore = {
+		{ id = TAP_ID, pitch = 0.95, vol = 0.28, delay = 0 },
+		{ id = BELL_ID, pitch = 1.15, vol = 0.22, delay = 0.05 },
+	},
+	water_draw = {
+		{ id = BELL_ID, pitch = 1.2, vol = 0.22, delay = 0 },
+		{ id = BELL_ID, pitch = 1.5, vol = 0.20, delay = 0.08 },
+	},
+	coin = {
+		{ id = BELL_ID, pitch = 1.8, vol = 0.22, delay = 0 },
+		{ id = BELL_ID, pitch = 2.15, vol = 0.24, delay = 0.06 },
+	},
+	hit = {
+		{ id = TAP_ID, pitch = 1.05, vol = 0.26, delay = 0 },
+		{ id = BELL_ID, pitch = 1.125, vol = 0.15, delay = 0.02 },
+	},
+	swing = {
+		{ id = LUTE_ID, pitch = 1.08, vol = 0.24, delay = 0 },
+	},
+	proj = {
+		{ id = LUTE_ID, pitch = 1.35, vol = 0.22, delay = 0 },
+		{ id = BELL_ID, pitch = 1.5, vol = 0.14, delay = 0.02 },
+	},
+	ring = {
+		{ id = GONG_ID, pitch = 0.95, vol = 0.34, delay = 0 },
+		{ id = BELL_ID, pitch = 1.25, vol = 0.24, delay = 0.06 },
+	},
+	chime = {
+		{ id = BELL_ID, pitch = 1.15, vol = 0.28, delay = 0 },
+		{ id = BELL_ID, pitch = 1.45, vol = 0.22, delay = 0.06 },
+	},
+	warn = {
+		{ id = GONG_ID, pitch = 0.72, vol = 0.24, delay = 0 },
+	},
 }
 
 function Effects.sound(kind: string, pitchMult: number?)
-	local spec = SOUNDS[kind] or SOUNDS.chime
+	local layers = SYNTH_PRESETS[kind] or SYNTH_PRESETS.chime
+	local mult = pitchMult or 1
+	for _, layer in ipairs(layers) do
+		task.spawn(function()
+			if layer.delay and layer.delay > 0 then
+				task.wait(layer.delay)
+			end
+			local s = Instance.new("Sound")
+			s.SoundId = layer.id
+			s.PlaybackSpeed = layer.pitch * mult
+			s.Volume = layer.vol
+			s.Parent = SoundService
+			s:Play()
+			task.delay(2.5, function()
+				s:Destroy()
+			end)
+		end)
+	end
+end
+
+---------------------------------------------------------------- @guru-kula-desam Continuous Music Jukebox
+local musicIdx = 1
+local musicMuted = false
+local activeTrackSound: Sound? = nil
+local trackConn: RBXScriptConnection? = nil
+local musicCallbacks: { (any, boolean) -> () } = {}
+
+local function notifyMusicListeners()
+	local hymn = Effects.HYMNS[musicIdx]
+	for _, fn in ipairs(musicCallbacks) do
+		task.spawn(fn, hymn, musicMuted)
+	end
+end
+
+function Effects.onMusicChanged(fn: (any, boolean) -> ())
+	table.insert(musicCallbacks, fn)
+	fn(Effects.HYMNS[musicIdx], musicMuted)
+end
+
+function Effects.currentHymn()
+	return Effects.HYMNS[musicIdx], musicMuted
+end
+
+function Effects.playHymn(index: number?)
+	if index then
+		musicIdx = ((index - 1) % #Effects.HYMNS) + 1
+	end
+	local hymn = Effects.HYMNS[musicIdx]
+	if trackConn then
+		trackConn:Disconnect()
+		trackConn = nil
+	end
+	if activeTrackSound then
+		local old = activeTrackSound
+		TweenService:Create(old, TweenInfo.new(1.2), { Volume = 0 }):Play()
+		task.delay(1.3, function()
+			old:Destroy()
+		end)
+	end
 	local s = Instance.new("Sound")
-	s.SoundId = spec.id
-	s.PlaybackSpeed = spec.pitch * (pitchMult or 1)
-	s.Volume = spec.vol
+	s.Name = "GurukulaHymn_" .. hymn.id
+	s.SoundId = hymn.assetId
+	s.Volume = 0
+	s.Looped = false
 	s.Parent = SoundService
+	activeTrackSound = s
 	s:Play()
-	task.delay(2.5, function()
-		s:Destroy()
+	TweenService:Create(s, TweenInfo.new(1.5), { Volume = musicMuted and 0 or hymn.volume }):Play()
+
+	trackConn = s.Ended:Connect(function()
+		if activeTrackSound == s then
+			Effects.nextHymn()
+		end
 	end)
+	-- Fallback if an asset fails to load or finishes silently
+	task.delay(6, function()
+		if activeTrackSound == s and not s.IsPlaying and s.TimeLength == 0 then
+			-- Keep gentle temple tanpura chime pulsing even if offline in Studio
+			Effects.sound("chime", 0.75)
+		end
+	end)
+	notifyMusicListeners()
+end
+
+function Effects.nextHymn()
+	Effects.playHymn(musicIdx + 1)
+	Effects.sound("ui_click")
+end
+
+function Effects.toggleMute(): boolean
+	musicMuted = not musicMuted
+	local hymn = Effects.HYMNS[musicIdx]
+	if activeTrackSound then
+		TweenService:Create(activeTrackSound, TweenInfo.new(0.4), { Volume = musicMuted and 0 or hymn.volume }):Play()
+	end
+	notifyMusicListeners()
+	return musicMuted
 end
 
 local function floatNumber(pos: Vector3, amount: number, colorKey: string)
@@ -81,8 +335,12 @@ local function floatNumber(pos: Vector3, amount: number, colorKey: string)
 end
 
 local ELEMENT_COLORS = {
-	fire = Color3.fromRGB(255, 120, 40), water = Color3.fromRGB(80, 160, 255), wind = Color3.fromRGB(200, 240, 255),
-	hit = Color3.fromRGB(255, 220, 140), backfire = Color3.fromRGB(180, 40, 200),
+	fire = Color3.fromRGB(255, 120, 40),
+	water = Color3.fromRGB(80, 160, 255),
+	wind = Color3.fromRGB(200, 240, 255),
+	hit = Color3.fromRGB(255, 220, 140),
+	sattva = Color3.fromRGB(255, 230, 125),
+	backfire = Color3.fromRGB(180, 40, 200),
 }
 
 local function ring(pos: Vector3, radius: number, color: Color3)
@@ -140,7 +398,7 @@ local function projectile(p)
 		local pos = p.origin + p.dir * p.speed * t
 		local cf = CFrame.lookAt(pos, pos + p.dir)
 		if style.spin then
-			cf = CFrame.new(pos) * CFrame.Angles(0, t * 20, math.pi / 2) -- disc lying flat, spinning
+			cf = CFrame.new(pos) * CFrame.Angles(0, t * 20, math.pi / 2)
 		end
 		part.CFrame = cf
 	end)
@@ -310,13 +568,18 @@ local function applyLighting()
 	local yug = YUGA_TINT[yIdx]
 	local onBhumi = currentLoka == "bhumi"
 	TweenService:Create(Lighting, TweenInfo.new(2), {
-		ClockTime = def.clock + (onBhumi and yug.clock or 0), Ambient = def.ambient, Brightness = def.brightness,
-		FogEnd = def.fogEnd, FogColor = def.fog,
+		ClockTime = def.clock + (onBhumi and yug.clock or 0),
+		Ambient = def.ambient,
+		Brightness = def.brightness,
+		FogEnd = def.fogEnd,
+		FogColor = def.fog,
 	}):Play()
 	atmosphere.Density = def.density
 	atmosphere.Color = def.fog
 	TweenService:Create(colorCorrection, TweenInfo.new(2), {
-		TintColor = onBhumi and yug.tint or Color3.new(1, 1, 1), Contrast = onBhumi and yug.contrast or 0, Saturation = onBhumi and yug.saturation or 0,
+		TintColor = onBhumi and yug.tint or Color3.new(1, 1, 1),
+		Contrast = onBhumi and yug.contrast or 0,
+		Saturation = onBhumi and yug.saturation or 0,
 	}):Play()
 end
 
@@ -356,6 +619,10 @@ end
 
 ---------------------------------------------------------------- start
 function Effects.start()
+	UI.onSound = function(soundKind: string)
+		Effects.sound(soundKind)
+	end
+
 	fxFolder = Instance.new("Folder")
 	fxFolder.Name = "ClientFx"
 	fxFolder.Parent = workspace
@@ -368,6 +635,49 @@ function Effects.start()
 	blur.Size = 0
 	blur.Parent = Lighting
 
+	-- Start continuous @guru-kula-desam background music Jukebox immediately & wire HUD buttons
+	HUD.onNextHymn = function()
+		Effects.nextHymn()
+	end
+	HUD.onToggleMute = function()
+		Effects.toggleMute()
+	end
+	Effects.onMusicChanged(function(hymn, muted)
+		HUD.setHymnDisplay(hymn, muted)
+	end)
+	Effects.playHymn(1)
+
+	-- Gentle ambient temple bell resonance every 24s to keep the Gurukula world feeling sacred and alive
+	task.spawn(function()
+		while true do
+			task.wait(24)
+			if not musicMuted then
+				Effects.sound("chime", 0.72)
+			end
+		end
+	end)
+
+	-- Zero-latency WoW-style interaction sounds on ProximityPrompts
+	ProximityPromptService.PromptShown:Connect(function()
+		Effects.sound("ui_hover")
+	end)
+	ProximityPromptService.PromptTriggered:Connect(function(prompt)
+		local action = (prompt.ActionText or ""):lower()
+		if action:find("gather") or action:find("plant") or action:find("harvest") then
+			Effects.sound("gather_herb")
+		elseif action:find("mine") or action:find("develop") then
+			Effects.sound("mine_ore")
+		elseif action:find("water") then
+			Effects.sound("water_draw")
+		elseif action:find("speak") then
+			Effects.sound("dialogue_open")
+		elseif action:find("study") or action:find("trace") or action:find("contemplate") or action:find("inspect") then
+			Effects.sound("quest_accept")
+		else
+			Effects.sound("ui_click")
+		end
+	end)
+
 	Remotes.get("Fx").OnClientEvent:Connect(function(p)
 		if p.kind == "num" then
 			floatNumber(p.pos, p.amount, p.color)
@@ -376,7 +686,11 @@ function Effects.start()
 			end
 		elseif p.kind == "ring" then
 			ring(p.pos, p.radius, ELEMENT_COLORS[p.color] or ELEMENT_COLORS.hit)
-			Effects.sound("ring")
+			if p.color == "sattva" then
+				Effects.sound("pacify_awakening")
+			else
+				Effects.sound("ring")
+			end
 		elseif p.kind == "proj" then
 			projectile(p)
 			Effects.sound("proj")
@@ -385,16 +699,41 @@ function Effects.start()
 			Effects.sound("swing")
 		end
 	end)
+
 	Remotes.get("Toast").OnClientEvent:Connect(function(text, kind)
 		HUD.toast(text, kind)
-		if kind == "karma_good" or kind == "level" or kind == "quest" then
-			Effects.sound("chime")
+		local lower = (text or ""):lower()
+		if kind == "level" or lower:find("promotion") then
+			Effects.sound("level_up")
+		elseif kind == "quest" then
+			if lower:find("complete") then
+				Effects.sound("quest_complete")
+			else
+				Effects.sound("quest_accept")
+			end
+		elseif kind == "gold" then
+			Effects.sound("coin")
+		elseif kind == "loot" then
+			if lower:find("mined") then
+				Effects.sound("mine_ore")
+			else
+				Effects.sound("gather_herb")
+			end
+		elseif kind == "karma_good" then
+			if lower:find("ahimsa") or lower:find("awakened") then
+				Effects.sound("pacify_awakening")
+			else
+				Effects.sound("quest_accept")
+			end
+		elseif kind == "warn" or kind == "karma_bad" then
+			Effects.sound("warn")
 		end
 	end)
+
 	Remotes.get("Travel").OnClientEvent:Connect(function(loka, name)
 		currentLoka = loka
 		applyLighting()
-		Effects.sound("chime", 0.85)
+		Effects.sound("level_up", 0.9)
 		HUD.toast("— " .. name .. " —", "path")
 	end)
 

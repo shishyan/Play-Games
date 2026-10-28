@@ -152,6 +152,7 @@ local function applyFx(player: Player, fx)
 		if w and w.class == profile.class then
 			profile.weapon = fx[2]
 			profile.durability = 100
+			PlayerState.applyToCharacter(player, false)
 			PlayerState.toast(player, ("You now wield the %s."):format(w.name), "info")
 		end
 	elseif kind == "donate" then
@@ -184,6 +185,7 @@ local function applyFx(player: Player, fx)
 		end
 		profile.weaponTier += 1
 		profile.durability = 100
+		PlayerState.applyToCharacter(player, false)
 		PlayerState.toast(player, ("Your weapon is now tier %d."):format(profile.weaponTier), "level")
 	elseif kind == "repair" then
 		if profile.gold < fx[2] then

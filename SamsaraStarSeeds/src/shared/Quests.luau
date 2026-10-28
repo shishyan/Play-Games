@@ -77,8 +77,8 @@ function Quests.syncItems(quests, inv): { string }
 	return changed
 end
 
--- ev = { k = "kill", t = enemyId } | { k = "cleanse" } | { k = "donate", n = gold } | { k = "loka", t = lokaId } ...
--- A "kill" also advances "killany" objectives. Returns changed quest ids.
+-- ev = { k = "kill", t = enemyId } | { k = "pacify", t = enemyId? } | { k = "cleanse" } | { k = "donate", n = gold } | { k = "loka", t = lokaId } ...
+-- A "kill" or "pacify" (with or without target) advances "pacify", "killany", and matching "kill" objectives so Ahimsa awakening fulfills all spirit-calming quests.
 function Quests.event(quests, ev): { string }
 	local changed = {}
 	for qid, q in pairs(quests) do
@@ -89,8 +89,10 @@ function Quests.event(quests, ev): { string }
 				local matches = false
 				if obj.k == ev.k then
 					matches = obj.t == nil or obj.t == ev.t
-				elseif obj.k == "killany" and ev.k == "kill" then
+				elseif obj.k == "killany" and (ev.k == "kill" or (ev.k == "pacify" and ev.t ~= nil)) then
 					matches = true
+				elseif obj.k == "kill" and ev.k == "pacify" and ev.t ~= nil then
+					matches = obj.t == nil or obj.t == ev.t
 				end
 				if matches and (q.prog[i] or 0) < (obj.n or 1) then
 					q.prog[i] = math.min(obj.n or 1, (q.prog[i] or 0) + (ev.n or 1))
